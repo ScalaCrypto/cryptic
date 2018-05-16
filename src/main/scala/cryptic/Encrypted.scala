@@ -25,11 +25,11 @@ object Encrypted {
     override def flatMap[W](f: Nothing => Encrypted[W, Any])(implicit encw: Encrypter[W, Any], decw: Decrypter[W , Any]): Encrypted[W, Any] = this
   }
   case class Value[+V, K](s: Secret)(implicit encv: Encrypter[V, K], decv: Decrypter[V , K]) extends Encrypted[V, K] {
-    override def decrypted(implicit key: K): Option[V] = implicitly[Decrypter[V, K]].decrypt(s)
+    override def decrypted(implicit key: K): Option[V] = decv.decrypt(s)
   }
   def apply[V, K](value: V)(implicit encv: Encrypter[V, K], decv: Decrypter[V , K], key: K): Encrypted[V, K] = {
     if (value == null) empty
-    else Value(implicitly[Encrypter[V, K]].encrypt(value))
+    else Value(encv.encrypt(value))
   }
   //sealed trait View[V, K] extends Encrypted[V, K]
   final case class Filtered[V, K](e: Encrypted[V, K], pred: V => Boolean)(implicit encv: Encrypter[V, K], decv: Decrypter[V , K]) extends Encrypted[V, K] {

@@ -13,8 +13,8 @@ class EncryptedSpec extends FlatSpec with Matchers {
   case class User(
     id: Long,
     alias: String,
-    name: Encrypted[PersonName, _],
-    email: Encrypted[EmailAddress, _])
+    name: Encrypted[PersonName, Crypto.Ceasar.type],
+    email: Encrypted[EmailAddress, Crypto.Ceasar.type])
 
   "String encrypter" should "encrypt to equal" in {
     stringEncrypter.encrypt("kalle")("K") shouldEqual Secret("kalle")

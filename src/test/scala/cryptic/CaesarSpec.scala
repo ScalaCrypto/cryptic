@@ -17,8 +17,11 @@ class CaesarSpec extends FlatSpec with Matchers {
   "Caesar Encrypted" should "support encryption and decryption" in {
     val key = Caesar.Key(0)
     implicit val ce: Encryptor = Caesar.encryptor(key)
-    val e = Encrypted[String]("nisse") match { case Encrypted.Value(ct) ⇒ }
-    e.asInstanceOf[Encrypted.Value[String]].cipherText .contains("nisse") shouldBe false
+    val e = Encrypted[String]("nisse")
+    e match {
+      case Encrypted.Value(ct) ⇒ ct.contains("nisse") shouldBe false // Verify that cipher text somewhat hides plain text.
+      case _ ⇒ fail("does not decrypt")
+    }
 
     implicit val cd: Decryptor = Caesar.decryptor(key)
     val decrypted: Either[String, String] = e.decrypted

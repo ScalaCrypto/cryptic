@@ -3,23 +3,35 @@ package object cryptic {
   object PlainText {
     def apply(x: Array[Byte]): PlainText = x
     def apply(x: String): PlainText = x.getBytes()
-    trait Encoder[V] {
-      def encode(value: V): PlainText
+    trait Serializer[V] {
+      def serialize(value: V): PlainText
     }
-    trait Decoder[V] {
-      def decode(plainText: PlainText): Either[String, V]
+    trait Deserializer[V] {
+      def deserialize(plainText: PlainText): Either[String, V]
     }
-    implicit val nothingEncoder: Encoder[Nothing] = (value: Nothing) => throw new UnsupportedOperationException("encode empty")
-    implicit val nothingDecoder: Decoder[Nothing] = (plainText: PlainText) => throw new UnsupportedOperationException("decode empty")
-    implicit val stringEncoder: Encoder[String] = (value: String) => PlainText(value)
-    implicit val stringDecoder: Decoder[String] = (plainText: PlainText) => Right(new String(plainText).toString)
+    implicit val nothingSerializer: Serializer[Nothing] = (value: Nothing) => throw new UnsupportedOperationException("encode empty")
+    implicit val nothingDeserializer: Deserializer[Nothing] = (plainText: PlainText) => throw new UnsupportedOperationException("decode empty")
+    implicit val stringSerializer: Serializer[String] = (value: String) => PlainText(value)
+    implicit val stringDeserializer: Deserializer[String] = (plainText: PlainText) => Right(new String(plainText).toString)
     // Todo better serialization for Int, Double, Boolean
-    implicit val intEncoder: Encoder[Int] = (value: Int) => PlainText(value.toString)
-    implicit val intDecoder: Decoder[Int] = (plainText: PlainText) => Right(new String(plainText).toInt)
-    implicit val doubleEncoder: Encoder[Double] = (value: Double) => PlainText(value.toString)
-    implicit val doubleDecoder: Decoder[Double] = (plainText: PlainText) => Right(new String(plainText).toDouble)
-    implicit val booleanEncoder: Encoder[Boolean] = (value: Boolean) => PlainText(value.toString)
-    implicit val booleanDecoder: Decoder[Boolean] = (plainText: PlainText) => Right(new String (plainText).toBoolean)
+    implicit val intSerializer: Serializer[Int] = (value: Int) =>
+      PlainText(value.toString)
+    implicit val intDeserializer: Deserializer[Int] = (plainText: PlainText) =>
+      Right(new String(plainText).toInt)
+    implicit val doubleSerializer: Serializer[Double] = (value: Double) =>
+      PlainText(value.toString)
+    implicit val doubleDeserializer: Deserializer[Double] = (plainText: PlainText) =>
+      Right(new String(plainText).toDouble)
+    implicit val booleanSerializer: Serializer[Boolean] = (value: Boolean) =>
+      PlainText(value.toString)
+    implicit val booleanDeserializer: Deserializer[Boolean] = (plainText: PlainText) =>
+      Right(new String (plainText).toBoolean)
+    implicit def optionSerializer[V : Serializer]: Serializer[Option[V]] = {
+      case Some(v: V) => implicitly[Serializer[V]].serialize(v)
+      case None => PlainText("")
+    }
+    implicit def optionDeserializer[V : Deserializer]: Deserializer[Option[V]] = (plainText: PlainText) => 
+      implicitly[Deserializer[V]].deserialize(plainText).map(Option.apply)
   }
   type CipherText = Array[Byte]
   object CipherText {

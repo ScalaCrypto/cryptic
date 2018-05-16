@@ -15,7 +15,7 @@ class EncryptedSpec extends FlatSpec with Matchers {
     email: Encrypted[EmailAddress])
 
   "String Encoder" should "encode to equal" in {
-    stringEncoder.encode("kalle") shouldEqual PlainText("kalle")
+    stringEncoder.serialize("kalle") shouldEqual PlainText("kalle")
   }
   "String Decoder" should "decode to equal" in {
     stringDecoder.decode(PlainText("kalle")) shouldEqual Right("kalle")

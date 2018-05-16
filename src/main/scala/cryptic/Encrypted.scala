@@ -1,74 +1,66 @@
 package cryptic
 
-final case class CipherText(data: String) {
+import scala.language.implicitConversions
+
+final case class PlainText(data: String) {
   override def productElement(n: Int) = if (n == 0) "\uD83D\uDD12" else throw new IndexOutOfBoundsException(n.toString)
 }
-trait Encryptor[V] {
-  def encrypt(value: V): CipherText
+trait Encryptor {
+  def encrypt(plainText: PlainText): CipherText
 }
-trait Decryptor[V] {
-  def decrypt(cipherText: CipherText): Option[V]
+trait Decryptor {
+  def decrypt(cipherText: CipherText): Either[String, PlainText]
+}
+trait Encoder[V] {
+  def encode(value: V): PlainText
+}
+trait Decoder[V] {
+  def decode(plainText: PlainText): Either[String, V]
 }
 sealed trait Encrypted[V] {
   import Encrypted._
-  def decrypted(implicit decryptor: Decryptor[V]): Option[V]
-  def filter(pred: V => Boolean): Encrypted[V] = Filtered(this, pred)
+  def decrypted(implicit decryptor: Decryptor): Either[String, V]
+  def filter(pred: V => Boolean): Encrypted[Option[V]] = Filtered(this, pred)
   def map[W](f: V => W): Encrypted[W] = Mapped(this, f)
   def flatMap[W](f: V => Encrypted[W]): Encrypted[W] = FlatMapped(this, f)
 }
 object Encrypted {
   def empty[V]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]
   case object Empty extends Encrypted[Nothing]{
-    override def decrypted(implicit decryptor: Decryptor[Nothing]): None.type = None
-    override def filter(pred: Nothing => Boolean): Encrypted[Nothing] = this
+    override def decrypted(implicit decryptor: Decryptor) = Left("decrypt called on empty")
+    override def filter(pred: Nothing => Boolean): Encrypted[Option[Nothing]] = empty
     override def map[W](f: Nothing => W): Encrypted[W] = empty
     override def flatMap[W](f: Nothing => Encrypted[W]): Encrypted[W] = empty
   }
-  case class Value[V](s: CipherText) extends Encrypted[V] {
-    override def decrypted(implicit decryptor: Decryptor[V]): Option[V] = decryptor.decrypt(s)
+  case class Value[V : Decoder](ct: CipherText) extends Encrypted[V] {
+    override def decrypted(implicit decryptor: Decryptor): Either[String, V] = decryptor.decrypt(ct).flatMap(implicitly[Decoder[V]].decode)
   }
-  def apply[V](value: V)(implicit encryptor: Encryptor[V]): Encrypted[V] = {
+  def apply[V : Encoder : Decoder](value: V)(implicit encryptor: Encryptor): Encrypted[V] = {
     if (value == null) empty
-    else Value(encryptor.encrypt(value))
+    else Value[V](encryptor.encrypt(implicitly[Encoder[V]].encode(value)))
   }
-  //sealed trait View[V] extends Encrypted[V]
-  final case class Filtered[V](e: Encrypted[V], pred: V => Boolean) extends Encrypted[V] {
-    override def decrypted(implicit decryptor: Decryptor[V]): Option[V] = e.decrypted.filter(pred)
+  final case class Filtered[V](e: Encrypted[V], pred: V => Boolean) extends Encrypted[Option[V]] {
+    override def decrypted(implicit decryptor: Decryptor): Either[String, Option[V]] = e.decrypted.map(v => Option(v).filter(pred))
   }
   final case class Mapped[V, W](e: Encrypted[V], f: V => W) extends Encrypted[W] {
-    override def decrypted(implicit decryptor: Decryptor[V]): Option[W] = e.decrypted.map(f)
+    override def decrypted(implicit decryptor: Decryptor): Either[String, W] = e.decrypted.map(f)
   }
   final case class FlatMapped[V, W](e: Encrypted[V], f: V => Encrypted[W]) extends Encrypted[W] {
-    override def decrypted(implicit decryptor: Decryptor[W]): Option[W] = e.decrypted match {
-      case None => None
-      case Some(v) => f(v).decrypted
-    }
+    override def decrypted(implicit decryptor: Decryptor): Either[String, W] = e.decrypted.flatMap[String, W](v => f(v).decrypted)
   }
 
-  object Implicits {
-    implicit val nothingEncryptor: Encryptor[Nothing] = new Encryptor[Nothing] {
-      override def encrypt(v: Nothing): CipherText = CipherText(null)
-    }
-    implicit val nothingDecryptor: Decryptor[Nothing] = new Decryptor[Nothing] {
-      override def decrypt(s: CipherText): Option[Nothing] = None
-    }
-    implicit val stringEncryptor: Encryptor[String] = new Encryptor[String] {
-      override def encrypt(v: String): CipherText = CipherText(v)
-    }
-    implicit val stringDecryptor: Decryptor[String] = new Decryptor[String] {
-      override def decrypt(s: CipherText): Option[String] = Option(s.data)
-    }
+  object Coders {
+    implicit val nothingEncoder: Encoder[Nothing] = (value: Nothing) => PlainText(null)
+    implicit val nothingDecoder: Decoder[Nothing] = (plainText: PlainText) => throw new UnsupportedOperationException("decode empty")
+    implicit val stringEncoder: Encoder[String] = (value: String) => PlainText(value)
+    implicit val stringDecoder: Decoder[String] = (plainText: PlainText) => Right(plainText.data)
   }
 
-  object Crypto {
+  object Cryptos {
     object Ceasar {
       case class Key(offset:Int)
-      implicit def stringEncryptor(key:Key): Encryptor[String] = new Encryptor[String] {
-        override def encrypt(v: String): CipherText = CipherText(v.map(_ + key.offset).map(_.toChar).mkString)
-      }
-      implicit def stringDecryptor(key:Key): Decryptor[String] = new Decryptor[String] {
-        override def decrypt(s: CipherText): Option[String] = Option(s).map(_.data.map(_ - key.offset).map(_.toChar).mkString)
-      }
+      implicit def encryptor(key: Key): Encryptor = (plainText: PlainText) => CipherText(plainText.data.map(_ + key.offset).map(_.toChar).mkString)
+      implicit def decryptor(key: Key): Decryptor = (cipherText: CipherText) => Right[String, PlainText](PlainText(cipherText.map(ch => (ch - key.offset).toChar).mkString))
     }
   }
 }

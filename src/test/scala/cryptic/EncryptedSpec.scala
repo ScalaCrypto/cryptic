@@ -13,23 +13,23 @@ class EncryptedSpec extends FlatSpec with Matchers {
   case class User(
     id: Long,
     alias: String,
-    name: Encrypted[PersonName, Crypto.Ceasar.type],
-    email: Encrypted[EmailAddress, Crypto.Ceasar.type])
+    name: Encrypted[PersonName],
+    email: Encrypted[EmailAddress])
 
-  "String encrypter" should "encrypt to equal" in {
-    stringEncrypter.encrypt("kalle")("K") shouldEqual Secret("kalle")
+  "String Encryptor" should "encrypt to equal" in {
+    stringEncryptor.encrypt("kalle") shouldEqual CipherText("kalle")
   }
-  "String decrypter" should "decrypt to equal" in {
-    stringDecrypter.decrypt(Secret("kalle"))("K") shouldEqual Some("kalle")
+  "String Decryptor" should "decrypt to equal" in {
+    stringDecryptor.decrypt(CipherText("kalle")) shouldEqual Some("kalle")
   }
 
-  "Ceasar string encrypter" should "encrypt to shifted string" in {
-    Crypto.Ceasar.stringEncrypter.encrypt("kalle")(Crypto.Ceasar.Key(0)) shouldEqual Secret("kalle")
-    Crypto.Ceasar.stringEncrypter.encrypt("kalle")(Crypto.Ceasar.Key(1)) shouldEqual Secret("lbmmf")
+  "Ceasar string Encryptor" should "encrypt to shifted string" in {
+    Crypto.Ceasar.stringEncryptor(Crypto.Ceasar.Key(0)).encrypt("kalle") shouldEqual CipherText("kalle")
+    Crypto.Ceasar.stringEncryptor(Crypto.Ceasar.Key(1)).encrypt("kalle") shouldEqual CipherText("lbmmf")
   }
-  "Ceasar string decrypter" should "decrypt to shifted string" in {
-    Crypto.Ceasar.stringDecrypter.decrypt(Secret("kalle"))(Crypto.Ceasar.Key(0)) shouldEqual Some("kalle")
-    Crypto.Ceasar.stringDecrypter.decrypt(Secret("lbmmf"))(Crypto.Ceasar.Key(1)) shouldEqual Some("kalle")
+  "Ceasar string Decryptor" should "decrypt to shifted string" in {
+    Crypto.Ceasar.stringDecryptor(Crypto.Ceasar.Key(0)).decrypt(CipherText("kalle")) shouldEqual Some("kalle")
+    Crypto.Ceasar.stringDecryptor(Crypto.Ceasar.Key(1)).decrypt(CipherText("lbmmf")) shouldEqual Some("kalle")
   }
   def createUser: User = {
     implicit val key: Ceasar.Key = Crypto.Ceasar.Key(1)

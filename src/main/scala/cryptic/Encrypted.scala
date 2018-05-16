@@ -43,7 +43,7 @@ object Encrypted {
 
   object CeasarCrypto {
     case class Key(offset:Int)
-    implicit def encryptor(key: Key): Encryptor = (plainText: PlainText) => CipherText(plainText.map(_ + key.offset).map(_.toChar).mkString)
-    implicit def decryptor(key: Key): Decryptor = (cipherText: CipherText) => Right[String, PlainText](PlainText(cipherText.map(ch => (ch - key.offset).toChar).mkString))
+    implicit def encryptor(key: Key): Encryptor = (plainText: PlainText) => CipherText(plainText.map(b ⇒ (b + key.offset).toByte))
+    implicit def decryptor(key: Key): Decryptor = (cipherText: CipherText) => Right[String, PlainText](PlainText(cipherText.map(b => (b - key.offset).toByte)))
   }
 }

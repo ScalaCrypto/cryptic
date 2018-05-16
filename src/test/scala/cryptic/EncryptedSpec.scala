@@ -27,12 +27,12 @@ class EncryptedSpec extends FlatSpec with Matchers {
   }
 
   "Ceasar Encryptor" should "encrypt to shifted string" in {
-    CeasarCrypto.encryptor(CeasarCrypto.Key(0)).encrypt(PlainText("kalle")) shouldEqual CipherText("kalle")
-    CeasarCrypto.encryptor(CeasarCrypto.Key(1)).encrypt(PlainText("kalle")) shouldEqual CipherText("lbmmf")
+    CeasarCrypto.encryptor(CeasarCrypto.Key(0)).encrypt(PlainText("kalle")) shouldEqual CipherText("kalle".getBytes())
+    CeasarCrypto.encryptor(CeasarCrypto.Key(1)).encrypt(PlainText("kalle")) shouldEqual CipherText("lbmmf".getBytes())
   }
   "Ceasar Decryptor" should "decrypt to shifted string" in {
-    CeasarCrypto.decryptor(CeasarCrypto.Key(0)).decrypt(CipherText("kalle")) shouldEqual Right(PlainText("kalle"))
-    CeasarCrypto.decryptor(CeasarCrypto.Key(1)).decrypt(CipherText("lbmmf")) shouldEqual Right(PlainText("kalle"))
+    CeasarCrypto.decryptor(CeasarCrypto.Key(0)).decrypt(CipherText("kalle".getBytes())) map(_.toList)  shouldEqual Right(PlainText("kalle").toList)
+    CeasarCrypto.decryptor(CeasarCrypto.Key(1)).decrypt(CipherText("lbmmf".getBytes())) map(_.toList) shouldEqual Right(PlainText("kalle").toList)
   }
   /*
   def createUser: User = {

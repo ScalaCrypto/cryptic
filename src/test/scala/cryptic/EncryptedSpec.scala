@@ -1,10 +1,8 @@
 package cryptic
 
 import org.scalatest._
-import Encrypted.Coders._
-import Encrypted.Cryptos._
-import cryptic.Encrypted.Cryptos
-import cryptic.Encrypted.Cryptos.Ceasar
+import PlainText._
+import cryptic.Encrypted.CeasarCrypto
 
 class EncryptedSpec extends FlatSpec with Matchers {
   case class Name(literal: String)
@@ -24,13 +22,17 @@ class EncryptedSpec extends FlatSpec with Matchers {
     stringDecoder.decode(PlainText("kalle")) shouldEqual Right("kalle")
   }
 
+  "PlainText" should "hide value" in {
+    PlainText("kalle").toString
+  }
+
   "Ceasar Encryptor" should "encrypt to shifted string" in {
-    Cryptos.Ceasar.encryptor(Cryptos.Ceasar.Key(0)).encrypt(PlainText("kalle")) shouldEqual CipherText("kalle")
-    Cryptos.Ceasar.encryptor(Cryptos.Ceasar.Key(1)).encrypt(PlainText("kalle")) shouldEqual CipherText("lbmmf")
+    CeasarCrypto.encryptor(CeasarCrypto.Key(0)).encrypt(PlainText("kalle")) shouldEqual CipherText("kalle")
+    CeasarCrypto.encryptor(CeasarCrypto.Key(1)).encrypt(PlainText("kalle")) shouldEqual CipherText("lbmmf")
   }
   "Ceasar Decryptor" should "decrypt to shifted string" in {
-    Cryptos.Ceasar.decryptor(Cryptos.Ceasar.Key(0)).decrypt(CipherText("kalle")) shouldEqual Right(PlainText("kalle"))
-    Cryptos.Ceasar.decryptor(Cryptos.Ceasar.Key(1)).decrypt(CipherText("lbmmf")) shouldEqual Right(PlainText("kalle"))
+    CeasarCrypto.decryptor(CeasarCrypto.Key(0)).decrypt(CipherText("kalle")) shouldEqual Right(PlainText("kalle"))
+    CeasarCrypto.decryptor(CeasarCrypto.Key(1)).decrypt(CipherText("lbmmf")) shouldEqual Right(PlainText("kalle"))
   }
   /*
   def createUser: User = {

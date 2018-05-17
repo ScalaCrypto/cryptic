@@ -1,7 +1,7 @@
 package cryptic
 package crypto
 
-object Caesar {
+object Caesar{
   case class Key(offset: Int) {
     require(offset != 0)
   }

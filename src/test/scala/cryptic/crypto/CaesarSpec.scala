@@ -1,14 +1,13 @@
-package cryptic.crypto
+package cryptic
+package crypto
 
-import cryptic.{CipherText, Encrypted, serialization}
+import cryptic.serialization.StringSerializer
 import org.scalatest._
-//import Predef.{$conforms => _}
 
 class CaesarSpec extends FlatSpec with Matchers {
-
   import Caesar._
-  import serialization.StringSerializer._
-  implicit val key1 = Caesar.Key(1)
+  import StringSerializer._
+  implicit val key1: Key = Caesar.Key(1)
 
   "Caesar Encryptor" should "encrypt to shifted string" in {
     Encrypted[String]("kalle") match {
@@ -38,20 +37,4 @@ class CaesarSpec extends FlatSpec with Matchers {
    assertThrows[IllegalArgumentException] { Caesar.Key(0) }
   }
 
-  /*
-  def createUser: User = {
-    implicit val key: Caesar.Key = Cryptos.key1
-    User(1, "kalle", Encrypted(PersonName(first = Name("Karl") ,last = Name("Nilsson"))), Encrypted(EmailAddress("kalle@nilsson.se")))
-  }
-  "Caesar crypto" should "work when used with correct key" in {
-    implicit val key: Caesar.Key = Cryptos.key1
-    val user = createUser
-    user.email.map(_.literal).decrypted shouldEqual "kalle@nilsson.se"
-  }
-  "Caesar crypto" should "not work when used with incorrect key" in {
-    implicit val key: Caesar.Key = Cryptos.Caesar.Key(2)
-    val user = createUser
-    user.email.map(_.literal).decrypted shouldEqual "kalle@nilsson.se"
-  }
-  */
 }

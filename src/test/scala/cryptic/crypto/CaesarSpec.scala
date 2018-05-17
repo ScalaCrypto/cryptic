@@ -9,16 +9,6 @@ class CaesarSpec extends FlatSpec with Matchers {
   import StringSerializer._
   implicit val key1: Key = Caesar.Key(1)
 
-  "Caesar Encryptor" should "encrypt to shifted string" in {
-    Encrypted[String]("kalle") match {
-      case Encrypted.Value(cipherText) => cipherText shouldEqual CipherText("lbmmf".getBytes())
-      case _ => fail("bad encryption")
-    }
-  }
-  "Caesar Decryptor" should "decrypt to shifted string" in {
-    Encrypted[String](CipherText("lbmmf".getBytes())).decrypted shouldEqual Right("kalle")
-  }
-
   "Caesar Encrypted" should "support encryption and decryption" in {
     Encrypted[String]("nisse").decrypted match {
       case Right(decrypted) ⇒ decrypted shouldEqual "nisse"
@@ -28,7 +18,7 @@ class CaesarSpec extends FlatSpec with Matchers {
 
   "Caesar Encrypted" should "hide plaintext" in {
     Encrypted[String]("nisse") match {
-      case Encrypted.Value(ct) ⇒ new String(ct).contains("nisse")
+      case Encrypted.Value(ct) ⇒ new String(ct.bytes).contains("nisse")
       case _ ⇒ None
     }
   }

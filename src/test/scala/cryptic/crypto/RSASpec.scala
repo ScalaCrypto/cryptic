@@ -31,9 +31,21 @@ class RSASpec extends FlatSpec with Matchers {
   "RSA Encrypted" should "hide plaintext" in {
     // Note no need for the private key when encrypting
     Encrypted[String]("nisse") match {
-      case Encrypted.Value(ct) ⇒ new String(ct).contains("nisse")
+      case Encrypted.Value(ct) ⇒ new String(ct.bytes).contains("nisse")
       case _ ⇒ None
     }
+  }
+
+  "RSA" should "same value should be equal in encrypted space without decryption key" in {
+    val enc1 = Encrypted[String]("nisse")
+    val enc2 = Encrypted[String]("nisse")
+    enc1 shouldEqual enc2
+  }
+
+  "RSA" should "different values should no be equal" in {
+    val enc1 = Encrypted[String]("nisse")
+    val enc2 = Encrypted[String]("kalle")
+    (enc1 == enc2) shouldBe false
   }
 
 }

@@ -18,16 +18,18 @@ class RSASpec extends FlatSpec with Matchers {
   keyPairGenerator.initialize(keySize)
   private val keyPair: KeyPair = keyPairGenerator.genKeyPair
   implicit val publicKey: PublicKey = keyPair.getPublic
-  implicit val privateKey: PrivateKey = keyPair.getPrivate
 
   "RSA Encrypted" should "support encryption and decryption" in {
-    Encrypted[String]("nisse").decrypted match {
+    val encrypted = Encrypted[String]("nisse")
+    implicit val privateKey: PrivateKey = keyPair.getPrivate
+    encrypted.decrypted match {
       case Right(decrypted) ⇒ decrypted shouldEqual "nisse"
       case x ⇒ fail(s"does not decrypt: $x")
     }
   }
 
   "RSA Encrypted" should "hide plaintext" in {
+    // Note no need for the private key when encrypting
     Encrypted[String]("nisse") match {
       case Encrypted.Value(ct) ⇒ new String(ct).contains("nisse")
       case _ ⇒ None

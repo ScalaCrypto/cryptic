@@ -2,26 +2,25 @@ package cryptic
 package serialization
 
 import cryptic.PlainText
-import cryptic.PlainText.{Deserializer, Serializer}
 
 /**
   * Very inefficient, use a proper serializer.
   */
 object StringSerializer {
-
-  implicit val stringSerializer: Serializer[String] = (value: String) => PlainText(value)
-  implicit val stringDeserializer: Deserializer[String] = (plainText: PlainText) => Right(new String(plainText).toString)
-  implicit val intSerializer: Serializer[Int] = (value: Int) =>
-    PlainText(value.toString)
-  implicit val intDeserializer: Deserializer[Int] = (plainText: PlainText) =>
-    Right(new String(plainText).toInt)
-  implicit val doubleSerializer: Serializer[Double] = (value: Double) =>
-    PlainText(value.toString)
-  implicit val doubleDeserializer: Deserializer[Double] = (plainText: PlainText) =>
-    Right(new String(plainText).toDouble)
-  implicit val booleanSerializer: Serializer[Boolean] = (value: Boolean) =>
-    PlainText(value.toString)
-  implicit val booleanDeserializer: Deserializer[Boolean] = (plainText: PlainText) =>
-    Right(new String (plainText).toBoolean)
-
+  implicit val stringSerializer: Serializer[String] = new Serializer[String] {
+    override def serialize(value: String) = PlainText(value)
+    override def deserialize(plainText: PlainText) = Right(new String(plainText).toString)
+  }
+  implicit val intSerializer: Serializer[Int] = new Serializer[Int] {
+    override def serialize(value: Int) = PlainText(value.toString)
+    override def deserialize(plainText: PlainText) = Right(new String(plainText).toInt)
+  }
+  implicit val doubleSerializer: Serializer[Double] = new Serializer[Double] {
+    override def serialize(value: Double) = PlainText(value.toString)
+    override def deserialize(plainText: PlainText) = Right(new String(plainText).toDouble)
+  }
+  implicit val booleanSerializer: Serializer[Boolean] = new Serializer[Boolean] {
+    override def serialize(value: Boolean) = PlainText(value.toString)
+    override def deserialize(plainText: PlainText) = Right(new String (plainText).toBoolean)
+  }
 }

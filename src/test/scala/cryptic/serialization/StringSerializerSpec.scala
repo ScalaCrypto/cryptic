@@ -10,7 +10,7 @@ class StringSerializerSpec extends FlatSpec with Matchers {
     stringSerializer.serialize("kalle") shouldEqual PlainText("kalle")
   }
   "String deserializer" should "decode to equal" in {
-    stringDeserializer.deserialize(PlainText("kalle")) shouldEqual Right("kalle")
+    stringSerializer.deserialize(PlainText("kalle")) shouldEqual Right("kalle")
   }
 
 

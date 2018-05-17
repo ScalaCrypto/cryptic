@@ -37,4 +37,10 @@ package object cryptic {
   object CipherText {
     def apply(x: Array[Byte]): CipherText = x
   }
+  trait Encrypt {
+    def apply(plainText: PlainText): CipherText
+  }
+  trait Decrypt {
+    def apply(cipherText: CipherText): Either[String, PlainText]
+  }
 }

@@ -1,29 +1,33 @@
 package cryptic
 
 import cryptic.PlainText._
+import cryptic.crypto.Caesar
 import org.scalatest._
+//import Predef.{$conforms => _}
 
 class CaesarSpec extends FlatSpec with Matchers {
-
-  val key1 = Caesar.Key(1)
+  import Caesar._
+  implicit val key1 = Caesar.Key(1)
 
   "Caesar Encryptor" should "encrypt to shifted string" in {
-    Caesar.encryptor(key1).encrypt(PlainText("kalle")) shouldEqual CipherText("lbmmf".getBytes())
+    Encrypted[String]("kalle") match {
+      case Encrypted.Value(cipherText) => cipherText shouldEqual CipherText("lbmmf".getBytes())
+      case _ => fail("bad encryption")
+    }
   }
   "Caesar Decryptor" should "decrypt to shifted string" in {
-    Caesar.decryptor(key1).decrypt(CipherText("lbmmf".getBytes())) map (_.toList) shouldEqual Right(PlainText("kalle").toList)
+    Encrypted[String](CipherText("lbmmf".getBytes())).decrypted shouldEqual Right("kalle")
   }
 
   "Caesar Encrypted" should "support encryption and decryption" in {
-    implicit val decryptor: Decryptor = Caesar.decryptor(key1)
-    encrypt(key1, "nisse").decrypted match {
+    Encrypted[String]("nisse").decrypted match {
       case Right(decrypted) ⇒ decrypted shouldEqual "nisse"
       case x ⇒ fail(s"does not decrypt: $x")
     }
   }
 
   "Caesar Encrypted" should "hide plaintext" in {
-    encrypt(key1, "nisse") match {
+    Encrypted[String]("nisse") match {
       case Encrypted.Value(ct) ⇒ new String(ct).contains("nisse")
       case _ ⇒ None
     }
@@ -33,10 +37,6 @@ class CaesarSpec extends FlatSpec with Matchers {
    assertThrows[IllegalArgumentException] { Caesar.Key(0) }
   }
 
-  private def encrypt(key: Caesar.Key, plain: String) = {
-    implicit val ce: Encryptor = Caesar.encryptor(key)
-    Encrypted[String](plain)
-  }
   /*
   def createUser: User = {
     implicit val key: Caesar.Key = Cryptos.key1

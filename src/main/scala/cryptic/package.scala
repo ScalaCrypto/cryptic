@@ -5,12 +5,12 @@ package object cryptic {
     def apply(x: Array[Byte]): PlainText = x
     def apply(x: String): PlainText = x.getBytes()
   }
-  def hash(plainText: PlainText):Hash = {
+  def hash(plainText: PlainText): Hash = {
     import java.security.MessageDigest
     val digest = MessageDigest.getInstance("SHA-256")
     digest.digest(plainText).toVector
   }
-  case class CipherText(hash:Hash)(val bytes:Array[Byte])
+  case class CipherText(hash: Hash)(val bytes: Array[Byte])
   trait Encrypt {
     def apply(plainText: PlainText): CipherText
   }

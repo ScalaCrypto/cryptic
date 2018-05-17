@@ -3,7 +3,8 @@ package cryptic
 import java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 
 import org.scalatest._
-import cryptic.serialization.{Name, PersonName}
+import serialization.{Name, PersonName}
+import syntax._
 
 class EncryptedSpec extends FlatSpec with Matchers {
   "Fst serializer" should "work when encrypting and decrypting" in {
@@ -15,7 +16,7 @@ class EncryptedSpec extends FlatSpec with Matchers {
     val keyPair: KeyPair = keyPairGenerator.genKeyPair
     implicit val publicKey: PublicKey = keyPair.getPublic
     implicit val privateKey: PrivateKey = keyPair.getPrivate
-    val e = Encrypted(PersonName(first = Name("Karl"), last = Name("Nilsson")))
+    val e = PersonName(first = Name("Karl"), last = Name("Nilsson")).encrypted
     val e2 = e.map(_.copy(last = Name("Andersson")))
     val e3 = e.filter(_.last != Name("Nilsson"))
     val e4 = e2.filter(_.last != Name("Nilsson"))

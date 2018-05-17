@@ -1,12 +1,13 @@
-package cryptic
+package cryptic.crypto
 
-import cryptic.PlainText._
-import cryptic.crypto.Caesar
+import cryptic.{CipherText, Encrypted, serialization}
 import org.scalatest._
 //import Predef.{$conforms => _}
 
 class CaesarSpec extends FlatSpec with Matchers {
+
   import Caesar._
+  import serialization.StringSerializer._
   implicit val key1 = Caesar.Key(1)
 
   "Caesar Encryptor" should "encrypt to shifted string" in {

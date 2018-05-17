@@ -14,13 +14,6 @@ class EncryptedSpec extends FlatSpec with Matchers {
     name: Encrypted[PersonName],
     email: Encrypted[EmailAddress])
 
-  "String serializer" should "encode to equal" in {
-    stringSerializer.serialize("kalle") shouldEqual PlainText("kalle")
-  }
-  "String deserializer" should "decode to equal" in {
-    stringDeserializer.deserialize(PlainText("kalle")) shouldEqual Right("kalle")
-  }
-
   /*
   def createUser: User = {
     implicit val key: Ceasar.Key = Cryptos.Ceasar.Key(1)

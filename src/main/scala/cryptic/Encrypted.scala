@@ -1,5 +1,6 @@
 package cryptic
 
+import syntax._
 import serialization.Serializer
 import scala.language.implicitConversions
 
@@ -7,9 +8,7 @@ sealed abstract class Encrypted[V: Serializer] {
   import Encrypted._
   def run(implicit encrypt: Encrypt, decrypt: Decrypt): Either[String, Encrypted[V]]
   def decrypted(implicit decrypt: Decrypt): Either[String, V]
-  def filter(pred: V => Boolean)(
-        implicit optionSerializer: Serializer[Option[V]]): Encrypted[Option[V]] =
-    Filtered(this, pred)
+  def filter(pred: V => Boolean): Encrypted[V] = Filtered(this, pred)
   def map[W: Serializer](f: V => W): Encrypted[W] = Mapped(this, f)
   def flatMap[W: Serializer](f: V => Encrypted[W]): Encrypted[W] = FlatMapped(this, f)
 }
@@ -18,9 +17,7 @@ object Encrypted {
   case object Empty extends Encrypted[Nothing] {
     override def run(implicit encrypt: Encrypt, decrypt: Decrypt) = Left("run called on empty")
     override def decrypted(implicit decrypt: Decrypt) = Left("decrypt called on empty")
-    override def filter(pred: Nothing => Boolean)(
-          implicit optionSerializer: Serializer[Option[Nothing]]): Encrypted[Option[Nothing]] =
-      empty
+    override def filter(pred: Nothing => Boolean): Encrypted[Nothing] = empty
     override def map[W: Serializer](f: Nothing => W): Encrypted[W] = empty
     override def flatMap[W: Serializer](f: Nothing => Encrypted[W]): Encrypted[W] = empty
   }
@@ -34,19 +31,12 @@ object Encrypted {
     else
       Value[V](encrypt(implicitly[Serializer[V]].serialize(value)))
   def apply[V: Serializer](cipherText: CipherText): Encrypted[V] = Value[V](cipherText)
-  final case class Filtered[V: Serializer](e: Encrypted[V], pred: V => Boolean)(
-        implicit optionSerializer: Serializer[Option[V]])
-      extends Encrypted[Option[V]] {
-    override def run(
-          implicit encrypt: Encrypt,
-          decrypt: Decrypt): Either[String, Encrypted[Option[V]]] =
-      decrypted.map(_.map(implicitly[Serializer[V]].serialize) match {
-        case Some(pt) =>
-          Value[Option[V]](encrypt(pt)) // TODO: This looks quite suspicious, will it fail at decryption?
-        case None => empty
-      })
-    override def decrypted(implicit decrypt: Decrypt): Either[String, Option[V]] =
-      e.decrypted.map(v => Option(v).filter(pred))
+  final case class Filtered[V: Serializer](e: Encrypted[V], pred: V => Boolean)
+      extends Encrypted[V] {
+    override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Either[String, Encrypted[V]] =
+      decrypted.map(_.encrypted)
+    override def decrypted(implicit decrypt: Decrypt): Either[String, V] =
+      e.decrypted.flatMap(v => if (pred(v)) Right(v) else Left("No such element"))
   }
   final case class Mapped[V, W: Serializer](e: Encrypted[V], f: V => W) extends Encrypted[W] {
     override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Either[String, Encrypted[W]] =

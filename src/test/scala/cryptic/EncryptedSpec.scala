@@ -22,7 +22,7 @@ class EncryptedSpec extends FlatSpec with Matchers {
     val e4 = e2.filter(_.last != Name("Nilsson"))
     e.decrypted shouldEqual Right(PersonName(first = Name("Karl"), last = Name("Nilsson")))
     e2.decrypted shouldEqual Right(PersonName(first = Name("Karl"), last = Name("Andersson")))
-    e3.decrypted shouldEqual Right(None)
-    e4.decrypted shouldEqual Right(Some(PersonName(first = Name("Karl"), last = Name("Andersson"))))
+    e3.decrypted shouldEqual Left("No such element")
+    e4.decrypted shouldEqual Right(PersonName(first = Name("Karl"), last = Name("Andersson")))
   }
 }

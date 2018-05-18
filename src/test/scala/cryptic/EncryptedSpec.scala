@@ -35,7 +35,7 @@ class EncryptedSpec extends FlatSpec with Matchers {
 
     case class Foo(clear: String, secret: Encrypted[String])
     val foo = Foo("clear", "secret".encrypted)
-    foo.secret.bytes match {
+    foo.secret.run.map(_.bytes) match {
       case Right(bytes) ⇒ bytes.toVector shouldEqual Vector(116, 101, 114, 99, 101, 115, 6, -4)
       case _ ⇒ fail("Could not get encrypted bytes")
     }

@@ -11,6 +11,9 @@ package object cryptic {
     digest.digest(plainText).toVector
   }
   case class CipherText(hash: Hash)(val bytes: Array[Byte])
+  object CipherText {
+    val Empty: CipherText = CipherText(Vector.empty)(Array.emptyByteArray)
+  }
   trait Encrypt {
     def apply(plainText: PlainText): CipherText
   }

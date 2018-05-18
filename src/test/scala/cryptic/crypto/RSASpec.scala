@@ -8,15 +8,10 @@ import org.scalatest._
 
 class RSASpec extends FlatSpec with Matchers {
 
-  import java.security.KeyPairGenerator
-
   import RSA._
   import StringSerializer._
 
-  val keySize = 2048
-  val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance("RSA")
-  keyPairGenerator.initialize(keySize)
-  private val keyPair: KeyPair = keyPairGenerator.genKeyPair
+  private val keyPair: KeyPair = keygen(2048)
   implicit val publicKey: PublicKey = keyPair.getPublic
 
   "RSA Encrypted" should "support encryption and decryption" in {

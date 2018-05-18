@@ -1,8 +1,9 @@
 package cryptic
 package crypto
-  import javax.crypto.Cipher
 
-import java.security.{PrivateKey, PublicKey}
+import java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
+
+import javax.crypto.Cipher
 
 object RSA {
 
@@ -16,5 +17,11 @@ object RSA {
   implicit def decrypt(implicit key: PrivateKey): Decrypt = (cipherText: CipherText) => {
     cipher.init(Cipher.DECRYPT_MODE, key)
     Right[String, PlainText](PlainText(cipher.doFinal(cipherText.bytes)))
+  }
+
+  def keygen(size: Int): KeyPair = {
+    val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance("RSA")
+    keyPairGenerator.initialize(size)
+    keyPairGenerator.genKeyPair
   }
 }

@@ -11,6 +11,10 @@ sealed abstract class Encrypted[V: Serializer] {
   def filter(pred: V => Boolean): Encrypted[V] = Filtered(this, pred)
   def map[W: Serializer](f: V => W): Encrypted[W] = Mapped(this, f)
   def flatMap[W: Serializer](f: V => Encrypted[W]): Encrypted[W] = FlatMapped(this, f)
+  def bytes:Either[String, Array[Byte]] = this match {
+    case Encrypted.Value(cipherText) ⇒ Right(cipherText.bytes)
+    case _ ⇒ Left("Pending operations")
+  }
 }
 object Encrypted {
   def empty[V]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]

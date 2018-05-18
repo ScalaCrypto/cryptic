@@ -11,4 +11,6 @@ object Caesar{
   }
   implicit def decrypt(implicit key: Key): Decrypt = (cipherText: CipherText) =>
     Right[String, PlainText](PlainText(cipherText.bytes.map(b => (b - key.offset).toByte)))
+
+  def keygen(offset:Int): Key = Key(offset)
 }

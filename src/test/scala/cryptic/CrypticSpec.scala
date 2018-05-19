@@ -7,7 +7,7 @@ import cryptic.serialization.{Name, PersonName}
 import cryptic.syntax._
 import org.scalatest._
 
-class EncryptingSpec extends FlatSpec with Matchers with EitherValues {
+class CrypticSpec extends FlatSpec with Matchers with EitherValues {
   "Fst serializer" should "work when encrypting and decrypting" in {
     import crypto.RSA._
     import serialization.FstSerializer._
@@ -45,10 +45,10 @@ class EncryptingSpec extends FlatSpec with Matchers with EitherValues {
 //    import crypto.RSA._
     val keyPair = RSA.keygen(512)
     import serialization.StringSerializer._
-    val encrypted: Encrypting[String] = "secret".encrypted(RSA.encrypt(keyPair.getPublic))
+    val encrypted: Cryptic[String] = "secret".encrypted(RSA.encrypt(keyPair.getPublic))
 //    encrypted.run.runned.bytes.length shouldEqual 64
 //    encrypted.run // We don't need a decryption implicit if we're a Value
-    val upper = encrypted map (s ⇒ s.toUpperCase)
+    val upper = encrypted.map(s ⇒ s.toUpperCase)
 //    upper.
 //    upper.run
 //    upper.bytesE.left.value shouldBe "Pending operations"

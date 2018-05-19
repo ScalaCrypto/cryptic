@@ -3,13 +3,13 @@ package crypto
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
 
-import cryptic.serialization.FstSerializer
+import cryptic.serialization.Fst
 import org.scalatest._
 
 class RSASpec extends FlatSpec with Matchers {
 
   import RSA._
-  import FstSerializer._
+  import Fst._
 
   private val keyPair: KeyPair = keygen(2048)
   implicit val publicKey: PublicKey = keyPair.getPublic

@@ -10,7 +10,7 @@ import org.scalatest._
 class CrypticSpec extends FlatSpec with Matchers with EitherValues {
   "Fst serializer" should "work when encrypting and decrypting" in {
     import crypto.RSA._
-    import serialization.FstSerializer._
+    import serialization.Fst._
     val keySize = 2048
     val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance("RSA")
     keyPairGenerator.initialize(keySize)
@@ -29,7 +29,7 @@ class CrypticSpec extends FlatSpec with Matchers with EitherValues {
 
   "Case class with encrypted members" should "encrypt and decrypt" in {
     // Serializer that handles case classes
-    import serialization.FstSerializer._
+    import serialization.Fst._
     //    import crypto.Caesar._
     //    implicit val key: Key = keygen(1)
     import crypto.Reverse._
@@ -41,17 +41,8 @@ class CrypticSpec extends FlatSpec with Matchers with EitherValues {
     foo.secret.decrypted shouldEqual Right("secret")
   }
 
-  "Encrypted run" should "be possible without encrypt/decrypt" in {
-//    import crypto.RSA._
-    val keyPair = RSA.keygen(512)
-    import serialization.StringSerializer._
-    val encrypted: Cryptic[String] = "secret".encrypted(RSA.encrypt(keyPair.getPublic))
-//    encrypted.run.runned.bytes.length shouldEqual 64
-//    encrypted.run // We don't need a decryption implicit if we're a Value
-    val upper = encrypted.map(s ⇒ s.toUpperCase)
-//    upper.
-//    upper.run
-//    upper.bytesE.left.value shouldBe "Pending operations"
-    //    upper.run.right.value.bytes shouldBe bytes.map(_ - 32)
+  "Encrypted bytes" should "be callable without encrypt/decrypt in scope" in {
+    e: Encrypted[String] =>
+      e.bytes
   }
 }

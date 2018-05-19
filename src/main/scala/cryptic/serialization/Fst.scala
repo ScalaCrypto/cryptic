@@ -3,7 +3,7 @@ package serialization
 
 import org.nustaq.serialization.FSTConfiguration
 
-object FstSerializer {
+object Fst {
   val fst = FSTConfiguration.createDefaultConfiguration()
   implicit def serializer[V]: Serializer[V] = new Serializer[V] {
     override def serialize(value: V) = PlainText(fst.asByteArray(value))

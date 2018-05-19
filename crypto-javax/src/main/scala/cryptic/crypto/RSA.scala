@@ -2,7 +2,6 @@ package cryptic
 package crypto
 
 import java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
-
 import javax.crypto.Cipher
 
 object RSA {

@@ -1,8 +1,6 @@
 package cryptic
 package serialization
 
-import java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
-import cryptic.crypto.Caesar
 import org.scalatest._
 
 case class Name(literal: String)
@@ -22,10 +20,10 @@ class FstSpec extends FlatSpec with Matchers {
 
   "Fst serializer" should "serialize user and deserialize back to original user" in {
     val user = User(
-      1,
-      "kalle",
-      PersonName(first = Name("Karl"), last = Name("Nilsson")),
-      EmailAddress("kalle@nilsson.se"))
+      id = 1,
+      alias = "kalle",
+      name = PersonName(first = Name("Karl"), last = Name("Nilsson")),
+      email = EmailAddress("kalle@nilsson.se"))
     val pt = serializer.serialize(user)
     val o = serializer.deserialize(pt)
     o shouldEqual Right(user)

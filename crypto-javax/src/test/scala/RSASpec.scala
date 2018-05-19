@@ -3,8 +3,8 @@ package crypto
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
 
-import cryptic.serialization.Fst
 import org.scalatest._
+import serialization.Fst
 
 class RSASpec extends FlatSpec with Matchers {
 

@@ -4,14 +4,15 @@ package crypto
 import javax.crypto.{Cipher, SecretKey}
 
 object AES {
-  def apply() : AES = new AES("CBC/PKCS5Padding")
+  def apply(): AES = new AES("CBC/PKCS5Padding")
 }
-  /**
-    *
-    * @param transformation without leading AES
-    * @return
-    */
-class AES(transformation:String) {
+
+/**
+  *
+  * @param transformation without leading AES
+  * @return
+  */
+class AES(transformation: String) {
   val cipher: Cipher = Cipher.getInstance(s"AES/$transformation")
 
   implicit def encrypt(implicit key: SecretKey): Encrypt = (plainText: PlainText) => {
@@ -20,7 +21,6 @@ class AES(transformation:String) {
   }
 
   implicit def decrypt(implicit key: SecretKey): Decrypt = (cipherText: CipherText) => {
-    import javax.crypto.spec.IvParameterSpec
 //    val encoded = key.getEncoded
 //    val ivParameterSpec = new IvParameterSpec(encoded)
     cipher.init(Cipher.DECRYPT_MODE, key)

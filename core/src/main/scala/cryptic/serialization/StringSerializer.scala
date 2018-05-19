@@ -1,8 +1,6 @@
 package cryptic
 package serialization
 
-import cryptic.PlainText
-
 /**
   * Very inefficient, use a proper serializer.
   */

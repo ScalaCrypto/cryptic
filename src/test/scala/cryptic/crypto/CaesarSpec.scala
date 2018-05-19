@@ -10,15 +10,15 @@ class CaesarSpec extends FlatSpec with Matchers {
   implicit val key1: Key = Caesar.Key(1)
 
   "Caesar Encrypted" should "support encryption and decryption" in {
-    Encrypted[String]("nisse").decrypted match {
+    Encrypted("nisse").decrypted match {
       case Right(decrypted) ⇒ decrypted shouldEqual "nisse"
       case x ⇒ fail(s"does not decrypt: $x")
     }
   }
 
   "Caesar Encrypted" should "hide plaintext" in {
-    Encrypted[String]("nisse") match {
-      case Encrypted.Value(ct) ⇒ new String(ct.bytes).contains("nisse")
+    Encrypted("nisse") match {
+      case Encrypted(ct) ⇒ new String(ct.bytes).contains("nisse")
       case _ ⇒ None
     }
   }

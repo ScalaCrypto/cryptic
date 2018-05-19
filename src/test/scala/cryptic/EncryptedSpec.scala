@@ -2,11 +2,12 @@ package cryptic
 
 import java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 
+import cryptic.crypto.RSA
 import cryptic.serialization.{Name, PersonName}
 import cryptic.syntax._
 import org.scalatest._
 
-class EncryptedSpec extends FlatSpec with Matchers {
+class EncryptedSpec extends FlatSpec with Matchers with EitherValues {
   "Fst serializer" should "work when encrypting and decrypting" in {
     import crypto.RSA._
     import serialization.FstSerializer._
@@ -36,10 +37,24 @@ class EncryptedSpec extends FlatSpec with Matchers {
     case class Foo(clear: String, secret: Encrypted[String])
     val foo = Foo("clear", "secret".encrypted)
     foo.secret.run.map(_.bytes) match {
-      case Right(bytes) ⇒ bytes.toVector shouldEqual Vector(116, 101, 114, 99, 101, 115, 6, -4)
+      case Right(bytes) ⇒ bytes shouldEqual Array(116, 101, 114, 99, 101, 115, 6, -4)
       case _ ⇒ fail("Could not get encrypted bytes")
     }
     // Only need decryption function when decrypting
     foo.secret.decrypted shouldEqual Right("secret")
+  }
+
+  "Encrypted run" should "be possible without encrypt/decrypt" in {
+//    import crypto.RSA._
+    val keyPair = RSA.keygen(512)
+    import serialization.StringSerializer._
+    val encrypted: Encrypted[String] = "secret".encrypted(RSA.encrypt(keyPair.getPublic))
+//    encrypted.run.runned.bytes.length shouldEqual 64
+    encrypted.run // We don't need a decryption implicit if we're a Value
+    val upper = encrypted map (s ⇒ s.toUpperCase)
+//    upper.
+//    upper.run
+//    upper.bytesE.left.value shouldBe "Pending operations"
+    //    upper.run.right.value.bytes shouldBe bytes.map(_ - 32)
   }
 }

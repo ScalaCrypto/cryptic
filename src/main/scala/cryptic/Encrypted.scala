@@ -15,11 +15,10 @@ sealed abstract class Encrypted[V: Serializer] {
 object Encrypted {
   def apply[V: Serializer](value: V)(implicit encrypt: Encrypt): Value[V] =
     if (value == null) empty
-    else
-      Value[V](encrypt(implicitly[Serializer[V]].serialize(value)))
+    else Value[V](encrypt(implicitly[Serializer[V]].serialize(value)))
   def apply[V: Serializer](cipherText: CipherText): Encrypted[V] = Value[V](cipherText)
   case class Value[V: Serializer](cipherText: CipherText) extends Encrypted[V] {
-    override def run(implicit encrypt: Encrypt, decrypt: Decrypt) = Right(this)
+    override def run(implicit encrypt: Encrypt = Encrypt.Empty, decrypt: Decrypt= Decrypt.Empty) = Right(this)
     override def decrypted(implicit decrypt: Decrypt): Either[String, V] =
       decrypt(cipherText).flatMap(implicitly[Serializer[V]].deserialize)
     def bytes: Array[Byte] = cipherText.bytes
@@ -42,16 +41,16 @@ object Encrypted {
     override def decrypted(implicit decrypt: Decrypt): Either[String, V] =
       src.decrypted.flatMap(v => if (pred(v)) Right(v) else Left("No such element"))
   }
-  final case class Mapped[V, W: Serializer](e: Encrypted[V], f: V => W) extends Encrypted[W] {
+  final case class Mapped[V, W: Serializer](src: Encrypted[V], f: V => W) extends Encrypted[W] {
     override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Either[String, Value[W]] =
       decrypted.map(w => Value(encrypt(implicitly[Serializer[W]].serialize(w))))
-    override def decrypted(implicit decrypt: Decrypt): Either[String, W] = e.decrypted.map(f)
+    override def decrypted(implicit decrypt: Decrypt): Either[String, W] = src.decrypted.map(f)
+    def bytes(implicit encrypt: Encrypt, decrypt: Decrypt): Either[String, Array[Byte]] = run(encrypt, decrypt).map(_.bytes)
   }
-  final case class FlatMapped[V, W: Serializer](e: Encrypted[V], f: V => Encrypted[W])
-      extends Encrypted[W] {
+  final case class FlatMapped[V, W: Serializer](src: Encrypted[V], f: V => Encrypted[W]) extends Encrypted[W] {
     override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Either[String, Value[W]] =
       decrypted.map(w => Value(encrypt(implicitly[Serializer[W]].serialize(w))))
     override def decrypted(implicit decrypt: Decrypt): Either[String, W] =
-      e.decrypted.flatMap[String, W](v => f(v).decrypted)
+      src.decrypted.flatMap[String, W](v => f(v).decrypted)
   }
 }

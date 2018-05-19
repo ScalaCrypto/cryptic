@@ -34,12 +34,9 @@ class EncryptedSpec extends FlatSpec with Matchers with EitherValues {
     //    implicit val key: Key = keygen(1)
     import crypto.Reverse._
 
-    case class Foo(clear: String, secret: Encrypted[String])
+    case class Foo(clear: String, secret: Encrypted.Value[String])
     val foo = Foo("clear", "secret".encrypted)
-    foo.secret.run.map(_.bytes) match {
-      case Right(bytes) ⇒ bytes shouldEqual Array(116, 101, 114, 99, 101, 115, 6, -4)
-      case _ ⇒ fail("Could not get encrypted bytes")
-    }
+    foo.secret.bytes shouldEqual Array(116, 101, 114, 99, 101, 115, 6, -4)
     // Only need decryption function when decrypting
     foo.secret.decrypted shouldEqual Right("secret")
   }
@@ -50,7 +47,7 @@ class EncryptedSpec extends FlatSpec with Matchers with EitherValues {
     import serialization.StringSerializer._
     val encrypted: Encrypted[String] = "secret".encrypted(RSA.encrypt(keyPair.getPublic))
 //    encrypted.run.runned.bytes.length shouldEqual 64
-    encrypted.run // We don't need a decryption implicit if we're a Value
+//    encrypted.run // We don't need a decryption implicit if we're a Value
     val upper = encrypted map (s ⇒ s.toUpperCase)
 //    upper.
 //    upper.run

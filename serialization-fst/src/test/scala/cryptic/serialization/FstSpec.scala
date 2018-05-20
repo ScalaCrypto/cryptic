@@ -28,5 +28,4 @@ class FstSpec extends FlatSpec with Matchers {
     val o = serializer.deserialize(pt)
     o shouldEqual Right(user)
   }
-
 }

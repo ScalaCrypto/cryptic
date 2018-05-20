@@ -9,7 +9,9 @@ lazy val cryptic = (project in file(".")).
       scalaVersion := "2.12.5",
       version      := "0.2.0-SNAPSHOT"
     )),
-    name := "cryptic").
+    name := "cryptic",
+    paradoxProperties in Compile ++= Map(
+      "github.base_url" -> s"https://github.com/ScalaCrypto/cryptic/tree/${version.value}")).
   aggregate(core, `serialization-fst`, `crypto-javax`)
 
 lazy val core = (project in file("core")).

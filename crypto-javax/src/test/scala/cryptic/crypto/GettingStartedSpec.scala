@@ -12,10 +12,10 @@ class GettingStartedSpec extends FlatSpec with Matchers {
 
   "Getting started guide" should "work" in {
     {
-      // #import-1
+      // #import
       import cryptic._
       import cryptic.syntax._
-      // #import-1
+      // #import
     }
 
     val key = {

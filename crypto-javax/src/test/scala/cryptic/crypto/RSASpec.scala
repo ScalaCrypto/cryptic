@@ -10,7 +10,7 @@ class RSASpec extends FlatSpec with Matchers {
 
   import RSA._
   import Fst._
-  
+
   private val keyPair: KeyPair = keygen(2048)
   implicit val publicKey: PublicKey = keyPair.getPublic
 

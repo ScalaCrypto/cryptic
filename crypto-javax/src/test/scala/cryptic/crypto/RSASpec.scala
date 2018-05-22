@@ -4,43 +4,33 @@ package crypto
 import java.security.{KeyPair, PrivateKey, PublicKey}
 
 import org.scalatest._
-import serialization.Fst
 
 class RSASpec extends FlatSpec with Matchers {
 
   import RSA._
-  import Fst._
 
   private val keyPair: KeyPair = keygen(2048)
   implicit val publicKey: PublicKey = keyPair.getPublic
+  private val plainText = PlainText("nisse")
+  val encryptFun: Encrypt = encrypt // Uses implicit key
 
-  "RSA Encrypted" should "support encryption and decryption" in {
-    val encrypted = Encrypted("nisse")
+  "RSA" should "support encryption and decryption" in {
+    val encrypted = encryptFun(plainText)
+
     implicit val privateKey: PrivateKey = keyPair.getPrivate
-    encrypted.decrypted match {
-      case Right(decrypted) ⇒ decrypted shouldEqual "nisse"
+    val decryptFun: Decrypt = decrypt // Uses implicit key
+    decryptFun(encrypted) match {
+      case Right(actual) ⇒ actual shouldEqual plainText
       case x ⇒ fail(s"does not decrypt: $x")
     }
   }
 
-  "RSA Encrypted" should "hide plaintext" in {
+  "RSA" should "hide plaintext" in {
     // Note no need for the private key when encrypting
-    Encrypted("nisse") match {
-      case Encrypted(ct) ⇒ new String(ct.bytes).contains("nisse")
+    encryptFun(plainText) match {
+      case ct:CipherText ⇒ new String(ct.bytes).contains("nisse".getBytes())
       case _ ⇒ None
     }
-  }
-
-  "RSA" should "same value should be equal in encrypted space without decryption key" in {
-    val enc1 = Encrypted("nisse")
-    val enc2 = Encrypted("nisse")
-    enc1 shouldEqual enc2
-  }
-
-  "RSA" should "different values should no be equal" in {
-    val enc1 = Encrypted("nisse")
-    val enc2 = Encrypted("kalle")
-    (enc1 == enc2) shouldBe false
   }
 
 }

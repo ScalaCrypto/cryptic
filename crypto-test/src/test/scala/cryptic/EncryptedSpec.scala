@@ -15,6 +15,11 @@ class EncryptedSpec extends FlatSpec with Matchers with EitherValues {
     // Only need decryption function when decrypting
     foo.secret.decrypted shouldEqual Right("secret")
   }
+  "Pending operations " should " be ran when decrypting" in {
+    val encrypted: Encrypted[String] = "secret".encrypted
+    val pending: Cryptic[String] = encrypted.map(_.toUpperCase)
+    pending.decrypted shouldEqual Right("SECRET")
+  }
   "Encrypted" should "have same value in encrypted space equal without decryption key" in {
     val enc1 = Encrypted("nisse")
     val enc2 = Encrypted("nisse")

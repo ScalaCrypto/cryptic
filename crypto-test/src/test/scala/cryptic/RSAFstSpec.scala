@@ -40,4 +40,30 @@ class RSAFstSpec extends FlatSpec with Matchers with EitherValues {
     val enc2 = Encrypted("kalle")
     (enc1 == enc2) shouldBe false
   }
+  "Pending operations " should " be ran when decrypting" in {
+    implicit val publicKey: PublicKey = keyPair.getPublic
+    val encrypted: Encrypted[String] = "secret".encrypted
+    val pending: Cryptic[String] = encrypted.map(_.toUpperCase)
+    implicit val privateKey: PrivateKey = keyPair.getPrivate
+    pending.decrypted shouldEqual Right("SECRET")
+  }
+  "Filter" should "filter" in {
+    implicit val publicKey: PublicKey = keyPair.getPublic
+    val encrypted: Encrypted[String] = "secret".encrypted
+    implicit val privateKey: PrivateKey = keyPair.getPrivate
+    encrypted.filter(_ != "secret").decrypted shouldEqual Left("decrypted called on filtered empty")
+    encrypted.filter(_ == "secret").decrypted shouldEqual Right("secret")
+  }
+  "Map" should "map" in {
+    implicit val publicKey: PublicKey = keyPair.getPublic
+    val encrypted: Encrypted[String] = "secret".encrypted
+    implicit val privateKey: PrivateKey = keyPair.getPrivate
+    encrypted.map(_.toUpperCase).decrypted shouldEqual Right("SECRET")
+  }
+  "Flatmap" should "flatmap" in {
+    implicit val publicKey: PublicKey = keyPair.getPublic
+    val encrypted: Encrypted[String] = "secret".encrypted
+    implicit val privateKey: PrivateKey = keyPair.getPrivate
+    encrypted.flatMap(_.toUpperCase.encrypted).decrypted shouldEqual Right("SECRET")
+  }
 }

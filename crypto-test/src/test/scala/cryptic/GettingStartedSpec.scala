@@ -1,9 +1,9 @@
 package cryptic
-package crypto
 
 import org.scalatest._
 
 // #data-types
+
 case class EmailAddress(literal: String)
 case class User(id: Long, email: Encrypted[EmailAddress])
 // #data-types

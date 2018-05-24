@@ -7,7 +7,7 @@ object Caesar {
   }
   implicit def encrypt(implicit key: Key): Encrypt = (plainText: PlainText) => {
     val bytes = plainText.map(b ⇒ (b + key.offset).toByte)
-    CipherText(hash(bytes))(bytes)
+    CipherText(bytes)
   }
   implicit def decrypt(implicit key: Key): Decrypt = (cipherText: CipherText) =>
     Right[String, PlainText](PlainText(cipherText.bytes.map(b => (b - key.offset).toByte)))

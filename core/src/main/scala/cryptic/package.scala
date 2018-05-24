@@ -11,9 +11,15 @@ package object cryptic {
     val digest = MessageDigest.getInstance("SHA-256")
     digest.digest(plainText).toVector
   }
-  case class CipherText(hash: Hash)(val bytes: Array[Byte])
+  case class CipherText(bytes: Array[Byte]) {
+    override def equals(obj: scala.Any): Boolean = obj match {
+      case CipherText(other) ⇒ bytes.sameElements(other)
+      case _ ⇒ false
+    }
+    override def toString: String = s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
+  }
   object CipherText {
-    val Empty: CipherText = CipherText(Vector.empty)(Array.emptyByteArray)
+    val Empty: CipherText = CipherText(Array.emptyByteArray)
   }
   object Encrypt {
     val Empty: Encrypt = _ ⇒ CipherText.Empty

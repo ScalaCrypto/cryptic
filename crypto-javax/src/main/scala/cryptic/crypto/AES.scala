@@ -17,7 +17,7 @@ class AES(transformation: String) {
 
   implicit def encrypt(implicit key: SecretKey): Encrypt = (plainText: PlainText) => {
     cipher.init(Cipher.ENCRYPT_MODE, key)
-    CipherText(hash(plainText))(cipher.doFinal(plainText))
+    CipherText(cipher.doFinal(plainText))
   }
 
   implicit def decrypt(implicit key: SecretKey): Decrypt = (cipherText: CipherText) => {

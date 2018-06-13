@@ -10,6 +10,7 @@ lazy val cryptic = (project in file(".")).
       version := "0.2.0-SNAPSHOT"
     )),
     name := "cryptic",
+    paradoxTheme := Some(builtinParadoxTheme("generic")),
     paradoxProperties in Compile ++= Map(
       "github.base_url" -> s"https://github.com/ScalaCrypto/cryptic/tree/${version.value}"))
   .aggregate(core, `serialization-fst`, `crypto-javax`, `crypto-test`)

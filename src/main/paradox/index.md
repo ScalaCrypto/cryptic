@@ -3,6 +3,9 @@ Keeps your secrets
 
 ## Getting started
 Add dependecy on core and your chosen serialization and crypto providers to your build.sbt file:
+@@dependency[sbt,Maven,Gradle] { group="scalacrypto" artifact="cryptic-core$scala.binary_version$" version="$version$" }
+
+Static:
 ```scala
 libraryDependencies ++= Seq(
   "scalacrypto" %% "cryptic-core" % "0.2.0-SNAPSHOT",
@@ -12,23 +15,23 @@ libraryDependencies ++= Seq(
 ```
 
 Import base package and syntax extension:
-@@snip [GettingStartedSpec.scala](../../../crypto-javax/src/test/scala/cryptic/crypto/GettingStartedSpec.scala) { #import }
+@@snip [GettingStartedSpec.scala](../../../crypto-test/src/test/scala/cryptic/GettingStartedSpec.scala) { #import }
 
 Define your data types:
-@@snip [GettingStartedSpec.scala](../../../crypto-javax/src/test/scala/cryptic/crypto/GettingStartedSpec.scala) { #data-types }
+@@snip [GettingStartedSpec.scala](../../../crypto-test/src/test/scala/cryptic/GettingStartedSpec.scala) { #data-types }
 
 Encrypt your data using convenient syntax (a crypto and a serializer must be available):
-@@snip [GettingStartedSpec.scala](../../../crypto-javax/src/test/scala/cryptic/crypto/GettingStartedSpec.scala) { #encrypt }
+@@snip [GettingStartedSpec.scala](../../../crypto-test/src/test/scala/cryptic/GettingStartedSpec.scala) { #encrypt }
 
 Access your data in encrypted form (can be done without crypto/serializer):
-@@snip [GettingStartedSpec.scala](../../../crypto-javax/src/test/scala/cryptic/crypto/GettingStartedSpec.scala) { #access }
+@@snip [GettingStartedSpec.scala](../../../crypto-test/src/test/scala/cryptic/GettingStartedSpec.scala) { #access }
 
 Transform your data (can be done without crypto/serializer):
-@@snip [GettingStartedSpec.scala](../../../crypto-javax/src/test/scala/cryptic/crypto/GettingStartedSpec.scala) { #transform }
+@@snip [GettingStartedSpec.scala](../../../crypto-test/src/test/scala/cryptic/GettingStartedSpec.scala) { #transform }
 
 Run your staged transformations (a crypto and a serializer must be available):
-@@snip [GettingStartedSpec.scala](../../../crypto-javax/src/test/scala/cryptic/crypto/GettingStartedSpec.scala) { #run }
+@@snip [GettingStartedSpec.scala](../../../crypto-test/src/test/scala/cryptic/GettingStartedSpec.scala) { #run }
 
 Decrypt your transformed data (a crypto and a serializer must be available):
-@@snip [GettingStartedSpec.scala](../../../crypto-javax/src/test/scala/cryptic/crypto/GettingStartedSpec.scala) { #decrypt }
+@@snip [GettingStartedSpec.scala](../../../crypto-test/src/test/scala/cryptic/GettingStartedSpec.scala) { #decrypt }
 

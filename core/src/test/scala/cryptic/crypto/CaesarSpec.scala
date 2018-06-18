@@ -18,7 +18,7 @@ class CaesarSpec extends FlatSpec with Matchers {
 
   "Caesar Encrypted" should "hide plaintext" in {
     Encrypted("nisse") match {
-      case Encrypted(ct) ⇒ new String(ct.bytes).contains("nisse")
+      case Encrypted(cipherText) ⇒ new String(cipherText.bytes).contains("nisse")
       case _ ⇒ None
     }
   }

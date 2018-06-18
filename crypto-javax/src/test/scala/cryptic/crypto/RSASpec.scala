@@ -6,9 +6,7 @@ import java.security.{KeyPair, PrivateKey, PublicKey}
 import org.scalatest._
 
 class RSASpec extends FlatSpec with Matchers {
-
   import RSA._
-
   private val keyPair: KeyPair = keygen(2048)
   implicit val publicKey: PublicKey = keyPair.getPublic
   private val plainText = PlainText("nisse")

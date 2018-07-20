@@ -19,14 +19,12 @@ object AES {
   case class Salt(bytes: Array[Byte]) extends AnyVal {
     def length: Int = bytes.length
   }
-  case class AESPassword(value: String) extends AnyVal {
+  case class AESPassphrase(value: String) extends AnyVal {
     def bytes: Array[Byte] = value.getBytes
   }
   private def newCipher(implicit aesParams: AESParams): Cipher = Cipher.getInstance(s"$keyAlgorithm/${aesParams.mode}")
 
-  implicit def encrypt(implicit password: AESPassword, aesParams: AESParams): Encrypt = (plainText: PlainText) => {
-    import javax.crypto.Cipher
-    import javax.crypto.spec.IvParameterSpec
+  implicit def encrypt(implicit password: AESPassphrase, aesParams: AESParams): Encrypt = (plainText: PlainText) => {
     val salt = generateSalt(aesParams.saltLength)
     val key = keygen(password, salt)
     val cipher = newCipher(aesParams)
@@ -45,7 +43,7 @@ object AES {
     CipherText(buffer.array())
   }
 
-  implicit def decrypt(implicit password: AESPassword, aesParams: AESParams): Decrypt = (cipherText: CipherText) => {
+  implicit def decrypt(implicit password: AESPassphrase, aesParams: AESParams): Decrypt = (cipherText: CipherText) => {
     val buffer = ByteBuffer.wrap(cipherText.bytes)
     def getNextBytes = {
       val nextBuffer = new Array[Byte](buffer.getInt())
@@ -61,7 +59,7 @@ object AES {
     Right[String, PlainText](PlainText(cipher.doFinal(text)))
   }
 
-  def keygen(password: AESPassword, salt: Salt)(implicit aesParams: AESParams): SecretKey = {
+  def keygen(password: AESPassphrase, salt: Salt)(implicit aesParams: AESParams): SecretKey = {
     val factory = SecretKeyFactory.getInstance(aesParams.factoryAlgorithm)
     val keySpec = new PBEKeySpec(password.value.toCharArray, salt.bytes, aesParams.keyspecIterationCount, aesParams.keyspecLength)
     new SecretKeySpec(factory.generateSecret(keySpec).getEncoded, keyAlgorithm)

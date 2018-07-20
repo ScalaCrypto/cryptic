@@ -6,8 +6,7 @@ import org.scalatest._
 class AESSpec extends FlatSpec with Matchers {
   import AES._
   implicit private val params: AESParams = AESParams()
-  implicit private val password: AESPassword = AESPassword("secret")
-  println(s"secretKey:$password")
+  implicit private val password: AESPassphrase = AESPassphrase("secret")
   private val plainText = PlainText("nisse")
   val encryptFun: Encrypt = encrypt // Uses implicit key
 

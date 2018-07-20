@@ -6,7 +6,7 @@ lazy val cryptic = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "ScalaCrypto",
-      scalaVersion := "2.12.5",
+      scalaVersion := "2.12.6",
       version := "0.2.0-SNAPSHOT"
     )),
     name := "cryptic",

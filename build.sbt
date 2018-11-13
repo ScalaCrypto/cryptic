@@ -35,9 +35,18 @@ lazy val `crypto-javax` = (project in file("crypto-javax")).
   )
   .dependsOn(core)
 
+lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle")).
+  settings(
+    name := "crypto-bouncycastle",
+    libraryDependencies ++= Seq(
+      "org.bouncycastle" % "bcprov-jdk15on" % "1.60",
+      scalaTest % Test)
+  )
+  .dependsOn(core)
+
 lazy val `crypto-test` = (project in file("crypto-test")).
   settings(
     name := "crypto-test",
     libraryDependencies ++= Seq(scalaTest % Test)
   )
-  .dependsOn(core, `serialization-fst`, `crypto-javax`)
+  .dependsOn(core, `serialization-fst`, `crypto-bouncycastle`, `crypto-javax`)

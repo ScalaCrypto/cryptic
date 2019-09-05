@@ -7,4 +7,6 @@ class AESFstSpec extends FstSpecBase {
   implicit val aesParams: AESParams = AESParams()
   val encrypt: Encrypt = AES.encrypt
   override val decrypt: Decrypt = AES.decrypt
+  override def toString: String = "AESFst"
+
 }

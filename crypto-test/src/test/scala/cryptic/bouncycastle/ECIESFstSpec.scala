@@ -1,5 +1,4 @@
 package cryptic.bouncycastle
-
 import java.security.{KeyPair, PrivateKey, PublicKey}
 
 import cryptic.crypto.ECIES

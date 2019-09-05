@@ -6,8 +6,8 @@ lazy val cryptic = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "ScalaCrypto",
-      scalaVersion := "2.12.6",
-      version := "0.2.0-SNAPSHOT"
+      scalaVersion := "2.13.0",
+      version := "0.3.0-SNAPSHOT"
     )),
     name := "cryptic",
     paradoxTheme := Some(builtinParadoxTheme("generic")),

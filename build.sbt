@@ -6,8 +6,8 @@ lazy val cryptic = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "ScalaCrypto",
-      scalaVersion := "2.12.6",
-      version := "0.2.0-SNAPSHOT"
+      scalaVersion := "2.13.0",
+      version := "0.3.0-SNAPSHOT"
     )),
     name := "cryptic",
     paradoxTheme := Some(builtinParadoxTheme("generic")),
@@ -35,9 +35,18 @@ lazy val `crypto-javax` = (project in file("crypto-javax")).
   )
   .dependsOn(core)
 
+lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle")).
+  settings(
+    name := "crypto-bouncycastle",
+    libraryDependencies ++= Seq(
+      "org.bouncycastle" % "bcprov-jdk15on" % "1.60",
+      scalaTest % Test)
+  )
+  .dependsOn(core)
+
 lazy val `crypto-test` = (project in file("crypto-test")).
   settings(
     name := "crypto-test",
     libraryDependencies ++= Seq(scalaTest % Test)
   )
-  .dependsOn(core, `serialization-fst`, `crypto-javax`)
+  .dependsOn(core, `serialization-fst`, `crypto-bouncycastle`, `crypto-javax`)

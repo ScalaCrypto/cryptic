@@ -1,8 +1,10 @@
 package cryptic
 
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.EitherValues
 
-trait FstSpecBase extends FlatSpecLike with Matchers with EitherValues {
+trait FstSpecBase extends AnyFlatSpecLike with Matchers with EitherValues {
   val encrypt: Encrypt
   val decrypt: Decrypt
   import cryptic.serialization.Fst._
@@ -46,8 +48,12 @@ trait FstSpecBase extends FlatSpecLike with Matchers with EitherValues {
       "secret".encrypted(encrypt)
     }
     val filtered = encrypted.filter(_ != "secret")
-    filtered.decrypted(decrypt) shouldEqual Left("decrypted called on filtered empty")
-    encrypted.filter(_ == "secret").decrypted(decrypt) shouldEqual Right("secret")
+    filtered.decrypted(decrypt) shouldEqual Left(
+      "decrypted called on filtered empty"
+    )
+    encrypted.filter(_ == "secret").decrypted(decrypt) shouldEqual Right(
+      "secret"
+    )
   }
   "Map" should "map" in {
     val encrypted: Encrypted[String] = {

@@ -3,9 +3,10 @@ package crypto
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
 
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class RSASpec extends FlatSpec with Matchers {
+class RSASpec extends AnyFlatSpec with Matchers {
   import RSA._
   private val keyPair: KeyPair = keygen(2048)
   implicit val publicKey: PublicKey = keyPair.getPublic
@@ -27,7 +28,7 @@ class RSASpec extends FlatSpec with Matchers {
 
   "RSA" should "hide plaintext" in {
     encryptFun(plainText) match {
-      case ct:CipherText ⇒ new String(ct.bytes).contains("nisse".getBytes())
+      case ct: CipherText ⇒ new String(ct.bytes).contains("nisse".getBytes())
       case _ ⇒ fail(s"""could not encrypt "$text"""")
     }
   }

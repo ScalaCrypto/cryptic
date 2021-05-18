@@ -1,9 +1,10 @@
 package cryptic
 package crypto
 
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class AESSpec extends FlatSpec with Matchers {
+class AESSpec extends AnyFlatSpec with Matchers {
   import AES._
   implicit private val params: AESParams = AESParams()
   implicit private val password: AESPassphrase = AESPassphrase("secret")

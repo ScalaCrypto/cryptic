@@ -2,9 +2,10 @@ package cryptic
 package crypto
 
 import cryptic.serialization.StringSerializer
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class CaesarSpec extends FlatSpec with Matchers {
+class CaesarSpec extends AnyFlatSpec with Matchers {
   import Caesar._
   import StringSerializer._
   implicit val key1: Key = Caesar.Key(1)
@@ -18,13 +19,14 @@ class CaesarSpec extends FlatSpec with Matchers {
 
   "Caesar Encrypted" should "hide plaintext" in {
     Encrypted("nisse") match {
-      case Encrypted(cipherText) ⇒ new String(cipherText.bytes).contains("nisse")
+      case Encrypted(cipherText) ⇒
+        new String(cipherText.bytes).contains("nisse")
       case _ ⇒ None
     }
   }
 
   "Caesar zero" should "not be valid" in {
-   assertThrows[IllegalArgumentException] { Caesar.Key(0) }
+    assertThrows[IllegalArgumentException] { Caesar.Key(0) }
   }
 
 }

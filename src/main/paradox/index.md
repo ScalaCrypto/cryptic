@@ -1,11 +1,14 @@
 # Cryptic
+
 Keeps your secrets
 
 ## Getting started
+
 Add dependecy on core and your chosen serialization and crypto providers to your build.sbt file:
 @@dependency[sbt,Maven,Gradle] { group="scalacrypto" artifact="cryptic-core$scala.binary_version$" version="$version$" }
 
 Static:
+
 ```scala
 libraryDependencies ++= Seq(
   "scalacrypto" %% "cryptic-core" % "0.2.0-SNAPSHOT",

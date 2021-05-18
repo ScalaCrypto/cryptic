@@ -16,7 +16,8 @@ package object cryptic {
       case CipherText(other) ⇒ bytes.sameElements(other)
       case _ ⇒ false
     }
-    override def toString: String = s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
+    override def toString: String =
+      s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
   }
   object CipherText {
     val Empty: CipherText = CipherText(Array.emptyByteArray)

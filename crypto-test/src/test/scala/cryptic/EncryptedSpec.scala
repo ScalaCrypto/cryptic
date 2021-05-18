@@ -1,9 +1,11 @@
 package cryptic
 
 import cryptic.syntax._
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.EitherValues
 
-class EncryptedSpec extends FlatSpec with Matchers with EitherValues {
+class EncryptedSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   import crypto.Reverse._
   import serialization.Fst._

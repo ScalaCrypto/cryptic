@@ -1,6 +1,6 @@
 package cryptic
 
-import serialization.Serializer
+import cryptic.serialization.Serializer
 
 package object syntax {
   implicit class RichAny[V: Serializer](val value: V) {

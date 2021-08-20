@@ -7,7 +7,7 @@ import javax.crypto.Cipher
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
 /**
-  * RSA encryption depends  private and public keys.
+  * Elliptic Curve encryption depends  private and public keys.
   * The public key should be implicitly available for encryption and
   * the private key for decryption
   */

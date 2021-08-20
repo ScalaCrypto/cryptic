@@ -1,6 +1,7 @@
 package cryptic
 
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // #data-types
 
@@ -8,16 +9,15 @@ case class EmailAddress(literal: String)
 case class User(id: Long, email: Encrypted[EmailAddress])
 // #data-types
 
-class GettingStartedSpec extends FlatSpec with Matchers {
+class GettingStartedSpec extends AnyFlatSpec with Matchers {
 
   "Getting started guide" should "work" in {
-    {
+    for (i <- 0 to 0) {
       // #import
       import cryptic._
       import cryptic.syntax._
       // #import
     }
-
     val key = {
       // #generate-key
       import cryptic.syntax._
@@ -55,8 +55,8 @@ class GettingStartedSpec extends FlatSpec with Matchers {
       // # transform
       import Cryptic._
       import cryptic.serialization.Fst._
-      val loweredEmailOp: Operation[EmailAddress] = user.email.
-        map(email => email.copy(literal = email.literal.toLowerCase))
+      val loweredEmailOp: Operation[EmailAddress] =
+        user.email.map(email => email.copy(literal = email.literal.toLowerCase))
       // # transform
       loweredEmailOp
     }
@@ -66,7 +66,8 @@ class GettingStartedSpec extends FlatSpec with Matchers {
       import cryptic.serialization.Fst._
       implicit val publicKey = key.getPublic
       implicit val privateKey = key.getPrivate
-      val userWithLoweredEmail: Either[String, User] = loweredEmailOp.run.map(email => user.copy(email = email))
+      val userWithLoweredEmail: Either[String, User] =
+        loweredEmailOp.run.map(email => user.copy(email = email))
       // #run
       userWithLoweredEmail
     }
@@ -75,7 +76,8 @@ class GettingStartedSpec extends FlatSpec with Matchers {
       import cryptic.crypto.RSA._
       import cryptic.serialization.Fst._
       implicit val privateKey = key.getPrivate
-      val loweredEmail: Either[String, EmailAddress] = userWithLoweredEmail.flatMap(_.email.decrypted)
+      val loweredEmail: Either[String, EmailAddress] =
+        userWithLoweredEmail.flatMap(_.email.decrypted)
       // #decrypt
       loweredEmail
     }

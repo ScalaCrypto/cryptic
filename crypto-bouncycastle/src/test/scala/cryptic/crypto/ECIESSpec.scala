@@ -3,9 +3,10 @@ package cryptic.crypto
 import java.security.{KeyPair, PrivateKey, PublicKey}
 
 import cryptic.{CipherText, Decrypt, Encrypt, PlainText}
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class ECIESSpec extends FlatSpec with Matchers {
+class ECIESSpec extends AnyFlatSpec with Matchers {
   import ECIES._
   private val keyPair: KeyPair = keygen(256)
   implicit val publicKey: PublicKey = keyPair.getPublic

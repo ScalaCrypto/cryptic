@@ -1,18 +1,18 @@
-lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8" withSources()
+lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.2.9" withSources()
 lazy val fst = "de.ruedigermoeller" % "fst" % "2.57" withSources()
 
 lazy val cryptic = (project in file(".")).
-  enablePlugins(TutPlugin).
+  //enablePlugins(TutPlugin).
   enablePlugins(ParadoxPlugin).
   settings(
     inThisBuild(List(
       organization := "ScalaCrypto",
-      scalaVersion := "2.13.1",
-      version := "0.3.0-SNAPSHOT"
+      scalaVersion := "2.13.6",
+      version := "0.4.0-SNAPSHOT"
     )),
     name := "cryptic",
     paradoxTheme := Some(builtinParadoxTheme("generic")),
-    paradoxProperties in Compile ++= Map(
+    Compile / paradoxProperties ++= Map(
       "github.base_url" -> s"https://github.com/ScalaCrypto/cryptic/tree/${version.value}")).
   aggregate(core, `serialization-fst`, `crypto-javax`, `crypto-test`)
 

@@ -1,7 +1,9 @@
 package cryptic
 
 import cryptic.syntax._
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.EitherValues
 
 case class Name(literal: String)
 
@@ -11,7 +13,7 @@ case class EmailAddress(literal: String)
 
 case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
-class EncryptedSpec extends FlatSpec with Matchers with EitherValues {
+class EncryptedSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   import serialization.StringSerializer._
 
@@ -43,76 +45,64 @@ class EncryptedSpec extends FlatSpec with Matchers with EitherValues {
   }
   "Encrypted" should "be mappable" in {
     import crypto.Reverse._
-    Encrypted("nisse").
-      map(_.toUpperCase).
-      decrypted shouldBe Right("NISSE")
+    Encrypted("nisse").map(_.toUpperCase).decrypted shouldBe Right("NISSE")
   }
   "Encrypted" should "be flat-mappable" in {
     import crypto.Reverse._
-    Encrypted("nisse").
-      flatMap(_.take(2).encrypted).
-      decrypted shouldBe Right("ni")
+    Encrypted("nisse").flatMap(_.take(2).encrypted).decrypted shouldBe Right(
+      "ni"
+    )
   }
   "Encrypted" should "be collectable" in {
     import crypto.Reverse._
-    Encrypted("nisse").
-      collect {
-        case "nisse" => "nice!"
-      }.
-      decrypted shouldBe Right("nice!")
-    Encrypted("nisse").
-      collect {
-        case "kalle" => "nice!"
-      }.run shouldBe Right(Encrypted.empty[String])
+    Encrypted("nisse").collect { case "nisse" =>
+      "nice!"
+    }.decrypted shouldBe Right("nice!")
+    Encrypted("nisse").collect { case "kalle" =>
+      "nice!"
+    }.run shouldBe Right(Encrypted.empty[String])
   }
   "Encrypted" should "be filterable" in {
     import crypto.Reverse._
-    Encrypted("nisse").
-      filter(_.length > 2).
-      decrypted shouldBe Right("nisse")
-    Encrypted("nisse").
-      filter(_.length < 2).
-      run shouldBe Right(Encrypted.empty[String])
+    Encrypted("nisse").filter(_.length > 2).decrypted shouldBe Right("nisse")
+    Encrypted("nisse").filter(_.length < 2).run shouldBe Right(
+      Encrypted.empty[String]
+    )
   }
   "Encrypted" should "be foldable" in {
     import crypto.Reverse._
-    Encrypted("nisse").
-      fold("kalle") {
+    Encrypted("nisse").fold("kalle") {
+      _.toUpperCase
+    } shouldBe Right("NISSE")
+    Encrypted("nisse").filter(_.length > 10).run.flatMap {
+      _.fold("kalle") {
         _.toUpperCase
-      } shouldBe Right("NISSE")
-    Encrypted("nisse").
-      filter(_.length > 10).
-      run.flatMap {
-        _.fold("kalle") {
-          _.toUpperCase
-        }
-      } shouldBe Right("kalle")
-    Encrypted("nisse").
-      filter(_.length < 10).
-      run.flatMap {
-        _.fold("kalle") {
-          _.toUpperCase
-        }
-      } shouldBe Right("NISSE")
+      }
+    } shouldBe Right("kalle")
+    Encrypted("nisse").filter(_.length < 10).run.flatMap {
+      _.fold("kalle") {
+        _.toUpperCase
+      }
+    } shouldBe Right("NISSE")
   }
   "Encrypted" should "be decryptable with alternative" in {
     import crypto.Reverse._
-    Encrypted("nisse").
-      filter(_.length > 2).
-      decryptedOrElse("kalle") shouldBe "nisse"
-    Encrypted("nisse").
-      filter(_.length < 2).
-      decryptedOrElse("kalle") shouldBe "kalle"
+    Encrypted("nisse")
+      .filter(_.length > 2)
+      .decryptedOrElse("kalle") shouldBe "nisse"
+    Encrypted("nisse")
+      .filter(_.length < 2)
+      .decryptedOrElse("kalle") shouldBe "kalle"
   }
   "Encrypted" should "be or-elsable" in {
     import crypto.Reverse._
-    Encrypted("nisse").
-      filter(_.length > 2).
-      orElse("kalle".encrypted).
-      decrypted shouldBe Right("nisse")
-    Encrypted("nisse").
-      filter(_.length < 2).
-      orElse("kalle".encrypted).
-      decrypted shouldBe Right("kalle")
+    Encrypted("nisse")
+      .filter(_.length > 2)
+      .orElse("kalle".encrypted)
+      .decrypted shouldBe Right("nisse")
+    Encrypted("nisse")
+      .filter(_.length < 2)
+      .orElse("kalle".encrypted)
+      .decrypted shouldBe Right("kalle")
   }
 }

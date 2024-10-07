@@ -3,18 +3,18 @@ package crypto
 
 import java.nio.ByteBuffer
 import java.security.SecureRandom
-
 import javax.crypto.spec.{IvParameterSpec, PBEKeySpec, SecretKeySpec}
 import javax.crypto.{Cipher, SecretKey, SecretKeyFactory}
 
 object AES {
   private val secureRandom = new SecureRandom()
   private val keyAlgorithm = "AES"
-  case class AESParams(factoryAlgorithm: String = "PBKDF2WithHmacSHA256",
-                       mode: String = "CBC/PKCS5Padding",
-                       keyspecIterationCount: Int = 65536,
-                       keyspecLength: Int = 256,
-                       saltLength: Int = 32)
+  case class AESParams(
+      factoryAlgorithm: String = "PBKDF2WithHmacSHA256",
+      mode: String = "CBC/PKCS5Padding",
+      keyspecIterationCount: Int = 65536,
+      keyspecLength: Int = 256,
+      saltLength: Int = 32)
 
   case class Salt(bytes: Array[Byte]) extends AnyVal {
     def length: Int = bytes.length
@@ -36,10 +36,7 @@ object AES {
     val textLength = cipherText.length
     // Encode with length prefix to allow for backwards compatibility
     val buffer = ByteBuffer.allocate(12 + aesParams.saltLength + ivLength + textLength)
-    buffer
-      .putInt(aesParams.saltLength).put(salt.bytes)
-      .putInt(ivLength).put(initVector)
-      .putInt(textLength).put(cipherText)
+    buffer.putInt(aesParams.saltLength).put(salt.bytes).putInt(ivLength).put(initVector).putInt(textLength).put(cipherText)
     CipherText(buffer.array())
   }
 

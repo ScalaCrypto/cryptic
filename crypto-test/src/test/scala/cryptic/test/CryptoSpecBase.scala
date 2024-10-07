@@ -1,14 +1,19 @@
 package cryptic
+package test
 
+import cryptic.serialization.Serializer
+import cryptic.{Cryptic, Decrypt, Encrypt, Encrypted}
+import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.EitherValues
+import upickle.default.ReadWriter
 
-trait FstSpecBase extends AnyFlatSpecLike with Matchers with EitherValues {
+trait CryptoSpecBase extends AnyFlatSpecLike with Matchers with EitherValues {
   val encrypt: Encrypt
   val decrypt: Decrypt
-  import cryptic.serialization.Fst._
+//  import cryptic.serialization.Chill._
   import cryptic.syntax._
+  implicit def serializer[V](implicit rw: ReadWriter[V] = null): Serializer[V]
 
   "case class with encrypted members" should "encrypt and decrypt" in {
     case class Foo(clear: String, secret: Encrypted[String])
@@ -48,12 +53,8 @@ trait FstSpecBase extends AnyFlatSpecLike with Matchers with EitherValues {
       "secret".encrypted(encrypt)
     }
     val filtered = encrypted.filter(_ != "secret")
-    filtered.decrypted(decrypt) shouldEqual Left(
-      "decrypted called on filtered empty"
-    )
-    encrypted.filter(_ == "secret").decrypted(decrypt) shouldEqual Right(
-      "secret"
-    )
+    filtered.decrypted(decrypt) shouldEqual Left("decrypted called on filtered empty")
+    encrypted.filter(_ == "secret").decrypted(decrypt) shouldEqual Right("secret")
   }
   "Map" should "map" in {
     val encrypted: Encrypted[String] = {

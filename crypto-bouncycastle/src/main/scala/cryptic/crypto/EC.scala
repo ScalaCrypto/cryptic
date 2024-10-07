@@ -1,17 +1,16 @@
-package cryptic.crypto
-
-import java.security._
+package cryptic
+package crypto
 
 import cryptic.{CipherText, Decrypt, Encrypt, PlainText}
-import javax.crypto.Cipher
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
-/**
-  * Elliptic Curve encryption depends  private and public keys.
-  * The public key should be implicitly available for encryption and
-  * the private key for decryption
+import java.security._
+import javax.crypto.Cipher
+
+/** Elliptic Curve Integrated Encryption Scheme depends on private and public keys. The public key should be implicitly available for encryption and the private
+  * key for decryption
   */
-object ECIES {
+object EC {
   Security.addProvider(new BouncyCastleProvider())
   val cipher: Cipher = Cipher.getInstance("ECIES", "BC")
   implicit def encrypt(implicit key: PublicKey): Encrypt = (plainText: PlainText) => {

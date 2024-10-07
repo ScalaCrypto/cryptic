@@ -1,13 +1,14 @@
-package cryptic.crypto
-
-import java.security.{KeyPair, PrivateKey, PublicKey}
+package cryptic
+package crypto
 
 import cryptic.{CipherText, Decrypt, Encrypt, PlainText}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class ECIESSpec extends AnyFlatSpec with Matchers {
-  import ECIES._
+import java.security.{KeyPair, PrivateKey, PublicKey}
+
+class ECSpec extends AnyFlatSpec with Matchers {
+  import EC._
   private val keyPair: KeyPair = keygen(256)
   implicit val publicKey: PublicKey = keyPair.getPublic
   private val text = "nisse"
@@ -26,7 +27,7 @@ class ECIESSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "ECIES" should "hide plaintext" in {
+  "ECIES" should "hide plaintegxt" in {
     encryptFun(plainText) match {
       case ct: CipherText ⇒ new String(ct.bytes).contains("nisse".getBytes())
       case _ ⇒ fail(s"""could not encrypt "$text"""")

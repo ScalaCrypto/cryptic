@@ -1,9 +1,9 @@
 package cryptic
 
 import cryptic.syntax._
+import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.EitherValues
 
 case class Name(literal: String)
 

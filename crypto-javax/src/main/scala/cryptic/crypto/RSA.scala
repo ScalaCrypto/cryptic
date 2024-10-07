@@ -5,10 +5,8 @@ import java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 import javax.crypto.Cipher
 
 /**
-  * RSA encryption depends  private and public keys.
-  * The public key should be implicitly available for encryption and
-  * the private key for decryption
-  */
+ * RSA encryption depends private and public keys. The public key should be implicitly available for encryption and the private key for decryption
+ */
 object RSA {
   val cipher: Cipher = Cipher.getInstance("RSA")
   implicit def encrypt(implicit key: PublicKey): Encrypt = (plainText: PlainText) => {

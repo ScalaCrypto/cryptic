@@ -1,10 +1,10 @@
 package cryptic
 package crypto
 
-import java.security.{KeyPair, PrivateKey, PublicKey}
-
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+
+import java.security.{KeyPair, PrivateKey, PublicKey}
 
 class RSASpec extends AnyFlatSpec with Matchers {
   import RSA._

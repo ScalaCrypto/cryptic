@@ -177,22 +177,26 @@ object Cryptic {
 case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V] {
 
   /**
-   * Converts the cipher text to an array of bytes.
+   * Returns the byte array representation of the cipher text.
    *
    * @return
-   *   an array of bytes representing the cipher text.
+   *   the byte array of the cipher text
    */
   def bytes: Array[Byte] = cipherText.bytes
 
   /**
-   * Returns false if this $encrypted is $empty, true otherwise.
-   * @note
-   *   Implemented here to avoid the implicit conversion to Iterable.
+   * Checks if the option is non-empty (defined).
+   *
+   * @return
+   *   true if the option is defined, false otherwise.
    */
   @inline final def nonEmpty: Boolean = isDefined
 
   /**
-   * Returns true if this $encrypted is not an instance of empty, false otherwise.
+   * Checks if the value is defined.
+   *
+   * @return
+   *   true if the value is defined, false otherwise
    */
   @inline final def isDefined: Boolean = !isEmpty
 
@@ -221,6 +225,7 @@ case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V] {
    */
   @inline final def exists(p: V => Boolean)(implicit decrypt: Decrypt): Boolean =
     !isEmpty && decrypted.map(p).getOrElse(false)
+
   /**
    * Tests whether a predicate holds for all elements after decryption.
    *
@@ -233,6 +238,7 @@ case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V] {
    */
   @inline final def forall(p: V => Boolean)(implicit decrypt: Decrypt): Boolean =
     isEmpty || decrypted.map(p).getOrElse(true)
+
   /**
    * Applies a function to all elements of the decrypted collection.
    *

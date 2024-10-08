@@ -2,11 +2,13 @@ package cryptic
 package serialization
 
 import cryptic.syntax.RichAny
-import cryptic.{Cryptic, Encrypted, crypto}
+import cryptic.{ crypto, Cryptic, Encrypted }
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import upickle.default._
+
+import scala.util.Success
 
 case class Foo(bar: String)
 
@@ -39,7 +41,7 @@ trait EncryptedSpecBase extends AnyFlatSpec with Matchers with EitherValues {
   "Case class with encrypted members" should "encrypt and decrypt" in {
     val foo = FooBar("secret".encrypted)
     foo.secret.bytes shouldEqual serializer[String].serialize("secret").reverse
-    foo.secret.decrypted shouldEqual Right("secret")
+    foo.secret.decrypted shouldEqual Success("secret")
 
   }
   "Encrypted case class with" should "encrypt and decrypt" in {
@@ -47,12 +49,12 @@ trait EncryptedSpecBase extends AnyFlatSpec with Matchers with EitherValues {
     val encryptedFoo = foo.encrypted(encrypt)
     val plainText = serializer[Foo].serialize(foo)
     encryptedFoo.bytes shouldBe plainText.reverse // Reveres crypto
-    encryptedFoo.decrypted shouldEqual Right(foo)
+    encryptedFoo.decrypted shouldEqual Success(foo)
   }
   "Pending operations " should " be ran when decrypting" in {
     val encrypted: Encrypted[String] = "secret".encrypted
     val pending: Cryptic[String] = encrypted.map(_.toUpperCase)
-    pending.decrypted shouldEqual Right("SECRET")
+    pending.decrypted shouldEqual Success("SECRET")
   }
   "Encrypted without decryption key" should "have same value in encrypted space" in {
     val enc1 = Encrypted("nisse")

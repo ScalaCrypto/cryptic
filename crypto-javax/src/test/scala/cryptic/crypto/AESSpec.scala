@@ -4,6 +4,8 @@ package crypto
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
+import scala.util.Success
+
 class AESSpec extends AnyFlatSpec with Matchers {
   import AES._
   implicit private val params: AESParams = AESParams()
@@ -16,7 +18,7 @@ class AESSpec extends AnyFlatSpec with Matchers {
 
     val decryptFun: Decrypt = decrypt // Uses implicit key
     decryptFun(encrypted) match {
-      case Right(actual) ⇒ actual shouldEqual plainText
+      case Success(actual) ⇒ actual shouldEqual plainText
       case x ⇒ fail(s"does not decrypt: $x")
     }
   }

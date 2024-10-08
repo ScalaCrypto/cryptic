@@ -5,6 +5,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
+import scala.util.Success
 
 class RSASpec extends AnyFlatSpec with Matchers {
   import RSA._
@@ -21,7 +22,7 @@ class RSASpec extends AnyFlatSpec with Matchers {
     implicit val privateKey: PrivateKey = keyPair.getPrivate
     val decryptFun: Decrypt = decrypt // Uses implicit key
     decryptFun(encrypted) match {
-      case Right(actual) ⇒ actual shouldEqual plainText
+      case Success(actual) ⇒ actual shouldEqual plainText
       case x ⇒ fail(s"does not decrypt: $x")
     }
   }

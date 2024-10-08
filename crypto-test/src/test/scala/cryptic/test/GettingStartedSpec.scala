@@ -1,11 +1,12 @@
 package cryptic
 package test
 
-import cryptic.{Cryptic, Encrypted}
+import cryptic.{ Cryptic, Encrypted }
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-import java.security.{PrivateKey, PublicKey}
+import java.security.{ PrivateKey, PublicKey }
+import scala.util.{ Success, Try }
 
 // #data-types
 
@@ -59,12 +60,12 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers {
       // # transform
       loweredEmailOp
     }
-    val userWithLoweredEmail: Either[String, User] = {
+    val userWithLoweredEmail: Try[User] = {
       // #run
       import cryptic.crypto.RSA._
       implicit val publicKey: PublicKey = key.getPublic
       implicit val privateKey: PrivateKey = key.getPrivate
-      val userWithLoweredEmail: Either[String, User] =
+      val userWithLoweredEmail: Try[User] =
         loweredEmailOp.run.map(email => user.copy(email = email))
       // #run
       userWithLoweredEmail
@@ -73,12 +74,12 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers {
       // #decrypt
       import cryptic.crypto.RSA._
       implicit val privateKey: PrivateKey = key.getPrivate
-      val loweredEmail: Either[String, EmailAddress] =
+      val loweredEmail: Try[EmailAddress] =
         userWithLoweredEmail.flatMap(_.email.decrypted)
       // #decrypt
       loweredEmail
     }
 
-    loweredEmail shouldEqual Right(EmailAddress("odd@example.com"))
+    loweredEmail shouldEqual Success(EmailAddress("odd@example.com"))
   }
 }

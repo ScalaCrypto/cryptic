@@ -2,11 +2,11 @@ package cryptic
 package test
 package javax
 
+import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.AES
 import cryptic.crypto.AES.AESParams
 import cryptic.serialization.{Chill, Fst, Serializer, Upickle}
 import cryptic.test.CryptoSpecBase
-import cryptic.{Decrypt, Encrypt}
 import upickle.default
 
 abstract class AESSpecBase extends CryptoSpecBase {

@@ -2,10 +2,10 @@ package cryptic
 package test
 package bouncycastle
 
+import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.EC
 import cryptic.serialization.{Chill, Fst, Serializer, Upickle}
 import cryptic.test.CryptoSpecBase
-import cryptic.{Decrypt, Encrypt}
 import upickle.default
 
 import java.security.{KeyPair, PrivateKey, PublicKey}

@@ -2,10 +2,10 @@ package cryptic
 package test
 package javax
 
+import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.RSA
 import cryptic.serialization.{Chill, Fst, Serializer, Upickle}
 import cryptic.test.CryptoSpecBase
-import cryptic.{Decrypt, Encrypt}
 import upickle.default
 
 import java.security.{PrivateKey, PublicKey}

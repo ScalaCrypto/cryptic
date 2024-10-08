@@ -3,9 +3,15 @@ package crypto
 
 import java.nio.ByteBuffer
 import java.security.SecureRandom
-import javax.crypto.spec.{IvParameterSpec, PBEKeySpec, SecretKeySpec}
-import javax.crypto.{Cipher, SecretKey, SecretKeyFactory}
+import javax.crypto.spec.{ IvParameterSpec, PBEKeySpec, SecretKeySpec }
+import javax.crypto.{ Cipher, SecretKey, SecretKeyFactory }
+import scala.util.Try
 
+/**
+ * Object AES provides encryption and decryption utilities using the AES algorithm.
+ * The functions provided allow encryption of plaintext into ciphertext and decryption of ciphertext back into plaintext
+ * using a passphrase and various parameters defined in the AESParams case class.
+ */
 object AES {
   private val secureRandom = new SecureRandom()
   private val keyAlgorithm = "AES"
@@ -36,7 +42,13 @@ object AES {
     val textLength = cipherText.length
     // Encode with length prefix to allow for backwards compatibility
     val buffer = ByteBuffer.allocate(12 + aesParams.saltLength + ivLength + textLength)
-    buffer.putInt(aesParams.saltLength).put(salt.bytes).putInt(ivLength).put(initVector).putInt(textLength).put(cipherText)
+    buffer
+      .putInt(aesParams.saltLength)
+      .put(salt.bytes)
+      .putInt(ivLength)
+      .put(initVector)
+      .putInt(textLength)
+      .put(cipherText)
     CipherText(buffer.array())
   }
 
@@ -53,12 +65,21 @@ object AES {
     val text: Array[Byte] = getNextBytes
     val cipher = newCipher
     cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv))
-    Right[String, PlainText](PlainText(cipher.doFinal(text)))
+    Try[PlainText](PlainText(cipher.doFinal(text)))
   }
 
+  /**
+   * Generates a secret key using the provided password and salt.
+   *
+   * @param password  the passphrase used to generate the key
+   * @param salt      the salt value used in the key generation process
+   * @param aesParams implicit AES parameters containing the factory algorithm, key specification iteration count, and key specification length
+   * @return the generated secret key
+   */
   def keygen(password: AESPassphrase, salt: Salt)(implicit aesParams: AESParams): SecretKey = {
     val factory = SecretKeyFactory.getInstance(aesParams.factoryAlgorithm)
-    val keySpec = new PBEKeySpec(password.value.toCharArray, salt.bytes, aesParams.keyspecIterationCount, aesParams.keyspecLength)
+    val keySpec =
+      new PBEKeySpec(password.value.toCharArray, salt.bytes, aesParams.keyspecIterationCount, aesParams.keyspecLength)
     new SecretKeySpec(factory.generateSecret(keySpec).getEncoded, keyAlgorithm)
   }
 

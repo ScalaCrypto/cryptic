@@ -25,9 +25,14 @@ object AES {
   case class Salt(bytes: Array[Byte]) extends AnyVal {
     def length: Int = bytes.length
   }
-  case class AESPassphrase(value: String) extends AnyVal {
-    def bytes: Array[Byte] = value.getBytes
+  case class AESPassphrase(bytes: Array[Byte]) {
+    def asChars: Array[Char] = bytes.map(_.toChar)
   }
+
+  object AESPassphrase {
+    def apply(password: String): AESPassphrase = new AESPassphrase(password.getBytes)
+  }
+
   private def newCipher(implicit aesParams: AESParams): Cipher = Cipher.getInstance(s"$keyAlgorithm/${aesParams.mode}")
 
   implicit def encrypt(implicit password: AESPassphrase, aesParams: AESParams): Encrypt = (plainText: PlainText) => {
@@ -79,7 +84,7 @@ object AES {
   def keygen(password: AESPassphrase, salt: Salt)(implicit aesParams: AESParams): SecretKey = {
     val factory = SecretKeyFactory.getInstance(aesParams.factoryAlgorithm)
     val keySpec =
-      new PBEKeySpec(password.value.toCharArray, salt.bytes, aesParams.keyspecIterationCount, aesParams.keyspecLength)
+      new PBEKeySpec(password.asChars, salt.bytes, aesParams.keyspecIterationCount, aesParams.keyspecLength)
     new SecretKeySpec(factory.generateSecret(keySpec).getEncoded, keyAlgorithm)
   }
 

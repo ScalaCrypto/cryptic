@@ -30,4 +30,17 @@ class AESSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  "AESParams keyspecLength" should
+    "only allow 126, 192, 256" in {
+      AESParams(keyspecLength = 192) should not be null
+    }
+
+  "AESParams keyspecLength" should
+    "not allow 127" in {
+      val exception = intercept[AssertionError] {
+        AESParams(keyspecLength = 127)
+      }
+      exception.getMessage shouldBe "assertion failed: Invalid keyspecLength: 127. Allowed values are 128, 192, 256."
+    }
+
 }

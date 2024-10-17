@@ -1,32 +1,27 @@
 package cryptic
 package serialization
 
-/** Very inefficient, use a proper serializer.
-  */
+import scala.util.Try
+
+/**
+ * Very inefficient, use a proper serializer.
+ */
 object StringSerializer {
   implicit val stringSerializer: Serializer[String] = new Serializer[String] {
-    override def serialize(value: String) = PlainText(value)
-    override def deserialize(plainText: PlainText) = Right(
-      new String(plainText).toString
-    )
+    override def serialize(value: String): PlainText = PlainText(value)
+    override def deserialize(plainText: PlainText): Try[String] = Try(new String(plainText))
   }
   implicit val intSerializer: Serializer[Int] = new Serializer[Int] {
-    override def serialize(value: Int) = PlainText(value.toString)
-    override def deserialize(plainText: PlainText) = Right(
-      new String(plainText).toInt
-    )
+    override def serialize(value: Int): PlainText = PlainText(value.toString)
+    override def deserialize(plainText: PlainText): Try[Int] = Try(new String(plainText).toInt)
   }
   implicit val doubleSerializer: Serializer[Double] = new Serializer[Double] {
-    override def serialize(value: Double) = PlainText(value.toString)
-    override def deserialize(plainText: PlainText) = Right(
-      new String(plainText).toDouble
-    )
+    override def serialize(value: Double): PlainText = PlainText(value.toString)
+    override def deserialize(plainText: PlainText): Try[Double] = Try(new String(plainText).toDouble)
   }
   implicit val booleanSerializer: Serializer[Boolean] =
     new Serializer[Boolean] {
-      override def serialize(value: Boolean) = PlainText(value.toString)
-      override def deserialize(plainText: PlainText) = Right(
-        new String(plainText).toBoolean
-      )
+      override def serialize(value: Boolean): PlainText = PlainText(value.toString)
+      override def deserialize(plainText: PlainText): Try[Boolean] = Try(new String(plainText).toBoolean)
     }
 }

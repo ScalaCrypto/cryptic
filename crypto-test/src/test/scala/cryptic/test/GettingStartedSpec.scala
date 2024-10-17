@@ -1,7 +1,12 @@
 package cryptic
+package test
 
+import cryptic.{ Cryptic, Encrypted }
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+
+import java.security.{ PrivateKey, PublicKey }
+import scala.util.{ Success, Try }
 
 // #data-types
 
@@ -14,15 +19,10 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers {
   "Getting started guide" should "work" in {
     for (i <- 0 to 0) {
       // #import
-      import cryptic._
-      import cryptic.syntax._
-      // #import
     }
     val key = {
       // #generate-key
-      import cryptic.syntax._
       import cryptic.crypto.RSA._
-      import cryptic.serialization.Fst._
       val key = keygen(2048)
       // #generate-key
       key
@@ -30,17 +30,17 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers {
 
     val (publicKey, privateKey) = {
       // #extract-key
-      implicit val publicKey = key.getPublic
-      implicit val privateKey = key.getPrivate
+      implicit val publicKey: PublicKey = key.getPublic
+      implicit val privateKey: PrivateKey = key.getPrivate
       // #extract-key
       (publicKey, privateKey)
     }
 
     val user: User = {
-      import cryptic.syntax._
       import cryptic.crypto.RSA._
-      import cryptic.serialization.Fst._
-      implicit val pubKey = publicKey
+      import cryptic.serialization.Chill._
+      import cryptic.syntax._
+      implicit val pubKey: PublicKey = publicKey
       // #encrypt
       val user = User(123, EmailAddress("Odd@Example.com").encrypted)
       // #encrypt
@@ -54,19 +54,18 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers {
     val loweredEmailOp: Cryptic.Operation[EmailAddress] = {
       // # transform
       import Cryptic._
-      import cryptic.serialization.Fst._
+      import cryptic.serialization.Chill._
       val loweredEmailOp: Operation[EmailAddress] =
         user.email.map(email => email.copy(literal = email.literal.toLowerCase))
       // # transform
       loweredEmailOp
     }
-    val userWithLoweredEmail: Either[String, User] = {
+    val userWithLoweredEmail: Try[User] = {
       // #run
       import cryptic.crypto.RSA._
-      import cryptic.serialization.Fst._
-      implicit val publicKey = key.getPublic
-      implicit val privateKey = key.getPrivate
-      val userWithLoweredEmail: Either[String, User] =
+      implicit val publicKey: PublicKey = key.getPublic
+      implicit val privateKey: PrivateKey = key.getPrivate
+      val userWithLoweredEmail: Try[User] =
         loweredEmailOp.run.map(email => user.copy(email = email))
       // #run
       userWithLoweredEmail
@@ -74,14 +73,13 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers {
     val loweredEmail = {
       // #decrypt
       import cryptic.crypto.RSA._
-      import cryptic.serialization.Fst._
-      implicit val privateKey = key.getPrivate
-      val loweredEmail: Either[String, EmailAddress] =
+      implicit val privateKey: PrivateKey = key.getPrivate
+      val loweredEmail: Try[EmailAddress] =
         userWithLoweredEmail.flatMap(_.email.decrypted)
       // #decrypt
       loweredEmail
     }
 
-    loweredEmail shouldEqual Right(EmailAddress("odd@example.com"))
+    loweredEmail shouldEqual Success(EmailAddress("odd@example.com"))
   }
 }

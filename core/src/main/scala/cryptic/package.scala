@@ -1,8 +1,10 @@
+import scala.util.{ Success, Try }
+
 package object cryptic {
   type PlainText = Array[Byte]
   type Hash = Vector[Byte]
   object PlainText {
-    val Empty = PlainText(Array.emptyByteArray)
+    val Empty: PlainText = PlainText(Array.emptyByteArray)
     def apply(x: Array[Byte]): PlainText = x
     def apply(x: String): PlainText = x.getBytes()
   }
@@ -29,9 +31,9 @@ package object cryptic {
     def apply(plainText: PlainText): CipherText
   }
   object Decrypt {
-    val Empty: Decrypt = _ ⇒ Right(PlainText.Empty)
+    val Empty: Decrypt = _ ⇒ Success(PlainText.Empty)
   }
   trait Decrypt {
-    def apply(cipherText: CipherText): Either[String, PlainText]
+    def apply(cipherText: CipherText): Try[PlainText]
   }
 }

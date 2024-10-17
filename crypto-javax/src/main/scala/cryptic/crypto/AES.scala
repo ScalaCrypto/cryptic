@@ -30,8 +30,14 @@ object AES {
   case class Salt(bytes: Array[Byte]) extends AnyVal {
     def length: Int = bytes.length
   }
+  /**
+   * Case class AESPassphrase for handling cryptographic passphrases.
+   *
+   * @param bytes Array of bytes representing the passphrase.
+   */
   case class AESPassphrase(bytes: Array[Byte]) {
     def chars: Array[Char] = bytes.map(_.toChar)
+    override def toString: String = new String(bytes)
   }
 
   object AESPassphrase {

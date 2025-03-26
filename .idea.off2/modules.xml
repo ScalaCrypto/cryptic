@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/core.iml" filepath="$PROJECT_DIR$/.idea/modules/core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cryptic_4115.iml" filepath="$PROJECT_DIR$/.idea/modules/cryptic_4115.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/cryptic_4115-build.iml" filepath="$PROJECT_DIR$/.idea/modules/cryptic_4115-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/crypto-bouncycastle.iml" filepath="$PROJECT_DIR$/.idea/modules/crypto-bouncycastle.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/crypto-javax.iml" filepath="$PROJECT_DIR$/.idea/modules/crypto-javax.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/crypto-test.iml" filepath="$PROJECT_DIR$/.idea/modules/crypto-test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/serialization-fst.iml" filepath="$PROJECT_DIR$/.idea/modules/serialization-fst.iml" />
+    </modules>
+  </component>
+</project>

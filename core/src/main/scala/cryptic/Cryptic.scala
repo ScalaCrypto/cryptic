@@ -1,66 +1,61 @@
 package cryptic
 
-import scala.language.implicitConversions
 import cryptic.serialization.Serializer
 import cryptic.syntax._
+
+import scala.language.implicitConversions
+import scala.util.{ Failure, Success, Try }
 
 sealed abstract class Cryptic[V: Serializer] {
   import Cryptic._
 
-  /** Returns this $cryptic's decrypted value to the right if it is nonempty,
-    * otherwise returns an error message to the left.
-    *
-    * @param decrypt
-    *   the `Decrypt` instance to use for decryption.
-    */
-  def decrypted(implicit decrypt: Decrypt): Either[String, V]
+  /**
+   * Decrypts the data using the provided implicit decryption mechanism.
+   *
+   * @param decrypt
+   *   The implicit decryption logic that will be used to decrypt the data.
+   * @return
+   *   Returns a Try instance containing the decrypted value of type V if successful, or a Failure if the decryption
+   *   fails.
+   */
+  def decrypted(implicit decrypt: Decrypt): Try[V]
 
-  /** Returns this $cryptic's decrypted value if it is nonempty, otherwise
-    * return the result of evaluating `default`.
-    *
-    * @param default
-    *   the default expression.
-    * @param decrypt
-    *   the `Decrypt` instance to use for decryption.
-    */
-  @inline final def decryptedOrElse[W >: V](default: => W)(implicit
-      decrypt: Decrypt
-  ): W =
-    decrypted.getOrElse(default)
+  /**
+   * Attempts to retrieve the decrypted value. If decryption fails or if the value is not present, it returns the
+   * provided default value.
+   *
+   * @param default
+   *   the value to return if decryption fails or if the value is not present
+   * @param decrypt
+   *   an implicit decryption context
+   * @return
+   *   the decrypted value if successful, otherwise the default value
+   */
+  @inline final def decryptedOrElse[W >: V](default: => W)(implicit decrypt: Decrypt): W = decrypted.getOrElse(default)
 
-  /** Returns a $cryptic which will apply $f to this $cryptic's decrypted value
-    * (if this $cryptic is nonempty) once run.
-    *
-    * @note
-    *   This is similar to `flatMap` except here, $f does not need to wrap its
-    *   result in a $crytic.
-    *
-    * @param f
-    *   the function to apply
-    * @see
-    *   flatMap
-    * @see
-    *   foreach
-    */
-  @inline final def map[W: Serializer](f: V => W): Operation[W] =
-    Mapped(this, f)
+  /**
+   * Transforms the current operation by applying a function to its result.
+   *
+   * @param f
+   *   The function to apply to the result of this operation.
+   * @tparam W
+   *   The result type of the function `f` after applying it to the original result type `V`.
+   * @return
+   *   A new operation representing the transformation of the original operation.
+   */
+  @inline final def map[W: Serializer](f: V => W): Operation[W] = Mapped(this, f)
 
-  /** Returns a $cryptic which will apply $f to this $cryptic's decrypted value
-    * (if this $cryptic is nonempty) once run.
-    *
-    * @note
-    *   Slightly different from `map` in that $f is expected to return a
-    *   $cryptic (which could be $empty).
-    *
-    * @param f
-    *   the function to apply
-    * @see
-    *   map
-    * @see
-    *   foreach
-    */
-  @inline final def flatMap[W: Serializer](f: V => Cryptic[W]): Operation[W] =
-    FlatMapped(this, f)
+  /**
+   * Transforms this `Operation[V]` into an `Operation[W]` by applying the given function `f`. The function `f` maps a
+   * value of type `V` to a `Cryptic[W]`, and the resulting `Operation` represents the composition of this
+   * transformation with the original operation.
+   *
+   * @param f
+   *   a function that takes a value of type `V` and produces a `Cryptic[W]`
+   * @return
+   *   an `Operation[W]` resulting from applying the function `f` to each value of type `V` produced by this `Operation`
+   */
+  @inline final def flatMap[W: Serializer](f: V => Cryptic[W]): Operation[W] = FlatMapped(this, f)
 
   /*
   /** Returns a $cryptic which will unwrap one level of cryptic nesting once run.
@@ -70,267 +65,283 @@ sealed abstract class Cryptic[V: Serializer] {
   @inline final def flatten[W : Serializer](implicit ev: V <:< Cryptic[W]): Operation[W] = Flattened(this)
    */
 
-  /** Returns a $cryptic which will apply the predicate $p to this $crytic's
-    * decrypted value once run and if it is `true` return this $cryptic,
-    * otherwise return $empty.
-    *
-    * @param p
-    *   the predicate used for testing.
-    */
+  /**
+   * Filters the elements based on the provided predicate function.
+   *
+   * @param p
+   *   the predicate function used to test elements.
+   * @return
+   *   a new Operation containing elements that satisfy the predicate.
+   */
   @inline final def filter(p: V => Boolean): Operation[V] = Filtered(this, p)
 
-  /** Returns a $cryptic which will apply the predicate $p to this $crytic's
-    * decrypted value once run and if it is `false` return this $cryptic,
-    * otherwise return $empty.
-    *
-    * @param p
-    *   the predicate used for testing.
-    */
-  @inline final def filterNot(p: V => Boolean): Filtered[V] =
-    Filtered(this, v => !p(v))
+  /**
+   * Filters out elements of a collection that satisfy a given predicate.
+   *
+   * @param p
+   *   the predicate function used to test elements, excluding those that return true
+   * @return
+   *   a new collection without the elements that satisfy the predicate
+   */
+  @inline final def filterNot(p: V => Boolean): Filtered[V] = Filtered(this, v => !p(v))
 
-  /** Returns a $cryptic which will contain the result of applying `pf` to this
-    * $cryptic's decrypted value '''if''' this $cryptic is nonempty '''and'''
-    * `pf` is defined for its value once run.
-    *
-    * @param pf
-    *   the partial function.
-    * @return
-    *   the result of applying `pf` to this $option's value (if possible), or
-    *   $none.
-    */
-  @inline final def collect[W: Serializer](
-      pf: PartialFunction[V, W]
-  ): Operation[W] = Collected(this, pf)
+  /**
+   * Applies a partial function to the elements of the collection and returns a new collection containing the results.
+   *
+   * @param pf
+   *   the partial function to be applied to each element
+   * @return
+   *   a new collection containing the results of applying the partial function
+   */
+  @inline final def collect[W: Serializer](pf: PartialFunction[V, W]): Operation[W] = Collected(this, pf)
 
-  /** Returns a $cryptic which will be equal to this $cryptic if it is nonempty
-    * once run, otherwise will return the result of evaluating `alternative`
-    * once run.
-    * @param alternative
-    *   the alternative expression.
-    */
-  @inline final def orElse[W >: V: Serializer](
-      alternative: => Cryptic[W]
-  ): Operation[W] = new OrElsed(this, alternative)
+  /**
+   * Provides an alternative operation to perform if the current operation fails.
+   *
+   * @param alternative
+   *   The alternative Cryptic operation to execute if the current one fails.
+   * @return
+   *   A new Operation instance representing the original or the alternative operation.
+   */
+  @inline final def orElse[W >: V: Serializer](alternative: => Cryptic[W]): Operation[W] =
+    new OrElsed(this, alternative)
 }
 object Cryptic {
   import Encrypted._
   sealed abstract class Operation[V: Serializer] extends Cryptic[V] {
-    def run(implicit
-        encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Either[String, Encrypted[V]]
+    def run(implicit encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[V]]
   }
-  sealed abstract class BinaryOperation[V: Serializer, W: Serializer]
-      extends Operation[W] {
-    override def run(implicit
-        encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Either[String, Encrypted[W]] =
-      decrypted.map(w =>
-        Encrypted(encrypt(implicitly[Serializer[W]].serialize(w)))
-      )
+  sealed abstract class BinaryOperation[V: Serializer, W: Serializer] extends Operation[W] {
+    override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[W]] =
+      decrypted.map(w => Encrypted(encrypt(implicitly[Serializer[W]].serialize(w))))
   }
-  final case class Mapped[V: Serializer, W: Serializer](
-      src: Cryptic[V],
-      f: V => W
-  ) extends BinaryOperation[V, W] {
-    override def decrypted(implicit decrypt: Decrypt): Either[String, W] =
+  final case class Mapped[V: Serializer, W: Serializer](src: Cryptic[V], f: V => W) extends BinaryOperation[V, W] {
+    override def decrypted(implicit decrypt: Decrypt): Try[W] =
       src.decrypted.map(f)
   }
-  final case class FlatMapped[V: Serializer, W: Serializer](
-      src: Cryptic[V],
-      f: V => Cryptic[W]
-  ) extends BinaryOperation[V, W] {
-    override def decrypted(implicit decrypt: Decrypt): Either[String, W] =
-      src.decrypted.flatMap[String, W](v => f(v).decrypted)
+  final case class FlatMapped[V: Serializer, W: Serializer](src: Cryptic[V], f: V => Cryptic[W])
+      extends BinaryOperation[V, W] {
+    override def decrypted(implicit decrypt: Decrypt): Try[W] =
+      src.decrypted.flatMap[W](v => f(v).decrypted)
   }
   /*
   final case class Flattened[V : Serializer, W : Serializer](src: Cryptic[V])(implicit ev: V <:< Cryptic[W])
       extends Operation[V] {
-    override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Either[String, Encrypted[V]] =
+    override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[V]] =
       src.decrypted.map[Encrypted[V]](ev.apply)
-    override def decrypted(implicit decrypt: Decrypt): Either[String, W] =
+    override def decrypted(implicit decrypt: Decrypt): Try[W] =
       src.decrypted.flatMap(v => ev(v).decrypted)
   }*/
-  final case class Filtered[V: Serializer](src: Cryptic[V], pred: V => Boolean)
-      extends Operation[V] {
-    override def run(implicit
-        encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Either[String, Encrypted[V]] =
-      src.decrypted.map[Encrypted[V]] { v ⇒
-        if (pred(v)) v.encrypted
-        else empty[V]
-      }
-    override def decrypted(implicit decrypt: Decrypt): Either[String, V] =
+  final case class Filtered[V: Serializer](src: Cryptic[V], pred: V => Boolean) extends Operation[V] {
+    override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[V]] = src.decrypted.map[Encrypted[V]] {
+      v =>
+        if (pred(v)) v.encrypted else empty[V]
+    }
+    override def decrypted(implicit decrypt: Decrypt): Try[V] =
       src.decrypted.flatMap(v =>
-        if (pred(v)) Right(v) else Left("decrypted called on filtered empty")
-      )
+        if (pred(v)) Success(v) else Failure(new UnsupportedOperationException("decrypted called on filtered empty")))
   }
-  final case class Collected[V: Serializer, W: Serializer](
-      src: Cryptic[V],
-      pf: PartialFunction[V, W]
-  ) extends BinaryOperation[V, W] {
-    override def run(implicit
-        encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Either[String, Encrypted[W]] =
+  final case class Collected[V: Serializer, W: Serializer](src: Cryptic[V], pf: PartialFunction[V, W])
+      extends BinaryOperation[V, W] {
+    override def run(implicit encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[W]] =
       src.decrypted match {
-        case Right(v) if pf.isDefinedAt(v) => Right(pf(v).encrypted)
-        case Right(_)                      => Right(empty[W])
-        case Left(s)                       => Left(s)
+        case Success(v) if pf.isDefinedAt(v) => Success(pf(v).encrypted)
+        case Success(_)                      => Success(empty[W])
+        case Failure(s)                      => Failure(s)
       }
-    override def decrypted(implicit decrypt: Decrypt): Either[String, W] =
+    override def decrypted(implicit decrypt: Decrypt): Try[W] =
       src.decrypted match {
-        case Right(v) if pf.isDefinedAt(v) => Right(pf(v))
-        case e                             => e.map(pf)
+        case Success(v) if pf.isDefinedAt(v) => Success(pf(v))
+        case Success(_) => Failure(new UnsupportedOperationException(s"decrypted called on collected empty"))
+        case Failure(e) => Failure(e)
       }
   }
-  final class OrElsed[V: Serializer, W >: V: Serializer](
-      src: Cryptic[V],
-      alternative: => Cryptic[W]
-  ) extends BinaryOperation[V, W] {
-    override def decrypted(implicit decrypt: Decrypt): Either[String, W] =
+  final class OrElsed[V: Serializer, W >: V: Serializer](src: Cryptic[V], alternative: => Cryptic[W])
+      extends BinaryOperation[V, W] {
+    override def decrypted(implicit decrypt: Decrypt): Try[W] =
       src.decrypted match {
-        case r @ Right(_) => r
-        case Left(_)      => alternative.decrypted
+        case r @ Success(_) => r
+        case Failure(_)     => alternative.decrypted
       }
   }
 }
-case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V] {
-  override def decrypted(implicit decrypt: Decrypt): Either[String, V] =
-    decrypt(cipherText).flatMap(implicitly[Serializer[V]].deserialize)
 
-  /** Returns a byte array containing the encrypted data.
-    * @return
-    *   byte array with encrypted data
-    */
+/**
+ * Represents an encrypted value of type `V`.
+ *
+ * @param cipherText
+ *   The encrypted data as `CipherText`.
+ * @tparam V
+ *   The type of the value being encrypted, requiring an implicit `Serializer` instance.
+ */
+case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V] {
+
+  /**
+   * Returns the byte array representation of the cipher text.
+   *
+   * @return
+   *   the byte array of the cipher text
+   */
   def bytes: Array[Byte] = cipherText.bytes
 
-  /** Returns true if this $encrypted is $empty, false otherwise.
-    */
-  def isEmpty: Boolean = false
-
-  /** Returns false if this $encrypted is $empty, true otherwise.
-    * @note
-    *   Implemented here to avoid the implicit conversion to Iterable.
-    */
+  /**
+   * Checks if the option is non-empty (defined).
+   *
+   * @return
+   *   true if the option is defined, false otherwise.
+   */
   @inline final def nonEmpty: Boolean = isDefined
 
-  /** Returns true if this $encrypted is an not an instance of $empty, false
-    * otherwise.
-    */
+  /**
+   * Checks if the value is defined.
+   *
+   * @return
+   *   true if the value is defined, false otherwise
+   */
   @inline final def isDefined: Boolean = !isEmpty
 
-  /** Tests whether this $encrypted contains a given value.
-    *
-    * @param value
-    *   the value to compare to.
-    * @param decrypt
-    *   the `Decrypt` instance to use for decryption.
-    * @return
-    *   `true` if this $cryptic has a value that is equal (as determined by
-    *   `==`) to `value`, `false` otherwise.
-    */
+  /**
+   * Checks if the given value is contained within the object.
+   *
+   * @param value
+   *   The value to be checked.
+   * @param decrypt
+   *   Implicit parameter to handle decryption.
+   * @return
+   *   True if the value is contained, false otherwise.
+   */
   @inline final def contains(value: V)(implicit decrypt: Decrypt): Boolean =
-    !isEmpty && decrypted == value
+    !isEmpty && decrypted == Try(value)
 
-  /** Returns true if this $encrypted is nonempty '''and''' the predicate $p
-    * returns true when applied to its value, otherwise returns false.
-    *
-    * @param p
-    *   the predicate to test
-    * @param decrypt
-    *   the `Decrypt` instance to use for decryption.
-    */
-  @inline final def exists(p: V => Boolean)(implicit
-      decrypt: Decrypt
-  ): Boolean =
-    !isEmpty && decrypted.exists(p)
+  /**
+   * Checks if there exists an element in the value that satisfies the predicate `p`.
+   *
+   * @param p
+   *   A predicate function that takes an element of type `V` and returns a Boolean.
+   * @param decrypt
+   *   An implicit parameter of type `Decrypt`, used to decrypt the value before applying the predicate.
+   * @return
+   *   A Boolean value that is true if the predicate holds for at least one element, false otherwise.
+   */
+  @inline final def exists(p: V => Boolean)(implicit decrypt: Decrypt): Boolean =
+    !isEmpty && decrypted.map(p).getOrElse(false)
 
-  /** Returns true if this $encrypted is empty '''or''' the predicate $p returns
-    * true when applied to its value.
-    *
-    * @param p
-    *   the predicate to test
-    * @param decrypt
-    *   the `Decrypt` instance to use for decryption.
-    */
-  @inline final def forall(p: V => Boolean)(implicit
-      decrypt: Decrypt
-  ): Boolean =
-    isEmpty || decrypted.forall(p)
+  /**
+   * Tests whether a predicate holds for all elements after decryption.
+   *
+   * @param p
+   *   the predicate to test elements against after decryption
+   * @param decrypt
+   *   an implicit decryption context
+   * @return
+   *   true if the container is empty or if the predicate holds for all decrypted elements, otherwise false
+   */
+  @inline final def forall(p: V => Boolean)(implicit decrypt: Decrypt): Boolean =
+    isEmpty || decrypted.map(p).getOrElse(true)
 
-  /** Apply the given procedure $f to this $encrypted's value if it is nonempty,
-    * otherwise do nothing.
-    *
-    * @param f
-    *   the procedure to apply.
-    * @param decrypt
-    *   the `Decrypt` instance to use for decryption.
-    * @see
-    *   map
-    * @see
-    *   flatMap
-    */
+  /**
+   * Applies a function to all elements of the decrypted collection.
+   *
+   * @param f
+   *   The function to apply to each element.
+   * @param decrypt
+   *   The implicit decryption instance used to decrypt the collection.
+   * @return
+   *   Unit
+   */
   @inline final def foreach[U](f: V => U)(implicit decrypt: Decrypt): Unit =
     if (!isEmpty) decrypted.foreach(f)
 
-  /** Returns a $cryptic which will apply $f to this $cryptic's decrypted value
-    * (if the $cryptic is nonempty) once run. If the $cryptic is $empty once
-    * run, expression `ifEmpty` will be evaluated instead.
-    *
-    * @note
-    *   This is equivalent to `$cryptic map f decryptedOrElse ifEmpty`.
-    *
-    * @param ifEmpty
-    *   the expression to evaluate if empty.
-    * @param f
-    *   the function to apply if nonempty.
-    */
-  @inline final def fold[W: Serializer](ifEmpty: => W)(f: V => W)(implicit
-      decrypt: Decrypt
-  ): Either[String, W] =
-    if (isEmpty) Right(ifEmpty) else decrypted.map(f)
+  /**
+   * Applies the provided functions based on the content of the collection.
+   *
+   * @param ifEmpty
+   *   the function to apply if the collection is empty
+   * @param f
+   *   the function to apply if the collection contains a value
+   * @param decrypt
+   *   an implicit parameter providing decryption functionality
+   * @return
+   *   a `Try[W]` that represents the result of applying the appropriate function
+   */
+  @inline final def fold[W: Serializer](ifEmpty: => W)(f: V => W)(implicit decrypt: Decrypt): Try[W] =
+    if (isEmpty) Try(ifEmpty) else decrypted.map(f)
 
-  /** Returns a singleton iterator of this $cryptic's value if it is nonempty,
-    * or the empty iterator otherwise.
-    */
-  @inline final def iterator(implicit
-      decrypt: Decrypt
-  ): Either[String, Iterator[V]] =
-    if (isEmpty) Right(collection.Iterator.empty)
+  /**
+   * Provides an iterator over the elements of the collection. The iterator will traverse the elements after decrypting
+   * them.
+   *
+   * @param decrypt
+   *   an implicit parameter that handles the decryption of the elements
+   * @return
+   *   a `Try` that contains an `Iterator` of decrypted elements if successful, or a failure if decryption fails
+   */
+  @inline final def iterator(implicit decrypt: Decrypt): Try[Iterator[V]] =
+    if (isEmpty) Try(collection.Iterator.empty)
     else decrypted.map(collection.Iterator.single)
 
-  /** Returns a singleton list containing this $cryptics's value if it is
-    * nonempty, or the empty list otherwise.
-    */
-  @inline final def toList(implicit decrypt: Decrypt): Either[String, List[V]] =
-    if (isEmpty) Right(List()) else decrypted.map(_ :: Nil)
+  /**
+   * Decrypts the cipher text using the provided `Decrypt` instance and deserializes it to type `V` using the implicitly
+   * available `Serializer[V]`.
+   *
+   * @param decrypt
+   *   an implicit parameter of type `Decrypt` to handle the decryption of the cipher text
+   * @return
+   *   a `Try[V]` containing the deserialized value if successful, or a failure if either the decryption or
+   *   deserialization steps fail
+   */
+  override def decrypted(implicit decrypt: Decrypt): Try[V] =
+    decrypt(cipherText).flatMap(implicitly[Serializer[V]].deserialize)
+
+  /**
+   * Checks if the collection is empty.
+   *
+   * @return
+   *   true if the collection contains no elements, false otherwise.
+   */
+  def isEmpty: Boolean = false
+
+  /**
+   * Converts the current collection to a list.
+   *
+   * @param decrypt
+   *   An implicit parameter for the decryption logic.
+   * @return
+   *   A `Try` containing a `List` of type `V`.
+   */
+  @inline final def toList(implicit decrypt: Decrypt): Try[List[V]] =
+    if (isEmpty) Try(List()) else decrypted.map(_ :: Nil)
 }
 object Encrypted {
 
-  /** Returns a new $encrypted instance holding the specified value in encrypted
-    * form.
-    * @param value
-    *   the value to be encrypted
-    * @param encrypt
-    *   the `Encrypt` instance to use for encryption.
-    * @tparam V
-    *   the type of `value`
-    */
-  def apply[V: Serializer](
-      value: V
-  )(implicit encrypt: Encrypt): Encrypted[V] = {
+  /**
+   * Applies encryption to the given value using the provided implicit serializer and encryptor.
+   *
+   * @param value
+   *   The value to be encrypted.
+   * @param encrypt
+   *   An implicit encryption function that will be used to encrypt the serialized value.
+   * @tparam V
+   *   The type of the value being encrypted. A Serializer must be available implicitly for this type.
+   * @return
+   *   An instance of Encrypted[V] containing the encrypted value. Returns an empty Encrypted instance if the input
+   *   value is null.
+   */
+  def apply[V: Serializer](value: V)(implicit encrypt: Encrypt): Encrypted[V] = {
     if (value == null) empty
     else Encrypted[V](encrypt(implicitly[Serializer[V]].serialize(value)))
   }
+
+  /**
+   * Constructs an empty Encrypted instance.
+   *
+   * @return
+   *   An instance of Encrypted representing an empty value.
+   */
   def empty[V: Serializer]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]
   object Empty extends Encrypted[Nothing](CipherText.Empty) {
-    override def decrypted(implicit decrypt: Decrypt) = Left(
-      "decrypted called on empty"
-    )
+    override def decrypted(implicit decrypt: Decrypt): Try[Nothing] = Failure(
+      new UnsupportedOperationException("decrypted called on empty"))
     override def isEmpty: Boolean = true
   }
 }

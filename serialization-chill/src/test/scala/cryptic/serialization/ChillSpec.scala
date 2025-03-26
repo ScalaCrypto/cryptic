@@ -11,17 +11,17 @@ case class PersonName(first: Name, middle: Option[Name] = None, last: Name)
 case class EmailAddress(literal: String)
 case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
-class FstSpec extends AnyFlatSpec with Matchers {
-  import Fst._
+class ChillSpec extends AnyFlatSpec with Matchers {
+  import Chill._
 
-  "Fst serializer" should "serialize string and then deserialize back to original string" in {
+  "Chill serializer" should "serialize string and then deserialize back to original string" in {
     val plainText = serializer.serialize("kalle")
     plainText shouldNot equal(PlainText("kalle"))
     val actual = serializer.deserialize(plainText)
     actual shouldEqual Success("kalle")
   }
 
-  "Fst serializer" should "serialize user and deserialize back to original user" in {
+  "Chill serializer" should "serialize user and deserialize back to original user" in {
     val user = User(
       id = 1,
       alias = "kalle",

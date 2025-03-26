@@ -1,25 +1,18 @@
 package cryptic
 package serialization
 
+import scala.util.{ Failure, Try }
+
 trait Serializer[V] {
   def serialize(value: V): PlainText
-  def deserialize(plainText: PlainText): Either[String, V]
+  def deserialize(plainText: PlainText): Try[V]
 }
 object Serializer {
   implicit val nothingSerializer: Serializer[Nothing] =
     new Serializer[Nothing] {
-      override def serialize(value: Nothing) =
+      override def serialize(value: Nothing): PlainText =
         throw new UnsupportedOperationException("serialize nothing")
-      override def deserialize(plainText: PlainText) =
-        throw new UnsupportedOperationException("deserialize nothing")
+      override def deserialize(plainText: PlainText): Try[Nothing] =
+        Failure(new UnsupportedOperationException("deserialize nothing"))
     }
-  /*
-  implicit def optionSerializer[V : Serializer]: Serializer[Option[V]] = new Serializer[_root_.scala.Option[V]] {
-    override def serialize(value: Option[V]) = value match {
-      case Some(v) => implicitly[Serializer[V]].serialize(v)
-      case None => implicitly[Serializer[None.type]].serialize(None)
-    }
-    override def deserialize(plainText: PlainText) = implicitly[Serializer[V]].deserialize(plainText).map(Option.apply)
-  }
-   */
 }

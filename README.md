@@ -50,8 +50,8 @@ Select serializer one of
 Import base package and syntax extension:
 
 ```scala
-import cryptic._
-import cryptic.syntax._
+import cryptic.*
+import cryptic.syntax.*
 ```
 
 Define your data types:
@@ -59,26 +59,23 @@ Define your data types:
 ```scala
 case class EmailAddress(literal: String)
 
-object EmailAddress {
+object EmailAddress:
   val rw: ReadWriter[EmailAddress] = macroRW // If you  use the Upickle serializer
-}
 
 case class User(id: Long, email: Encrypted[EmailAddress])
 
-object User {
+object User:
   val rw: ReadWriter[User] = macroRW // If you use the Upickle serializer
-}
-
 ```
 
 Encrypt your data using convenient syntax, a crypto and a serializer must be available:
 
 ```scala
 import java.security.{KeyPair, PrivateKey, PublicKey}
-import cryptic.serialization.Chill._ // Brings the Chill serializer in scope
-import cryptic.crypto.EC // Elliptic Curve encryption
+import cryptic.crypto.EC.{ given, * } // Elliptic Curve encryption
+import cryptic.serialization.Chill.* // Brings the Chill serializer in scope
 
-// We need an implicit public key to enable encryption for EC
+// We need a given public key to enable encryption for EC
 private val keyPair: KeyPair = EC.keygen(256)
 implicit private val publicKey: PublicKey = keyPair.getPublic
 
@@ -109,8 +106,8 @@ val lowered = user.email.
 Run your staged transformations, a crypto and a serializer must be in scope:
 
 ```scala
-import cryptic.crypto.RSA._
-import cryptic.serialization.Chill._
+import cryptic.crypto.RSA.*
+import cryptic.serialization.Chill.{ given, * }
 
 val user2 = user.copy(email = lowered.run())
 ```
@@ -118,7 +115,7 @@ val user2 = user.copy(email = lowered.run())
 Decrypt your transformed data, a crypto and a serializer must be in scope:
 
 ```scala
-import cryptic.crypto.RSA._
+import cryptic.crypto.RSA.{ given, * }
 import cryptic.serialization.Fst._
 
 val emailInLower = user2.email.decrypted
@@ -143,11 +140,9 @@ val emailInLower = user2.email.decrypted
 Provide an implementation of the Serializer trait:
 
 ```scala
-trait Serializer[V] {
+trait Serializer[V]:
   def serialize(value: V): PlainText
-
   def deserialize(plainText: PlainText): Either[String, V]
-}
 ```
 
 Example:
@@ -156,14 +151,10 @@ Example:
 
 import scala.util.Try
 
-object MySerializer {
-  implicit def serializer[V]: Serializer[V] = new Serializer[V] {
-
+object MySerializer:
+  given serializer[V]: Serializer[V] = new Serializer[V]:
     override def serialize(value: V): PlainText = ???
-
     override def deserialize(plainText: PlainText): Either[String, V] = ???
-  }
-}
 ```
 
 ### Crypto
@@ -171,37 +162,27 @@ object MySerializer {
 Provide implementations of the Encrypt and Decrypt traits and probably a Key:
 
 ```scala
-trait Encrypt {
+trait Encrypt:
   def apply(plainText: PlainText): CipherText
-}
 
-trait Decrypt {
+trait Decrypt:
   def apply(cipherText: CipherText): Either[String, PlainText]
-}
 ```
 
 Example Caesar crypto:
 
 ```scala
-object Caesar {
-  case class Key(offset: Int) {
+object Caesar:
+  case class Key(offset: Int):
     require(offset != 0)
-  }
 
-  implicit def encrypt(implicit key: Key): Encrypt = (plainText: PlainText) => {
-    val bytes = plainText.map(b ⇒ (b + key.offset).toByte)
+  given encrypt(using key: Key): Encrypt = (plainText: PlainText) =>  val bytes = plainText.map(b ⇒ (b + key.offset).toByte)
     CipherText(bytes)
-  }
 
-  implicit def decrypt(implicit key: Key): Decrypt = (cipherText: CipherText) =>
+  given decrypt(given key: Key): Decrypt = (cipherText: CipherText) =>
     Right[String, PlainText](
       PlainText(cipherText.bytes.map(b => (b - key.offset).toByte))
     )
 
   def keygen(offset: Int): Key = Key(offset)
-}
 ```
-
-
-
-

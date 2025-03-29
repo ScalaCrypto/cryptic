@@ -6,27 +6,24 @@ import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.RSA
 import cryptic.serialization.{Chill, Fst, Serializer, Upickle}
 import cryptic.test.CryptoSpecBase
-import upickle.default
+import upickle.default.*
 
 import java.security.{PrivateKey, PublicKey}
 
-abstract class RSASpecBase extends CryptoSpecBase {
+trait RSASpecBase extends CryptoSpecBase:
   private val keyPair = RSA.keygen(512)
-  implicit val publicKey: PublicKey = keyPair.getPublic
-  implicit val privateKey: PrivateKey = keyPair.getPrivate
-  val encrypt: Encrypt = RSA.encrypt
-  val decrypt: Decrypt = RSA.decrypt
+  given publicKey: PublicKey = keyPair.getPublic
+  given privateKey: PrivateKey = keyPair.getPrivate
+  override given encrypt: Encrypt = RSA.encrypt
+  override given decrypt: Decrypt = RSA.decrypt
   override def toString: String = "RSAChill"
-}
 
-class RSAChillSpec extends RSASpecBase {
-  override implicit def serializer[V](implicit rw: default.ReadWriter[V]): Serializer[V] = Chill.serializer
-}
+class RSAChillSpec extends RSASpecBase:
+  override given serializer[V]: Serializer[V] = Chill.serializer
 
-class RSAFstSpec extends RSASpecBase {
-  override implicit def serializer[V](implicit rw: default.ReadWriter[V]): Serializer[V] = Fst.serializer
-}
+class RSAFstSpec extends RSASpecBase:
+  override given serializer[V]: Serializer[V] = Fst.serializer
 
-class RSAUpickleSpec extends RSASpecBase {
-  override implicit def serializer[V](implicit rw: default.ReadWriter[V]): Serializer[V] = Upickle[V]
-}
+class RSAUpickleSpec[V: ReadWriter] extends RSASpecBase:
+  override given serializer[W]: Serializer[W] =
+    Upickle[W]()(using summon[ReadWriter[V]].asInstanceOf[ReadWriter[W]])

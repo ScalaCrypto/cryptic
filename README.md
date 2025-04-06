@@ -11,7 +11,6 @@ select the modules you nedd or write your own
 |:----------------------|:--------------------| 
 | crypto-javax          | AES, RSA            |
 | crypto-bouncycastle   | EC (Elliptic curve) |
-| serialization-chill   | Chill               | 
 | serialization-fst     | Fst                 | 
 | serialization-upickle | Upickle             | 
 
@@ -38,8 +37,6 @@ To encrypt with EC
 Select serializer one of
 
 ```sbt
-"scalacrypto" %% "serialization-chill" % "1.0.0"
-
 "scalacrypto" %% "serialization-fst" % "1.0.0"
 
 "scalacrypto" %% "serialization-upickle" % "1.0.0"
@@ -75,7 +72,6 @@ Encrypt your data using convenient syntax, a crypto and a serializer must be ava
 
 ```scala
 import java.security.{KeyPair, PrivateKey, PublicKey}
-import cryptic.serialization.Chill._ // Brings the Chill serializer in scope
 import cryptic.crypto.EC // Elliptic Curve encryption
 
 // We need an implicit public key to enable encryption for EC
@@ -110,7 +106,6 @@ Run your staged transformations, a crypto and a serializer must be in scope:
 
 ```scala
 import cryptic.crypto.RSA._
-import cryptic.serialization.Chill._
 
 val user2 = user.copy(email = lowered.run())
 ```
@@ -132,7 +127,6 @@ val emailInLower = user2.email.decrypted
 
 ## Provided serializers
 
-- Chill
 - Fst
 - Upickle
 

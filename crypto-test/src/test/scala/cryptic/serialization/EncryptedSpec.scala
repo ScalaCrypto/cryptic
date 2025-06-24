@@ -18,10 +18,6 @@ object Foo {
 
 case class FooBar(secret: Encrypted[String])
 
-class ChillEncryptedSpec extends EncryptedSpecBase {
-  override def serializer[V](implicit rw: ReadWriter[V]): Serializer[V] =
-    Chill.serializer
-}
 
 class FstEncryptedSpec extends EncryptedSpecBase {
   override def serializer[V](implicit rw: ReadWriter[V]): Serializer[V] =

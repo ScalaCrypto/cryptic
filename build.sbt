@@ -1,7 +1,6 @@
 import scala.collection.Seq
 
 lazy val scalaTest = ("org.scalatest" %% "scalatest" % "3.2.19").withSources()
-lazy val chill = ("com.twitter" %% "chill" % "0.10.0").withSources()
 lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
 lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.1.0").withSources()
 lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.78.1").withSources()
@@ -20,7 +19,7 @@ lazy val javaBaseOpens = Seq(
   "--add-opens=java.sql/java.sql=ALL-UNNAMED")
 
 lazy val commonSettings =
-  Seq(organization := "ScalaCrypto", scalaVersion := "2.13.16", version := "0.6.0-SNAPSHOT", javaOptions ++= javaBaseOpens) ++ testSettings
+  Seq(organization := "ScalaCrypto", scalaVersion := "3.6.4", version := "0.6.0-SNAPSHOT", javaOptions ++= javaBaseOpens) ++ testSettings
 
 lazy val testSettings = Seq(Test / fork := true, Test / javaOptions ++= javaBaseOpens)
 
@@ -31,12 +30,6 @@ lazy val coreSettings = commonSettings ++ Seq(
     s"cryptic-${artifact.name}-${module.revision}.${artifact.extension}"
   })
 
-lazy val serializationChillSettings = commonSettings ++ Seq(
-  name := "serialization-chill",
-  libraryDependencies ++= Seq(scalaTest % Test, chill),
-  artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
-    s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
-  })
 lazy val serializationFstSettings = commonSettings ++ testSettings ++ Seq(
   name := "serialization-fst",
   libraryDependencies ++= Seq(scalaTest % Test, fst),
@@ -64,8 +57,6 @@ lazy val cryptoTestSettings =
 
 lazy val core = (project in file("core")).settings(coreSettings)
 
-lazy val `serialization-chill` = (project in file("serialization-chill")).settings(serializationChillSettings).dependsOn(core)
-
 lazy val `serialization-fst` = (project in file("serialization-fst")).settings(serializationFstSettings).dependsOn(core)
 
 lazy val `serialization-upickle` = (project in file("serialization-upickle")).settings(serializationUpickleSettings).dependsOn(core)
@@ -78,7 +69,7 @@ lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle"))
 
 lazy val `crypto-test` = (project in file("crypto-test"))
   .settings(cryptoTestSettings)
-  .dependsOn(core, `serialization-chill`, `serialization-fst`, `serialization-upickle`, `crypto-bouncycastle`, `crypto-javax`)
+  .dependsOn(core, `serialization-fst`, `serialization-upickle`, `crypto-bouncycastle`, `crypto-javax`)
 
 lazy val cryptic = (project in file("."))
   .enablePlugins(ParadoxPlugin)
@@ -88,4 +79,4 @@ lazy val cryptic = (project in file("."))
     publish / skip := true,
     paradoxTheme := Some(builtinParadoxTheme("generic")),
     Compile / paradoxProperties ++= Map("github.base_url" -> s"https://github.com/ScalaCrypto/cryptic/tree/${version.value}"))
-  .aggregate(core, `serialization-chill`, `serialization-fst`, `serialization-upickle`, `crypto-javax`, `crypto-bouncycastle`, `crypto-test`)
+  .aggregate(core, `serialization-fst`, `serialization-upickle`, `crypto-javax`, `crypto-bouncycastle`, `crypto-test`)

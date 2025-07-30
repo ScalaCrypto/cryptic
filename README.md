@@ -77,7 +77,7 @@ import cryptic.serialization.Chill.* // Brings the Chill serializer in scope
 
 // We need a given public key to enable encryption for EC
 private val keyPair: KeyPair = EC.keygen(256)
-implicit private val publicKey: PublicKey = keyPair.getPublic
+given private val publicKey: PublicKey = keyPair.getPublic
 
 val user = User(123, EmailAddress("odd@example.com").encrypted)
 ```
@@ -87,7 +87,7 @@ To use the Upickle serializer:
 ```scala
 import cryptic.serialization.Upickle
 
-implicit def serializer[V](implicit rw: ReadWriter[V]): Serializer[V] = Upickle[V]
+given def serializer[V](using rw: ReadWriter[V]): Serializer[V] = Upickle[V]
 ```
 
 Access your data in encrypted form (can be done without crypto/serializer):
@@ -176,10 +176,11 @@ object Caesar:
   case class Key(offset: Int):
     require(offset != 0)
 
-  given encrypt(using key: Key): Encrypt = (plainText: PlainText) =>  val bytes = plainText.map(b ⇒ (b + key.offset).toByte)
+  given encrypt(using key: Key): Encrypt = (plainText: PlainText) =>  
+    val bytes = plainText.map(b => (b + key.offset).toByte)
     CipherText(bytes)
 
-  given decrypt(given key: Key): Decrypt = (cipherText: CipherText) =>
+  given decrypt(using key: Key): Decrypt = (cipherText: CipherText) =>
     Right[String, PlainText](
       PlainText(cipherText.bytes.map(b => (b - key.offset).toByte))
     )

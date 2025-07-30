@@ -2,7 +2,7 @@ import scala.collection.Seq
 
 lazy val scalaTest = ("org.scalatest" %% "scalatest" % "3.2.19").withSources()
 lazy val chill = ("com.twitter" % "chill" % "0.10.0").cross(CrossVersion.for3Use2_13).withSources()
-lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.4-jdk17").withSources()
+lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
 lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.2.1").withSources()
 lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.81").withSources()
 
@@ -27,19 +27,28 @@ lazy val testSettings = Seq(Test / fork := true, Test / javaOptions ++= javaBase
 lazy val coreSettings = commonSettings ++ Seq(
   name := "core",
   libraryDependencies ++= Seq(scalaTest % Test),
-  artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
+  Compile / packageBin / mappings += {
+    file("LICENSE") -> "LICENSE"
+  },
+    artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name}-${module.revision}.${artifact.extension}"
   })
 
 lazy val serializationChillSettings = commonSettings ++ Seq(
   name := "serialization-chill",
   libraryDependencies ++= Seq(scalaTest % Test, chill),
+  Compile / packageBin / mappings += {
+    file("LICENSE") -> "LICENSE"
+  },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
   })
 lazy val serializationFstSettings = commonSettings ++ testSettings ++ Seq(
   name := "serialization-fst",
   libraryDependencies ++= Seq(scalaTest % Test, fst),
+  Compile / packageBin / mappings += {
+    file("LICENSE") -> "LICENSE"
+  },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
   })
@@ -47,6 +56,9 @@ lazy val serializationFstSettings = commonSettings ++ testSettings ++ Seq(
 lazy val serializationUpickleSettings = commonSettings ++ Seq(
   name := "serialization-upickle",
   libraryDependencies ++= Seq(scalaTest % Test, upickle),
+  Compile / packageBin / mappings += {
+    file("LICENSE") -> "LICENSE"
+  },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
   })
@@ -55,6 +67,9 @@ lazy val cryptoCommonSettings = (projectName: String) =>
   commonSettings ++ Seq(
     name := projectName,
     libraryDependencies ++= Seq(scalaTest % Test),
+    Compile / packageBin / mappings += {
+      file("LICENSE") -> "LICENSE"
+    },
     artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
       s"cryptic-${artifact.name.replace("crypto-", "")}-${module.revision}.${artifact.extension}"
     })

@@ -20,7 +20,16 @@ lazy val javaBaseOpens = Seq(
   "--add-opens=java.sql/java.sql=ALL-UNNAMED")
 
 lazy val commonSettings =
-  Seq(organization := "ScalaCrypto", scalaVersion := "3.6.4", version := "0.7.0-SNAPSHOT", javaOptions ++= javaBaseOpens) ++ testSettings
+  Seq(
+    organization := "scalacrypto",
+    scalaVersion := "3.6.4",
+    version := "0.7.0-SNAPSHOT",
+    Compile / packageDoc / publishArtifact := false,
+    Compile / packageSrc / publishArtifact := true,
+    Compile / packageBin / publishArtifact := true,
+    Test / publishArtifact := false,
+    javaOptions ++= javaBaseOpens
+  ) ++ testSettings
 
 lazy val testSettings = Seq(Test / fork := true, Test / javaOptions ++= javaBaseOpens)
 
@@ -30,7 +39,7 @@ lazy val coreSettings = commonSettings ++ Seq(
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
-    artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
+  artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name}-${module.revision}.${artifact.extension}"
   })
 

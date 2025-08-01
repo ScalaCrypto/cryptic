@@ -27,19 +27,28 @@ lazy val testSettings = Seq(Test / fork := true, Test / javaOptions ++= javaBase
 lazy val coreSettings = commonSettings ++ Seq(
   name := "core",
   libraryDependencies ++= Seq(scalaTest % Test),
-  artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
+  Compile / packageBin / mappings += {
+    file("LICENSE") -> "LICENSE"
+  },
+    artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name}-${module.revision}.${artifact.extension}"
   })
 
 lazy val serializationChillSettings = commonSettings ++ Seq(
   name := "serialization-chill",
   libraryDependencies ++= Seq(scalaTest % Test, chill),
+  Compile / packageBin / mappings += {
+    file("LICENSE") -> "LICENSE"
+  },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
   })
 lazy val serializationFstSettings = commonSettings ++ testSettings ++ Seq(
   name := "serialization-fst",
   libraryDependencies ++= Seq(scalaTest % Test, fst),
+  Compile / packageBin / mappings += {
+    file("LICENSE") -> "LICENSE"
+  },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
   })
@@ -47,6 +56,9 @@ lazy val serializationFstSettings = commonSettings ++ testSettings ++ Seq(
 lazy val serializationUpickleSettings = commonSettings ++ Seq(
   name := "serialization-upickle",
   libraryDependencies ++= Seq(scalaTest % Test, upickle),
+  Compile / packageBin / mappings += {
+    file("LICENSE") -> "LICENSE"
+  },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
   })
@@ -55,6 +67,9 @@ lazy val cryptoCommonSettings = (projectName: String) =>
   commonSettings ++ Seq(
     name := projectName,
     libraryDependencies ++= Seq(scalaTest % Test),
+    Compile / packageBin / mappings += {
+      file("LICENSE") -> "LICENSE"
+    },
     artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
       s"cryptic-${artifact.name.replace("crypto-", "")}-${module.revision}.${artifact.extension}"
     })

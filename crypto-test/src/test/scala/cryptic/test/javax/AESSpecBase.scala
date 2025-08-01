@@ -5,7 +5,7 @@ package javax
 import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.AES
 import cryptic.crypto.AES.AESParams
-import cryptic.serialization.{Chill, Fst, Serializer, Upickle}
+import cryptic.serialization.{Chill, Fst, Upickle}
 import cryptic.test.CryptoSpecBase
 import upickle.default.*
 

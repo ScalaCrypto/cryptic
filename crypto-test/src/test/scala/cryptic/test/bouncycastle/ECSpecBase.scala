@@ -4,7 +4,7 @@ package bouncycastle
 
 import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.EC
-import cryptic.serialization.{Chill, Fst, Serializer, Upickle}
+import cryptic.serialization.{Chill, Fst, Upickle}
 import cryptic.test.CryptoSpecBase
 import upickle.default.*
 

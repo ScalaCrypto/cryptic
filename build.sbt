@@ -2,7 +2,7 @@ import scala.collection.Seq
 
 lazy val scalaTest = ("org.scalatest" %% "scalatest" % "3.2.19").withSources()
 lazy val chill = ("com.twitter" % "chill" % "0.10.0").cross(CrossVersion.for3Use2_13).withSources()
-lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
+lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.4-jdk17").withSources()
 lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.2.1").withSources()
 lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.81").withSources()
 

@@ -21,9 +21,6 @@ package object cryptic:
       val buffer = ByteBuffer.allocate(8)
       buffer.putDouble(x)
       buffer.array()
-    def apply(x: Any): Nothing = throw new IllegalArgumentException(
-      "Supported types are: Double, Int, Long and String"
-    )
     def unapply[T](plainText: PlainText)(using ct: ClassTag[T]): Try[T] =
       def checkSize(n: Int): Try[PlainText] =
         if plainText.length == n then Success(plainText)
@@ -101,11 +98,9 @@ package object cryptic:
     override def serialize(value: Double): PlainText = PlainText(value)
     override def deserialize(plainText: PlainText): Try[Double] =
       PlainText.unapply[Double](plainText)
-  def defaultSerializer[V: ClassTag]: Serializer[V] =
-    new Serializer[V]:
-      override def serialize(value: V): PlainText = PlainText(value)
-      override def deserialize(plainText: PlainText): Try[V] =
-        PlainText.unapply[V](plainText)
-
+//  given defaultSerializer[V: ClassTag]: Serializer[V] = new Serializer[V]:
+//    override def serialize(value: V): PlainText = PlainText(value)
+//    override def deserialize(plainText: PlainText): Try[V] =
+//      PlainText.unapply[V](plainText)
   extension [V: Serializer](value: V)
     def encrypted(using encrypt: Encrypt): Encrypted[V] = Encrypted(value)

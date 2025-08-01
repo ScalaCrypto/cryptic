@@ -13,20 +13,17 @@ class ECSpec extends AnyFlatSpec with Matchers:
   import EC.given
   private val keyPair: KeyPair = keygen(256)
   implicit val publicKey: PublicKey = keyPair.getPublic
-  private val text = "nisse"
-  private val plainText = PlainText(text)
-  val encryptFun: Encrypt = encrypt // Uses implicit key
+  private val text = "secret"
 
   "EC" should "support encryption and decryption" in:
     // Note no need for the private key when encrypting
-    val encrypted = encryptFun(plainText)
+    val encrypted: Encrypted[String] = text.encrypted
 
-    implicit val privateKey: PrivateKey = keyPair.getPrivate
-    val decryptFun: Decrypt = decrypt // Uses implicit key
-    decryptFun(encrypted) match
-      case Success(actual) ⇒ actual shouldEqual plainText
+    given privateKey: PrivateKey = keyPair.getPrivate
+    encrypted.decrypted match
+      case Success(actual) => actual shouldEqual text
       case x ⇒ fail(s"does not decrypt: $x")
 
-  "EC" should "hide plaintegxt" in:
-    new String(encryptFun(plainText).bytes)
-      .contains("nisse".getBytes()) shouldBe false
+  "EC" should "hide the plain text" in:
+    new String(text.encrypted.bytes)
+      .contains(text.getBytes()) shouldBe false

@@ -7,24 +7,21 @@ import org.scalatest.matchers.should.Matchers
 import scala.util.Success
 
 class AESSpec extends AnyFlatSpec with Matchers:
-  import AES.*
-  import AES.given
-  implicit private val params: AESParams = AESParams()
-  implicit private val password: AESPassphrase = AESPassphrase("secret")
-  private val plainText = PlainText("nisse")
-  val encryptFun: Encrypt = encrypt // Uses implicit key
+  import AES.{given, *}
+  given params: AESParams = AESParams()
+  given password: AESPassphrase = AESPassphrase("secret")
+  val text = "nisse"
 
   "AES" should "support encryption and decryption" in:
-    val encrypted = encryptFun(plainText)
+    val encrypted = text.encrypted
 
-    val decryptFun: Decrypt = decrypt // Uses implicit key
-    decryptFun(encrypted) match
-      case Success(actual) ⇒ actual shouldEqual plainText
+    encrypted.decrypted match
+      case Success(actual) => actual shouldEqual text
       case x ⇒ fail(s"does not decrypt: $x")
 
   "AES" should "hide plaintext" in:
-    new String(encryptFun(plainText).bytes)
-      .contains("nisse".getBytes()) shouldBe false
+    new String(text.encrypted.bytes)
+      .contains(text.getBytes()) shouldBe false
 
   "AESParams keyspecLength" should
     "only allow 126, 192, 256" in:

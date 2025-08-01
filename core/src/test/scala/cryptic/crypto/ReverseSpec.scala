@@ -18,7 +18,7 @@ class ReverseSpec extends AnyFlatSpec with Matchers:
       case x ⇒ fail(s"does not decrypt: $x")
 
   "Reverse Encrypted" should "hide plaintext" in:
-    new String(encrypted.cipherText.bytes)
+    new String(encrypted.bytes)
       .contains(text) shouldBe false
     
   "Reverse" should "be reversed" in:

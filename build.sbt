@@ -2,7 +2,7 @@ import scala.collection.Seq
 
 lazy val scalaTest = ("org.scalatest" %% "scalatest" % "3.2.19").withSources()
 lazy val chill = ("com.twitter" % "chill" % "0.10.0").cross(CrossVersion.for3Use2_13).withSources()
-lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.4-jdk17").withSources()
+lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
 lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.2.1").withSources()
 lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.81").withSources()
 
@@ -20,7 +20,16 @@ lazy val javaBaseOpens = Seq(
   "--add-opens=java.sql/java.sql=ALL-UNNAMED")
 
 lazy val commonSettings =
-  Seq(organization := "ScalaCrypto", scalaVersion := "3.6.4", version := "0.7.0-SNAPSHOT", javaOptions ++= javaBaseOpens) ++ testSettings
+  Seq(
+    organization := "scalacrypto",
+    scalaVersion := "3.6.4",
+    version := "0.7.0-SNAPSHOT",
+    Compile / packageDoc / publishArtifact := false,
+    Compile / packageSrc / publishArtifact := true,
+    Compile / packageBin / publishArtifact := true,
+    Test / publishArtifact := false,
+    javaOptions ++= javaBaseOpens
+  ) ++ testSettings
 
 lazy val testSettings = Seq(Test / fork := true, Test / javaOptions ++= javaBaseOpens)
 
@@ -30,7 +39,7 @@ lazy val coreSettings = commonSettings ++ Seq(
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
-    artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
+  artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name}-${module.revision}.${artifact.extension}"
   })
 

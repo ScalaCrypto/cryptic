@@ -1,8 +1,5 @@
 package cryptic
 
-import cryptic.serialization.Serializer
-import cryptic.syntax.*
-
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 

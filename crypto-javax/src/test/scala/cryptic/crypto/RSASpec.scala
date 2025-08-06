@@ -8,24 +8,20 @@ import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.Success
 
 class RSASpec extends AnyFlatSpec with Matchers:
-  import RSA.*
-  import RSA.given
-  private val keyPair: KeyPair = keygen(2048)
-  implicit val publicKey: PublicKey = keyPair.getPublic
-  private val text = "nisse"
-  private val plainText = PlainText(text)
-  val encryptFun: Encrypt = encrypt // Uses implicit key
+  import RSA.{given, *}
+  val keyPair: KeyPair = keygen(2048)
+  given publicKey: PublicKey = keyPair.getPublic
+  val text = "nisse"
 
   "RSA" should "support encryption and decryption" in:
     // Note no need for the private key when encrypting
-    val encrypted = encryptFun(plainText)
+    val encrypted = text.encrypted
 
-    implicit val privateKey: PrivateKey = keyPair.getPrivate
-    val decryptFun: Decrypt = decrypt // Uses implicit key
-    decryptFun(encrypted) match
-      case Success(actual) ⇒ actual shouldEqual plainText
+    given privateKey: PrivateKey = keyPair.getPrivate
+    encrypted.decrypted match
+      case Success(actual) => actual shouldEqual text
       case x ⇒ fail(s"does not decrypt: $x")
 
   "RSA" should "hide plaintext" in:
-    new String(encryptFun(plainText).bytes)
-      .contains("nisse".getBytes()) shouldBe false
+    new String(text.encrypted.bytes)
+      .contains(text.getBytes()) shouldBe false

@@ -1,8 +1,7 @@
 package cryptic
 package serialization
 
-import cryptic.syntax.*
-import cryptic.{crypto, Cryptic, Encrypted}
+import cryptic.*
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

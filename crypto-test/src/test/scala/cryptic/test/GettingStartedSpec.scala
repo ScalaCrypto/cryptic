@@ -1,7 +1,6 @@
 package cryptic
 package test
 
-import cryptic.{Cryptic, Encrypted}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -39,7 +38,6 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
       import cryptic.crypto.RSA.given
       import cryptic.serialization.Chill.*
       import cryptic.serialization.Chill.given
-      import cryptic.syntax.*
       implicit val pubKey: PublicKey = publicKey
       // #encrypt
       val user = User(123, EmailAddress("Odd@Example.com").encrypted)

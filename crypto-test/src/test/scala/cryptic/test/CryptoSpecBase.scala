@@ -1,8 +1,7 @@
 package cryptic
 package test
 
-import cryptic.serialization.Serializer
-import cryptic.{Cryptic, Decrypt, Encrypt, Encrypted}
+import cryptic.*
 import org.scalatest.TryValues
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
@@ -12,7 +11,6 @@ import scala.compiletime.deferred
 import scala.util.Success
 
 trait CryptoSpecBase extends AnyFlatSpecLike with Matchers with TryValues:
-  import cryptic.syntax.*
   given encrypt: Encrypt = deferred
   given decrypt: Decrypt = deferred
   given serializer[V]: Serializer[V] = deferred

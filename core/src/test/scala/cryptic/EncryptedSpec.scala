@@ -1,6 +1,5 @@
 package cryptic
 
-import cryptic.syntax.*
 import org.scalatest.TryValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -16,9 +15,7 @@ case class EmailAddress(literal: String)
 case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
 class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
-  import crypto.Reverse.*
   import crypto.Reverse.given
-  import serialization.StringSerializer.*
 
   private val clear = "nisse"
   private val enc1: Encrypted[String] = Encrypted(clear)

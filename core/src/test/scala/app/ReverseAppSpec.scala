@@ -6,7 +6,7 @@ import org.scalatest.TryValues
 
 import scala.util.{Success, Try}
 
-class AppSpec extends AnyFlatSpec with Matchers with TryValues:
+class ReverseAppSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.{*, given}
   import cryptic.crypto.Reverse.given
 

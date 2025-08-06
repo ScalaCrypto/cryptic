@@ -19,7 +19,7 @@ object Caesar:
   case class Key(offset: Int):
     require(offset != 0)
   given encrypt(using key: Key): Encrypt = (plainText: PlainText) =>
-    val bytes = plainText.map(b ⇒ (b + key.offset).toByte)
+    val bytes = plainText.bytes.map(b ⇒ (b + key.offset).toByte)
     CipherText(bytes)
   given decrypt(using key: Key): Decrypt = (cipherText: CipherText) =>
     Try[PlainText](

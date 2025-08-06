@@ -31,7 +31,7 @@ class ReverseAppSpec extends AnyFlatSpec with Matchers with TryValues:
     person.toString shouldBe "Person(17,Encrypted(CipherText(0x67726f2e6f7470797263616c616373406e697472616d)))"
 
   "PlainText" should "be easy" in:
-    PlainText(clear) shouldBe clear.getBytes()
+    PlainText(clear).bytes shouldBe clear.getBytes()
     val enc = clear.encrypted
     enc.bytes shouldBe clear.getBytes.reverse
 

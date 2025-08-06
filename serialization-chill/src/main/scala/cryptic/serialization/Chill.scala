@@ -22,6 +22,6 @@ object Chill:
     KryoPool.withByteArrayOutputStream(10, new ScalaKryoInstantiator())
 
   given serializer[V]: Serializer[V] = new Serializer[V]:
-    def serialize(value: V): PlainText = kryoPool.toBytesWithClass(value)
+    def serialize(value: V): PlainText = PlainText(kryoPool.toBytesWithClass(value))
     def deserialize(plainText: PlainText): Try[V] = Try:
-      kryoPool.fromBytes(plainText).asInstanceOf[V]
+      kryoPool.fromBytes(plainText.bytes).asInstanceOf[V]

@@ -18,5 +18,5 @@ object Upickle:
     new Serializer[V]:
       override def serialize(value: V): PlainText = PlainText(write(value))
       override def deserialize(plainText: PlainText): Try[V] = Try(
-        read[V](plainText)
+        read[V](plainText.bytes)
       )

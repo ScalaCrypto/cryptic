@@ -317,7 +317,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   cipher text
     * @return
     *   a `Try[V]` containing the decoded value if successful, or a failure
-    *   if either the decryption or decodec steps fail
+    *   if either the decryption or decoding steps fail
     */
   override def decrypted(using decrypt: Decrypt): Try[V] =
     decrypt(cipherText).flatMap(implicitly[Codec[V]].decode)

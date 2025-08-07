@@ -23,7 +23,8 @@ class CaesarSpec extends AnyFlatSpec with Matchers:
       .contains(text) shouldBe false
 
   "Caesar key zero" should "not be valid" in:
-    assertThrows[IllegalArgumentException] { Caesar.Key(0) }
- 
+    assertThrows[IllegalArgumentException]:
+      Caesar.Key(0)
+
   "Caesar Encrypted" should "be rotated" in:
     encrypted.bytes shouldEqual "ojttf".getBytes

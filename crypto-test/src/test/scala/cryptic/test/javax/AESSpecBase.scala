@@ -5,7 +5,7 @@ package javax
 import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.AES
 import cryptic.crypto.AES.AESParams
-import cryptic.serialization.{Chill, Fst, Upickle}
+import cryptic.codec.{Chill, Fst, Upickle}
 import cryptic.test.CryptoSpecBase
 import upickle.default.*
 
@@ -17,9 +17,9 @@ trait AESSpecBase extends CryptoSpecBase:
   override given encrypt: Encrypt = AES.encrypt
 
 class AESChillSpec extends AESSpecBase:
-  override given serializer[V]: Serializer[V] = Chill.serializer
+  override given codec[V]: Codec[V] = Chill.codec
 class AESFstSpec extends AESSpecBase:
-  override given serializer[V]: Serializer[V] = Fst.serializer
+  override given codec[V]: Codec[V] = Fst.codec
 class AESUpickleSpec[V: ReadWriter] extends AESSpecBase:
-  override given serializer[W]: Serializer[W] =
+  override given codec[W]: Codec[W] =
     Upickle[W]()(using summon[ReadWriter[V]].asInstanceOf[ReadWriter[W]])

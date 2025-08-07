@@ -3,7 +3,7 @@ package cryptic
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 
-sealed abstract class Cryptic[V: Serializer]:
+sealed abstract class Cryptic[V: Codec]:
   import Cryptic.*
 
   /** Decrypts the data using the provided implicit decryption mechanism.
@@ -41,7 +41,7 @@ sealed abstract class Cryptic[V: Serializer]:
     *   A new operation representing the transformation of the original
     *   operation.
     */
-  @inline final def map[W: Serializer](f: V => W): Operation[W] =
+  @inline final def map[W: Codec](f: V => W): Operation[W] =
     Mapped(this, f)
 
   /** Transforms this `Operation[V]` into an `Operation[W]` by applying the
@@ -55,7 +55,7 @@ sealed abstract class Cryptic[V: Serializer]:
     *   an `Operation[W]` resulting from applying the function `f` to each value
     *   of type `V` produced by this `Operation`
     */
-  @inline final def flatMap[W: Serializer](f: V => Cryptic[W]): Operation[W] =
+  @inline final def flatMap[W: Codec](f: V => Cryptic[W]): Operation[W] =
     FlatMapped(this, f)
 
   /*
@@ -63,7 +63,7 @@ sealed abstract class Cryptic[V: Serializer]:
    *
    * @param  ev    evidence that this $cryptic's type parameter `V` is in fact a `Cryptic[W]`.
    */
-  @inline final def flatten[W : Serializer](using ev: V <:< Cryptic[W]): Operation[W] = Flattened(this)
+  @inline final def flatten[W : Codec](using ev: V <:< Cryptic[W]): Operation[W] = Flattened(this)
    */
 
   /** Filters the elements based on the provided predicate function.
@@ -94,7 +94,7 @@ sealed abstract class Cryptic[V: Serializer]:
     * @return
     *   a new collection containing the results of applying the partial function
     */
-  @inline final def collect[W: Serializer](
+  @inline final def collect[W: Codec](
       pf: PartialFunction[V, W]
   ): Operation[W] = Collected(this, pf)
 
@@ -107,44 +107,44 @@ sealed abstract class Cryptic[V: Serializer]:
     *   A new Operation instance representing the original or the alternative
     *   operation.
     */
-  @inline final def orElse[W >: V: Serializer](
+  @inline final def orElse[W >: V: Codec](
       alternative: => Cryptic[W]
   ): Operation[W] =
     new OrElsed(this, alternative)
 object Cryptic:
   import Encrypted.*
-  sealed abstract class Operation[V: Serializer] extends Cryptic[V]:
+  sealed abstract class Operation[V: Codec] extends Cryptic[V]:
     def run(using encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[V]]
-  sealed abstract class BinaryOperation[V: Serializer, W: Serializer]
+  sealed abstract class BinaryOperation[V: Codec, W: Codec]
       extends Operation[W]:
     override def run(using
         encrypt: Encrypt,
         decrypt: Decrypt
     ): Try[Encrypted[W]] =
       decrypted.map(w =>
-        Encrypted(encrypt(implicitly[Serializer[W]].serialize(w)))
+        Encrypted(encrypt(implicitly[Codec[W]].encode(w)))
       )
-  final case class Mapped[V: Serializer, W: Serializer](
+  final case class Mapped[V: Codec, W: Codec](
       src: Cryptic[V],
       f: V => W
   ) extends BinaryOperation[V, W]:
     override def decrypted(using decrypt: Decrypt): Try[W] =
       src.decrypted.map(f)
-  final case class FlatMapped[V: Serializer, W: Serializer](
+  final case class FlatMapped[V: Codec, W: Codec](
       src: Cryptic[V],
       f: V => Cryptic[W]
   ) extends BinaryOperation[V, W]:
     override def decrypted(using decrypt: Decrypt): Try[W] =
       src.decrypted.flatMap[W](v => f(v).decrypted)
   /*
-  final case class Flattened[V : Serializer, W : Serializer](src: Cryptic[V])(using ev: V <:< Cryptic[W])
+  final case class Flattened[V : Codec, W : Codec](src: Cryptic[V])(using ev: V <:< Cryptic[W])
       extends Operation[V]:
     override def run(using encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[V]] =
       src.decrypted.map[Encrypted[V]](ev.apply)
     override def decrypted(using decrypt: Decrypt): Try[W] =
       src.decrypted.flatMap(v => ev(v).decrypted)
    */
-  final case class Filtered[V: Serializer](src: Cryptic[V], pred: V => Boolean)
+  final case class Filtered[V: Codec](src: Cryptic[V], pred: V => Boolean)
       extends Operation[V]:
     override def run(using
         encrypt: Encrypt,
@@ -160,7 +160,7 @@ object Cryptic:
               "decrypted called on filtered empty"
             )
           )
-  final case class Collected[V: Serializer, W: Serializer](
+  final case class Collected[V: Codec, W: Codec](
       src: Cryptic[V],
       pf: PartialFunction[V, W]
   ) extends BinaryOperation[V, W]:
@@ -182,7 +182,7 @@ object Cryptic:
             )
           )
         case Failure(e) => Failure(e)
-  final class OrElsed[V: Serializer, W >: V: Serializer](
+  final class OrElsed[V: Codec, W >: V: Codec](
       src: Cryptic[V],
       alternative: => Cryptic[W]
   ) extends BinaryOperation[V, W]:
@@ -196,10 +196,10 @@ object Cryptic:
   * @param cipherText
   *   The encrypted data as `CipherText`.
   * @tparam V
-  *   The type of the value being encrypted, requiring a given `Serializer`
+  *   The type of the value being encrypted, requiring a given `Codec`
   *   instance.
   */
-case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V]:
+case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
 
   /** Returns the byte array representation of the cipher text.
     *
@@ -291,8 +291,8 @@ case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V]:
     *   a `Try[W]` that represents the result of applying the appropriate
     *   function
     */
-  @inline final def fold[W: Serializer](ifEmpty: => W)(f: V => W)(using
-      decrypt: Decrypt
+  @inline final def fold[W: Codec](ifEmpty: => W)(f: V => W)(using
+                                                             decrypt: Decrypt
   ): Try[W] =
     if isEmpty then Try(ifEmpty) else decrypted.map(f)
 
@@ -310,17 +310,17 @@ case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V]:
     else decrypted.map(collection.Iterator.single)
 
   /** Decrypts the cipher text using the provided `Decrypt` instance and
-    * deserializes it to type `V` using the given `Serializer[V]`.
+    * decodes it to type `V` using the given `Codec[V]`.
     *
     * @param decrypt
     *   a given parameter of type `Decrypt` to handle the decryption of the
     *   cipher text
     * @return
-    *   a `Try[V]` containing the deserialized value if successful, or a failure
-    *   if either the decryption or deserialization steps fail
+    *   a `Try[V]` containing the decoded value if successful, or a failure
+    *   if either the decryption or decodec steps fail
     */
   override def decrypted(using decrypt: Decrypt): Try[V] =
-    decrypt(cipherText).flatMap(implicitly[Serializer[V]].deserialize)
+    decrypt(cipherText).flatMap(implicitly[Codec[V]].decode)
 
   /** Checks if the collection is empty.
     *
@@ -340,33 +340,33 @@ case class Encrypted[V: Serializer](cipherText: CipherText) extends Cryptic[V]:
     if isEmpty then Try(List()) else decrypted.map(_ :: Nil)
 object Encrypted:
 
-  /** Applies encryption to the given value using the provided serializer and
+  /** Applies encryption to the given value using the provided codec and
     * encryptor.
     *
     * @param value
     *   The value to be encrypted.
     * @param encrypt
-    *   An given encryption function that will be used to encrypt the serialized
+    *   An given encryption function that will be used to encrypt the encoded
     *   value.
     * @tparam V
-    *   The type of the value being encrypted. A Serializer must be available
+    *   The type of the value being encrypted. A Codec must be available
     *   for this type.
     * @return
     *   An instance of Encrypted[V] containing the encrypted value. Returns an
     *   empty Encrypted instance if the input value is null.
     */
-  def apply[V: Serializer](
+  def apply[V: Codec](
       value: V
   )(using encrypt: Encrypt): Encrypted[V] =
     if value == null then empty
-    else Encrypted[V](encrypt(implicitly[Serializer[V]].serialize(value)))
+    else Encrypted[V](encrypt(implicitly[Codec[V]].encode(value)))
 
   /** Constructs an empty Encrypted instance.
     *
     * @return
     *   An instance of Encrypted representing an empty value.
     */
-  def empty[V: Serializer]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]
+  def empty[V: Codec]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]
   object Empty extends Encrypted[Nothing](CipherText.Empty):
     override def decrypted(implicit decrypt: Decrypt): Try[Nothing] = Failure(
       new UnsupportedOperationException("decrypted called on empty")

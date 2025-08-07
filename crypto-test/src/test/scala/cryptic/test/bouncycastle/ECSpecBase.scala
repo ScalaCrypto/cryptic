@@ -4,7 +4,7 @@ package bouncycastle
 
 import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.EC
-import cryptic.serialization.{Chill, Fst, Upickle}
+import cryptic.codec.{Chill, Fst, Upickle}
 import cryptic.test.CryptoSpecBase
 import upickle.default.*
 
@@ -19,14 +19,14 @@ trait ECSpecBase extends CryptoSpecBase:
   override given decrypt: Decrypt = EC.decrypt
 
 class ECChillSpec extends ECSpecBase:
-  override given serializer[V]: Serializer[V] = Chill.serializer
+  override given codec[V]: Codec[V] = Chill.codec
   override def toString: String = "ECChill"
 
 class ECFstSpec extends ECSpecBase:
-  override given serializer[V]: Serializer[V] = Fst.serializer
+  override given codec[V]: Codec[V] = Fst.codec
   override def toString: String = "ECFst"
 
 class ECUpickleSpec[V: ReadWriter] extends ECSpecBase:
-  override given serializer[W]: Serializer[W] =
+  override given codec[W]: Codec[W] =
     Upickle[W]()(using summon[ReadWriter[V]].asInstanceOf[ReadWriter[W]])
   override def toString: String = "ECUpickle"

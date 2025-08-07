@@ -33,6 +33,10 @@ package object cryptic:
       val buffer = ByteBuffer.allocate(8)
       buffer.putLong(x)
       apply(buffer.array())
+    def apply(x: Float): PlainText =
+      val buffer = ByteBuffer.allocate(4)
+      buffer.putFloat(x)
+      apply(buffer.array())
     def apply(x: Double): PlainText =
       val buffer = ByteBuffer.allocate(8)
       buffer.putDouble(x)
@@ -52,6 +56,10 @@ package object cryptic:
         case c if c == classOf[Int] =>
           checkSize(4).map(plainText =>
             ByteBuffer.wrap(plainText.bytes).getInt.asInstanceOf[T]
+          )
+        case c if c == classOf[Float] =>
+          checkSize(4).map(plainText =>
+            ByteBuffer.wrap(plainText.bytes).getFloat.asInstanceOf[T]
           )
         case c if c == classOf[Double] =>
           checkSize(8).map(plainText =>
@@ -94,47 +102,52 @@ package object cryptic:
       new CipherText(buffer.array())
     def unapplySeq(cipherText: CipherText): Option[Seq[Array[Byte]]] =
       Option(cipherText.split)
-  object Encrypt:
-    val Empty: Encrypt = _ ⇒ CipherText.Empty
   trait Encrypt:
     def apply(plainText: PlainText): CipherText
-  object Decrypt:
-    val Empty: Decrypt = _ ⇒ Success(PlainText.empty)
+  object Encrypt:
+    val Empty: Encrypt = _ ⇒ CipherText.Empty
   trait Decrypt:
     def apply(cipherText: CipherText): Try[PlainText]
-  trait Serializer[V]:
-    def serialize(value: V): PlainText
-    def deserialize(plainText: PlainText): Try[V]
-  given nothingSerializer: Serializer[Nothing] = new Serializer[Nothing]:
-    override def serialize(value: Nothing): PlainText =
-      throw new UnsupportedOperationException("serialize nothing")
-    override def deserialize(plainText: PlainText): Try[Nothing] = Failure(
-      new UnsupportedOperationException("deserialize nothing")
-    )
-  given bytesSerializer: Serializer[Array[Byte]] = new Serializer[Array[Byte]]:
-    override def serialize(value: Array[Byte]): PlainText = PlainText(value)
-    override def deserialize(plainText: PlainText): Try[Array[Byte]] = Try(
-      plainText.bytes
-    )
-  given stringSerializer: Serializer[String] = new Serializer[String]:
-    override def serialize(value: String): PlainText = PlainText(value)
-    override def deserialize(plainText: PlainText): Try[String] = Try(
-      new String(plainText.bytes)
-    )
-  given intSerializer: Serializer[Int] = new Serializer[Int]:
-    override def serialize(value: Int): PlainText = PlainText(value)
-    override def deserialize(plainText: PlainText): Try[Int] =
-      PlainText.unapply[Int](plainText)
-  given longSerializer: Serializer[Long] = new Serializer[Long]:
-    override def serialize(value: Long): PlainText = PlainText(value)
-    override def deserialize(plainText: PlainText): Try[Long] =
-      PlainText.unapply[Long](plainText)
-  given doubleSerializer: Serializer[Double] = new Serializer[Double]:
-    override def serialize(value: Double): PlainText = PlainText(value)
-    override def deserialize(plainText: PlainText): Try[Double] =
-      PlainText.unapply[Double](plainText)
+  object Decrypt:
+    val Empty: Decrypt = _ ⇒ Success(PlainText.empty)
+  trait Codec[V]:
+    def encode(value: V): PlainText
+    def decode(plainText: PlainText): Try[V]
+  object Codec:
+    given Codec[Nothing] = new Codec[Nothing]:
+      override def encode(value: Nothing): PlainText =
+        throw new UnsupportedOperationException("encode nothing")
+      override def decode(plainText: PlainText): Try[Nothing] = Failure(
+        new UnsupportedOperationException("decode nothing")
+      )
+    given Codec[Array[Byte]] = new Codec[Array[Byte]]:
+      override def encode(value: Array[Byte]): PlainText = PlainText(value)
+      override def decode(plainText: PlainText): Try[Array[Byte]] = Try(
+        plainText.bytes
+      )
+    given Codec[String] = new Codec[String]:
+      override def encode(value: String): PlainText = PlainText(value)
+      override def decode(plainText: PlainText): Try[String] = Try(
+        new String(plainText.bytes)
+      )
+    given Codec[Int] = new Codec[Int]:
+      override def encode(value: Int): PlainText = PlainText(value)
+      override def decode(plainText: PlainText): Try[Int] =
+        PlainText.unapply[Int](plainText)
+    given Codec[Long] = new Codec[Long]:
+      override def encode(value: Long): PlainText = PlainText(value)
+      override def decode(plainText: PlainText): Try[Long] =
+        PlainText.unapply[Long](plainText)
+    given Codec[Float] = new Codec[Float]:
+      override def encode(value: Float): PlainText = PlainText(value)
+      override def decode(plainText: PlainText): Try[Float] =
+        PlainText.unapply[Float](plainText)
+    given Codec[Double] = new Codec[Double]:
+      override def encode(value: Double): PlainText = PlainText(value)
+      override def decode(plainText: PlainText): Try[Double] =
+        PlainText.unapply[Double](plainText)
 
-  extension [V: Serializer](value: V)
+  extension [V: Codec](value: V)
     def encrypted(using encrypt: Encrypt): Encrypted[V] = Encrypted(value)
 
   extension (buffer: ByteBuffer)

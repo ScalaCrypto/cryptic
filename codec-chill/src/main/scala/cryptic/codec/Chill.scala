@@ -5,17 +5,17 @@ import com.twitter.chill.{KryoPool, ScalaKryoInstantiator}
 
 import scala.util.Try
 
-/** Object Chill provides Kryo codec and decodec functionality.
-  * It contains a Kryo codec pool and given methods for codec
-  * and decodec.
+/** Object Chill provides Kryo encoding and decoding functionality.
+  * It contains a Kryo pool and given methods for encoding
+  * and decoding.
   *
   * The codec method creates a new instance of Codec[V].
   *
   * The encode method converts a value of type V to a PlainText using Kryo
-  * codec.
+  * encoding.
   *
   * The decode method converts a PlainText back to a value of type V using
-  * Kryo decodec.
+  * Kryo decoding.
   */
 object Chill:
   private val kryoPool =

@@ -33,5 +33,5 @@ object Fst:
       fst.asByteArray(value)
     )
     override def deserialize(plainText: PlainText): Try[V] = Try(
-      fst.asObject(plainText).asInstanceOf[V]
+      fst.asObject(plainText.bytes).asInstanceOf[V]
     )

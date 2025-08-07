@@ -17,6 +17,6 @@ import scala.util.Success
   */
 object Reverse:
   given encrypt: Encrypt = (plainText: PlainText) =>
-    CipherText(plainText.reverse)
+    CipherText(plainText.bytes.reverse)
   given decrypt: Decrypt = (cipherText: CipherText) =>
     Success(PlainText(cipherText.bytes.reverse))

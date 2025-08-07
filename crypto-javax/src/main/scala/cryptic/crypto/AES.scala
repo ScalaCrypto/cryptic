@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.security.SecureRandom
 import javax.crypto.{Cipher, SecretKey, SecretKeyFactory}
 import javax.crypto.spec.{IvParameterSpec, PBEKeySpec, SecretKeySpec}
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 /** Object AES provides encryption and decryption utilities using the AES
   * algorithm. The functions provided allow encryption of plaintext into
@@ -58,37 +58,18 @@ object AES:
     cipher.init(Cipher.ENCRYPT_MODE, key)
     val params = cipher.getParameters
     val initVector = params.getParameterSpec(classOf[IvParameterSpec]).getIV
-    val cipherText = cipher.doFinal(plainText)
-    val ivLength = initVector.length
-    val textLength = cipherText.length
-    // Encode with length prefix to allow for backwards compatibility
-    val buffer =
-      ByteBuffer.allocate(12 + aesParams.saltLength + ivLength + textLength)
-    buffer
-      .putInt(aesParams.saltLength)
-      .put(salt.bytes)
-      .putInt(ivLength)
-      .put(initVector)
-      .putInt(textLength)
-      .put(cipherText)
-    CipherText(buffer.array())
+    val cipherText = cipher.doFinal(plainText.bytes)
+    CipherText(plainText.manifest, salt.bytes, initVector, cipherText)
 
   given decrypt(using
       passphrase: AESPassphrase,
       aesParams: AESParams
   ): Decrypt = (cipherText: CipherText) =>
-    val buffer = ByteBuffer.wrap(cipherText.bytes)
-    def getNextBytes =
-      val nextBuffer = new Array[Byte](buffer.getInt())
-      buffer.get(nextBuffer)
-      nextBuffer
-    val salt: Array[Byte] = getNextBytes
+    val Array(manifest, salt, iv, bytes) = cipherText.split
     val key = keygen(passphrase, Salt(salt))
-    val iv: Array[Byte] = getNextBytes
-    val text: Array[Byte] = getNextBytes
     val cipher = newCipher
     cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv))
-    Try[PlainText](PlainText(cipher.doFinal(text)))
+    Try[PlainText](PlainText(cipher.doFinal(bytes), manifest))
 
   /** Generates a secret key using the provided password and salt.
     *

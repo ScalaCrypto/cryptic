@@ -36,13 +36,13 @@ trait EncryptedSpecBase extends AnyFlatSpec with Matchers with EitherValues:
 
   "Case class with encrypted members" should "encrypt and decrypt" in:
     val foo = FooBar("secret".encrypted)
-    foo.secret.bytes shouldEqual serializer[String].serialize("secret").reverse
+    foo.secret.bytes shouldEqual serializer[String].serialize("secret").bytes.reverse
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted case class with" should "encrypt and decrypt" in:
     val foo = Foo("clear")
     val encryptedFoo = foo.encrypted
     val plainText = serializer[Foo].serialize(foo)
-    encryptedFoo.bytes shouldBe plainText.reverse // Reveres crypto
+    encryptedFoo.bytes shouldBe plainText.bytes.reverse // Reveres crypto
     encryptedFoo.decrypted shouldEqual Success(foo)
   "Pending operations " should " be ran when decrypting" in:
     val encrypted: Encrypted[String] = "secret".encrypted

@@ -5,7 +5,7 @@ import org.nustaq.serialization.FSTConfiguration
 
 import scala.util.Try
 
-/** The `Fst` object provides a mechanism for codec and decodec
+/** The `Fst` object provides a mechanism for encoding and decoding
   * using the FST (Fast Serialization) library.
   *
   * It contains a default FST configuration and an implicit `Codec` for

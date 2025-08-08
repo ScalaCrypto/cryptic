@@ -24,13 +24,11 @@ import scala.util.Try
   *       into a value of type `V` by decoding the byte array using the FST
   *       configuration instance, wrapped in a `Try`.
   */
-object Fst:
+object Fst extends Codec.Companion:
   private val fst: FSTConfiguration =
     FSTConfiguration.createDefaultConfiguration()
-  implicit def codec[V]: Codec[V] = new Codec[V]:
-    override def encode(value: V): PlainText = PlainText(
-      fst.asByteArray(value)
-    )
-    override def decode(plainText: PlainText): Try[V] = Try(
-      fst.asObject(plainText.bytes).asInstanceOf[V]
+  given codec: [V] => Codec[V]:
+    def encode(v: V): PlainText = PlainText(fst.asByteArray(v))
+    def decode(pt: PlainText): Try[V] = Try(
+      fst.asObject(pt.bytes).asInstanceOf[V]
     )

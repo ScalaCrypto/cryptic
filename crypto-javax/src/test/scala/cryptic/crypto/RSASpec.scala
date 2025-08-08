@@ -7,8 +7,9 @@ import org.scalatest.matchers.should.Matchers
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.Success
 
-class RSASpec extends AnyFlatSpec with Matchers:
-  import RSA.{given, *}
+class RsaSpec extends AnyFlatSpec with Matchers:
+  import cryptic.codec.default.given
+  import Rsa.{*, given}
   val keyPair: KeyPair = keygen(2048)
   given publicKey: PublicKey = keyPair.getPublic
   val text = "nisse"

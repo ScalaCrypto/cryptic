@@ -1,0 +1,46 @@
+package cryptic
+package codec
+
+import java.nio.ByteBuffer
+import scala.util.Try
+import scala.util.Success
+
+object default extends Codec.Companion:
+  given optionCodec: [V: Codec] => Codec[Option[V]]:
+    def encode(v: Option[V]): PlainText =
+      v match
+        case Some(value) => summon[Codec[V]].encode(value)
+        case None        => PlainText.empty
+    def decode(pt: PlainText): Try[Option[V]] =
+      if pt.bytes.isEmpty then Success(None)
+      else summon[Codec[V]].decode(pt).map(Some(_))
+
+  given Codec[Array[Byte]]:
+    def encode(v: Array[Byte]): PlainText = PlainText(v)
+    def decode(pt: PlainText): Try[Array[Byte]] =
+      Success(pt.bytes)
+
+  given Codec[String]:
+    def encode(v: String): PlainText = PlainText(v)
+    def decode(pt: PlainText): Try[String] =
+      Success(new String(pt.bytes))
+
+  given Codec[Int]:
+    def encode(v: Int): PlainText = PlainText(v)
+    def decode(pt: PlainText): Try[Int] =
+      Try(ByteBuffer.wrap(pt.bytes).getInt)
+
+  given Codec[Long]:
+    def encode(v: Long): PlainText = PlainText(v)
+    def decode(pt: PlainText): Try[Long] =
+      Try(ByteBuffer.wrap(pt.bytes).getLong)
+
+  given Codec[Float]:
+    def encode(v: Float): PlainText = PlainText(v)
+    def decode(pt: PlainText): Try[Float] =
+      Try(ByteBuffer.wrap(pt.bytes).getFloat)
+
+  given Codec[Double]:
+    def encode(v: Double): PlainText = PlainText(v)
+    def decode(pt: PlainText): Try[Double] =
+      Try(ByteBuffer.wrap(pt.bytes).getDouble)

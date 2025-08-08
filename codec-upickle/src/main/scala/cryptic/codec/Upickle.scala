@@ -12,10 +12,9 @@ import scala.util.Try
   * convert objects of that type to and from plain text format using the uPickle
   * library methods.
   */
-object Upickle:
-  def apply[V: ReadWriter](): Codec[V] =
-    new Codec[V]:
-      override def encode(value: V): PlainText = PlainText(write(value))
-      override def decode(plainText: PlainText): Try[V] = Try(
-        read[V](plainText.bytes)
-      )
+object Upickle extends Codec.Companion:
+  given codec: [V: {Writer, Reader}] => Codec[V]:
+    def encode(v: V): PlainText = PlainText(write(v))
+    def decode(pt: PlainText): Try[V] = Try(
+      read[V](pt.bytes)
+    )

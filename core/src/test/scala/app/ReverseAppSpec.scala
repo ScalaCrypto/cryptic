@@ -8,6 +8,7 @@ import scala.util.{Success, Try}
 
 class ReverseAppSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.{*, given}
+  import cryptic.codec.default.given
   import cryptic.crypto.Reverse.given
 
   val clear = "secret"
@@ -34,4 +35,3 @@ class ReverseAppSpec extends AnyFlatSpec with Matchers with TryValues:
     PlainText(clear).bytes shouldBe clear.getBytes()
     val enc = clear.encrypted
     enc.bytes shouldBe clear.getBytes.reverse
-

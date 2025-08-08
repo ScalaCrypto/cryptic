@@ -17,7 +17,7 @@ import scala.util.Try
   * @define keygen
   *   Generates an RSA key pair with the specified size.
   */
-object RSA:
+object Rsa:
   val cipher: Cipher = Cipher.getInstance("RSA")
   given encrypt(using key: PublicKey): Encrypt =
     (plainText: PlainText) =>

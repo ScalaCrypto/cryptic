@@ -15,7 +15,8 @@ case class EmailAddress(literal: String)
 case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
 class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
-  import crypto.Reverse.given
+  import cryptic.codec.default.given
+  import cryptic.crypto.Reverse.given
 
   private val clear = "nisse"
   private val enc1: Encrypted[String] = Encrypted(clear)

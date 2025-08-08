@@ -8,9 +8,10 @@ import org.scalatest.matchers.should.Matchers
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.Success
 
-class ECSpec extends AnyFlatSpec with Matchers:
-  import EC.*
-  import EC.given
+class EllipticCurveSpec extends AnyFlatSpec with Matchers:
+  import cryptic.codec.default.given
+  import EllipticCurve.*
+  import EllipticCurve.given
   private val keyPair: KeyPair = keygen(256)
   implicit val publicKey: PublicKey = keyPair.getPublic
   private val text = "secret"

@@ -7,9 +7,10 @@ import org.scalatest.TryValues
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.{Success, Try}
 
-class ECAppSpec extends AnyFlatSpec with Matchers with TryValues:
+class EllipticCurveAppSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.{*, given}
-  import cryptic.crypto.EC.{*, given}
+  import cryptic.codec.default.given
+  import cryptic.crypto.EllipticCurve.{*, given}
 
   val keyPair: KeyPair = keygen(256)
   given publicKey: PublicKey = keyPair.getPublic

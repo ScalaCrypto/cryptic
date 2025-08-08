@@ -1,7 +1,160 @@
 package cryptic
 
+import java.nio.ByteBuffer
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
+import scala.reflect.ClassTag
+
+type Hash = Vector[Byte]
+type Manifest = Array[Byte]
+
+object Manifest:
+  val empty: Array[Byte] = Array.emptyByteArray
+
+case class PlainText(bytes: Array[Byte], manifest: Manifest = Manifest.empty):
+  //    override def toString: String = "\uD83D\uDD12"
+  override def equals(obj: Any): Boolean = obj match
+    case other: PlainText =>
+      manifest.sameElements(other.manifest) && bytes.sameElements(other.bytes)
+    case _ => false
+  override def hashCode: Int =
+    java.util.Arrays.hashCode(bytes) * 31 + java.util.Arrays.hashCode(
+      manifest
+    )
+
+object PlainText:
+  val empty: PlainText = PlainText(Array.emptyByteArray)
+  def apply(x: Array[Byte]): PlainText = new PlainText(x)
+  def apply(x: String): PlainText = apply(x.getBytes())
+  def apply(x: Int): PlainText =
+    val buffer = ByteBuffer.allocate(4)
+    buffer.putInt(x)
+    apply(buffer.array())
+  def apply(x: Long): PlainText =
+    val buffer = ByteBuffer.allocate(8)
+    buffer.putLong(x)
+    apply(buffer.array())
+  def apply(x: Float): PlainText =
+    val buffer = ByteBuffer.allocate(4)
+    buffer.putFloat(x)
+    apply(buffer.array())
+  def apply(x: Double): PlainText =
+    val buffer = ByteBuffer.allocate(8)
+    buffer.putDouble(x)
+    apply(buffer.array())
+  def unapply[T](plainText: PlainText)(using ct: ClassTag[T]): Try[T] =
+    def checkSize(n: Int): Try[PlainText] =
+      if plainText.bytes.length == n then Success(plainText)
+      else
+        Failure(
+          new IllegalArgumentException(
+            s"PlainText must be exactly $n bytes for $ct extraction"
+          )
+        )
+    ct.runtimeClass match
+      case c if c == classOf[String] =>
+        Try(new String(plainText.bytes).trim.asInstanceOf[T])
+      case c if c == classOf[Int] =>
+        checkSize(4).map(plainText =>
+          ByteBuffer.wrap(plainText.bytes).getInt.asInstanceOf[T]
+        )
+      case c if c == classOf[Float] =>
+        checkSize(4).map(plainText =>
+          ByteBuffer.wrap(plainText.bytes).getFloat.asInstanceOf[T]
+        )
+      case c if c == classOf[Double] =>
+        checkSize(8).map(plainText =>
+          ByteBuffer.wrap(plainText.bytes).getDouble.asInstanceOf[T]
+        )
+      case c if c == classOf[Long] =>
+        checkSize(8).map(plainText =>
+          ByteBuffer.wrap(plainText.bytes).getLong.asInstanceOf[T]
+        )
+      case _ =>
+        Failure(
+          new IllegalArgumentException(
+            s"Unsupported type $ct for extraction. " +
+              "Supported types are: Double, Int, Long and String"
+          )
+        )
+def hash(plainText: PlainText): Hash =
+  import java.security.MessageDigest
+  val digest = MessageDigest.getInstance("SHA-256")
+  digest.digest(plainText.bytes).toVector // Todo handle manifest?
+
+case class CipherText(bytes: Array[Byte]):
+  def buffer: ByteBuffer = ByteBuffer.wrap(bytes)
+  def split: Array[Array[Byte]] = buffer.split
+  override def equals(obj: scala.Any): Boolean = obj match
+    case CipherText(other) ⇒ bytes.sameElements(other)
+    case _ ⇒ false
+  override def toString: String =
+    s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
+
+object CipherText:
+  val Empty: CipherText = CipherText(Array.emptyByteArray)
+  def apply(array: Array[Byte], arrays: Array[Byte]*): CipherText =
+    val count = 1 + arrays.length
+    val buffer = ByteBuffer.allocate(4 + count * 4 + arrays.foldLeft(0):
+      case (length, bytes) => length + bytes.length)
+    buffer.putInt(count)
+    buffer.nextBytes(array)
+    arrays.foldLeft(buffer):
+      case (buffer, bytes) => buffer.nextBytes(bytes)
+    new CipherText(buffer.array())
+  def unapplySeq(cipherText: CipherText): Option[Seq[Array[Byte]]] =
+    Option(cipherText.split)
+
+trait Encrypt:
+  def apply(plainText: PlainText): CipherText
+
+object Encrypt:
+  val Empty: Encrypt = _ ⇒ CipherText.Empty
+
+trait Decrypt:
+  def apply(cipherText: CipherText): Try[PlainText]
+
+object Decrypt:
+  val Empty: Decrypt = _ ⇒ Success(PlainText.empty)
+
+trait Codec[V]:
+  def encode(v: V): PlainText
+  def decode(plainText: PlainText): Try[V]
+
+object Codec:
+  trait Companion:
+    extension [V: Codec](v: V)
+      def encoded: PlainText = summon[Codec[V]].encode(v)
+    extension [V: Codec](plainText: PlainText)
+      def decoded: Try[V] = summon[Codec[V]].decode(plainText)
+
+given Codec[Nothing]:
+  def encode(v: Nothing): PlainText = PlainText.empty
+  def decode(pt: PlainText): Try[Nothing] =
+    Failure(
+      new IllegalArgumentException(
+        "Cannot decode Nothing"
+      )
+    )
+
+extension [V: Codec](value: V)
+  def encrypted(using encrypt: Encrypt): Encrypted[V] = Encrypted(value)
+
+extension (buffer: ByteBuffer)
+  def nextBytes(): Array[Byte] =
+    val length = buffer.getInt()
+    val bytes =
+      if length == 0 then Array.emptyByteArray else new Array[Byte](length)
+    buffer.get(bytes)
+    bytes
+  def nextBytes(bytes: Array[Byte]): ByteBuffer =
+    buffer.putInt(bytes.length)
+    buffer.put(bytes)
+  def split: Array[Array[Byte]] =
+    val count = buffer.getInt()
+    val arrays = Array.ofDim[Array[Byte]](count)
+    for i <- 0 until count do arrays(i) = buffer.nextBytes()
+    arrays
 
 sealed abstract class Cryptic[V: Codec]:
   import Cryptic.*
@@ -121,9 +274,7 @@ object Cryptic:
         encrypt: Encrypt,
         decrypt: Decrypt
     ): Try[Encrypted[W]] =
-      decrypted.map(w =>
-        Encrypted(encrypt(implicitly[Codec[W]].encode(w)))
-      )
+      decrypted.map(w => Encrypted(encrypt(implicitly[Codec[W]].encode(w))))
   final case class Mapped[V: Codec, W: Codec](
       src: Cryptic[V],
       f: V => W
@@ -196,8 +347,7 @@ object Cryptic:
   * @param cipherText
   *   The encrypted data as `CipherText`.
   * @tparam V
-  *   The type of the value being encrypted, requiring a given `Codec`
-  *   instance.
+  *   The type of the value being encrypted, requiring a given `Codec` instance.
   */
 case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
 
@@ -292,7 +442,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   function
     */
   @inline final def fold[W: Codec](ifEmpty: => W)(f: V => W)(using
-                                                             decrypt: Decrypt
+      decrypt: Decrypt
   ): Try[W] =
     if isEmpty then Try(ifEmpty) else decrypted.map(f)
 
@@ -309,18 +459,18 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     if isEmpty then Try(collection.Iterator.empty)
     else decrypted.map(collection.Iterator.single)
 
-  /** Decrypts the cipher text using the provided `Decrypt` instance and
-    * decodes it to type `V` using the given `Codec[V]`.
+  /** Decrypts the cipher text using the provided `Decrypt` instance and decodes
+    * it to type `V` using the given `Codec[V]`.
     *
     * @param decrypt
     *   a given parameter of type `Decrypt` to handle the decryption of the
     *   cipher text
     * @return
-    *   a `Try[V]` containing the decoded value if successful, or a failure
-    *   if either the decryption or decoding steps fail
+    *   a `Try[V]` containing the decoded value if successful, or a failure if
+    *   either the decryption or decoding steps fail
     */
   override def decrypted(using decrypt: Decrypt): Try[V] =
-    decrypt(cipherText).flatMap(implicitly[Codec[V]].decode)
+    decrypt(cipherText).flatMap(summon[Codec[V]].decode)
 
   /** Checks if the collection is empty.
     *
@@ -349,8 +499,8 @@ object Encrypted:
     *   An given encryption function that will be used to encrypt the encoded
     *   value.
     * @tparam V
-    *   The type of the value being encrypted. A Codec must be available
-    *   for this type.
+    *   The type of the value being encrypted. A Codec must be available for
+    *   this type.
     * @return
     *   An instance of Encrypted[V] containing the encrypted value. Returns an
     *   empty Encrypted instance if the input value is null.

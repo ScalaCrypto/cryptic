@@ -7,6 +7,7 @@ import org.scalatest.matchers.should.Matchers
 import scala.util.Success
 
 class CaesarSpec extends AnyFlatSpec with Matchers:
+  import cryptic.codec.default.given
   import Caesar.*
   import Caesar.given
   given key1: Key = Caesar.Key(1)

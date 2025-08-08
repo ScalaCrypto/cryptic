@@ -15,15 +15,6 @@ object Foo:
 
 case class FooBar(secret: Encrypted[String])
 
-class ChillEncryptedSpec extends EncryptedSpecBase:
-  override def codec[V](implicit rw: ReadWriter[V]): Codec[V] = Chill.codec
-
-class FstEncryptedSpec extends EncryptedSpecBase:
-  override def codec[V: ReadWriter]: Codec[V] = Fst.codec
-
-class UpickleEncryptedSpec extends EncryptedSpecBase:
-  override def codec[V: ReadWriter]: Codec[V] = Upickle.codec
-
 trait EncryptedSpecBase extends AnyFlatSpec with Matchers with EitherValues:
   import cryptic.codec.default.{*, given}
   import cryptic.crypto.Reverse.{*, given}

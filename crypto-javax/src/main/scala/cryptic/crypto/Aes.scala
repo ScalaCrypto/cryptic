@@ -12,7 +12,7 @@ import scala.util.{Failure, Try}
   * ciphertext and decryption of ciphertext back into plaintext using a
   * passphrase and various parameters defined in the AESParams case class.
   */
-object AES:
+object Aes:
   private val secureRandom = new SecureRandom()
   private val keyAlgorithm = "AES"
   case class AESParams(
@@ -102,5 +102,5 @@ object AES:
 
   private def generateSalt(length: Int): Salt =
     val salt = new Array[Byte](length)
-    AES.secureRandom.nextBytes(salt)
+    Aes.secureRandom.nextBytes(salt)
     Salt(salt)

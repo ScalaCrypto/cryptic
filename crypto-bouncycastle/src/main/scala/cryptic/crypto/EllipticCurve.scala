@@ -12,7 +12,7 @@ import scala.util.Try
   * keys. The public key should be given for encryption and the private key for
   * decryption
   */
-object EC:
+object EllipticCurve:
   Security.addProvider(new BouncyCastleProvider())
   val cipher: Cipher = Cipher.getInstance("ECIES", "BC")
   given encrypt(using key: PublicKey): Encrypt =

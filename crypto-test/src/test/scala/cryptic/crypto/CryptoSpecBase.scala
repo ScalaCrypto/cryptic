@@ -1,5 +1,5 @@
 package cryptic
-package test
+package crypto
 
 import cryptic.*
 import org.scalatest.TryValues

@@ -4,7 +4,6 @@ import java.nio.ByteBuffer
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
 
 type Hash = Vector[Byte]
 type Manifest = Array[Byte]

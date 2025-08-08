@@ -2,18 +2,18 @@
 
 _Keeps your secrets._
 Cryptic is a monad for encrypting and decryptic data.
-To use cryptic you must select a crypto and a serializer.
+To use cryptic you must select a crypto and a codec.
 
-Cryptic supports several crypto libraries and serializers,
+Cryptic supports several crypto libraries and codecs,
 select the modules you nedd or write your own
 
 | Module                | Supports            |
 |:----------------------|:--------------------| 
 | crypto-javax          | AES, RSA            |
 | crypto-bouncycastle   | EC (Elliptic curve) |
-| serialization-chill   | Chill               | 
-| serialization-fst     | Fst                 | 
-| serialization-upickle | Upickle             | 
+| codec-chill   | Chill               | 
+| codec-fst     | Fst                 | 
+| codec-upickle | Upickle             | 
 
 ## Installation
 
@@ -35,14 +35,14 @@ To encrypt with EC
 "scalacrypto" %% "crypto-bouncycastle" % "1.0.0"
 ```
 
-Select serializer one of
+Select codec one of
 
 ```sbt
-"scalacrypto" %% "serialization-chill" % "1.0.0"
+"scalacrypto" %% "codec-chill" % "1.0.0"
 
-"scalacrypto" %% "serialization-fst" % "1.0.0"
+"scalacrypto" %% "codec-fst" % "1.0.0"
 
-"scalacrypto" %% "serialization-upickle" % "1.0.0"
+"scalacrypto" %% "codec-upickle" % "1.0.0"
 ```
 
 ## Usage
@@ -60,20 +60,20 @@ Define your data types:
 case class EmailAddress(literal: String)
 
 object EmailAddress:
-  val rw: ReadWriter[EmailAddress] = macroRW // If you  use the Upickle serializer
+  val rw: ReadWriter[EmailAddress] = macroRW // If you  use the Upickle codec
 
 case class User(id: Long, email: Encrypted[EmailAddress])
 
 object User:
-  val rw: ReadWriter[User] = macroRW // If you use the Upickle serializer
+  val rw: ReadWriter[User] = macroRW // If you use the Upickle codec
 ```
 
-Encrypt your data using convenient syntax, a crypto and a serializer must be available:
+Encrypt your data using convenient syntax, a crypto and a codec must be available:
 
 ```scala
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import cryptic.crypto.EC.{ given, * } // Elliptic Curve encryption
-import cryptic.serialization.Chill.* // Brings the Chill serializer in scope
+import cryptic.codec.Chill.* // Brings the Chill codec in scope
 
 // We need a given public key to enable encryption for EC
 private val keyPair: KeyPair = EC.keygen(256)
@@ -82,41 +82,41 @@ given private val publicKey: PublicKey = keyPair.getPublic
 val user = User(123, EmailAddress("odd@example.com").encrypted)
 ```
 
-To use the Upickle serializer:
+To use the Upickle codec:
 
 ```scala
-import cryptic.serialization.Upickle
+import cryptic.codec.Upickle
 
-given def serializer[V](using rw: ReadWriter[V]): Serializer[V] = Upickle[V]
+given def codec[V](using rw: ReadWriter[V]): Codec[V] = Upickle[V]
 ```
 
-Access your data in encrypted form (can be done without crypto/serializer):
+Access your data in encrypted form (can be done without crypto/codec):
 
 ```scala
 val bytes: Array[Byte] = user.email.bytes
 ```
 
-Transform your data, can be done without crypto/serializer:
+Transform your data, can be done without crypto/codec:
 
 ```scala
 val lowered = user.email.
   map(_.copy(literal = _.literal.toLower))
 ```
 
-Run your staged transformations, a crypto and a serializer must be in scope:
+Run your staged transformations, a crypto and a codec must be in scope:
 
 ```scala
 import cryptic.crypto.RSA.*
-import cryptic.serialization.Chill.{ given, * }
+import cryptic.codec.Chill.{ given, * }
 
 val user2 = user.copy(email = lowered.run())
 ```
 
-Decrypt your transformed data, a crypto and a serializer must be in scope:
+Decrypt your transformed data, a crypto and a codec must be in scope:
 
 ```scala
 import cryptic.crypto.RSA.{ given, * }
-import cryptic.serialization.Fst._
+import cryptic.codec.Fst._
 
 val emailInLower = user2.email.decrypted
 ```
@@ -127,7 +127,7 @@ val emailInLower = user2.email.decrypted
 - RSA
 - EC
 
-## Provided serializers
+## Provided codecs
 
 - Chill
 - Fst
@@ -135,14 +135,14 @@ val emailInLower = user2.email.decrypted
 
 ## Roll your own
 
-### Serializer
+### Codec
 
-Provide an implementation of the Serializer trait:
+Provide an implementation of the Codec trait:
 
 ```scala
-trait Serializer[V]:
-  def serialize(value: V): PlainText
-  def deserialize(plainText: PlainText): Either[String, V]
+trait Codec[V]:
+  def encode(value: V): PlainText
+  def decode(plainText: PlainText): Either[String, V]
 ```
 
 Example:
@@ -151,10 +151,10 @@ Example:
 
 import scala.util.Try
 
-object MySerializer:
-  given serializer[V]: Serializer[V] = new Serializer[V]:
-    override def serialize(value: V): PlainText = ???
-    override def deserialize(plainText: PlainText): Either[String, V] = ???
+object MyCodec:
+  given codec[V]: Codec[V] = new Codec[V]:
+    override def encode(value: V): PlainText = ???
+    override def decode(plainText: PlainText): Either[String, V] = ???
 ```
 
 ### Crypto

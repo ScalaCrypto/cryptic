@@ -43,33 +43,33 @@ lazy val coreSettings = commonSettings ++ Seq(
     s"cryptic-${artifact.name}-${module.revision}.${artifact.extension}"
   })
 
-lazy val serializationChillSettings = commonSettings ++ Seq(
-  name := "serialization-chill",
+lazy val codecChillSettings = commonSettings ++ Seq(
+  name := "codec-chill",
   libraryDependencies ++= Seq(scalaTest % Test, chill),
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
-    s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
+    s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
   })
-lazy val serializationFstSettings = commonSettings ++ testSettings ++ Seq(
-  name := "serialization-fst",
+lazy val codecFstSettings = commonSettings ++ testSettings ++ Seq(
+  name := "codec-fst",
   libraryDependencies ++= Seq(scalaTest % Test, fst),
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
-    s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
+    s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
   })
 
-lazy val serializationUpickleSettings = commonSettings ++ Seq(
-  name := "serialization-upickle",
+lazy val codecUpickleSettings = commonSettings ++ Seq(
+  name := "codec-upickle",
   libraryDependencies ++= Seq(scalaTest % Test, upickle),
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
-    s"cryptic-${artifact.name.replace("serialization-", "")}-${module.revision}.${artifact.extension}"
+    s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
   })
 
 lazy val cryptoCommonSettings = (projectName: String) =>
@@ -88,11 +88,11 @@ lazy val cryptoTestSettings =
 
 lazy val core = (project in file("core")).settings(coreSettings)
 
-lazy val `serialization-chill` = (project in file("serialization-chill")).settings(serializationChillSettings).dependsOn(core)
+lazy val `codec-chill` = (project in file("codec-chill")).settings(codecChillSettings).dependsOn(core)
 
-lazy val `serialization-fst` = (project in file("serialization-fst")).settings(serializationFstSettings).dependsOn(core)
+lazy val `codec-fst` = (project in file("codec-fst")).settings(codecFstSettings).dependsOn(core)
 
-lazy val `serialization-upickle` = (project in file("serialization-upickle")).settings(serializationUpickleSettings).dependsOn(core)
+lazy val `codec-upickle` = (project in file("codec-upickle")).settings(codecUpickleSettings).dependsOn(core)
 
 lazy val `crypto-javax` = (project in file("crypto-javax")).settings(cryptoCommonSettings("crypto-javax")).dependsOn(core)
 
@@ -102,7 +102,7 @@ lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle"))
 
 lazy val `crypto-test` = (project in file("crypto-test"))
   .settings(cryptoTestSettings)
-  .dependsOn(core, `serialization-chill`, `serialization-fst`, `serialization-upickle`, `crypto-bouncycastle`, `crypto-javax`)
+  .dependsOn(core, `codec-chill`, `codec-fst`, `codec-upickle`, `crypto-bouncycastle`, `crypto-javax`)
 
 lazy val cryptic = (project in file("."))
   .enablePlugins(ParadoxPlugin)
@@ -112,4 +112,4 @@ lazy val cryptic = (project in file("."))
     publish / skip := true,
     paradoxTheme := Some(builtinParadoxTheme("generic")),
     Compile / paradoxProperties ++= Map("github.base_url" -> s"https://github.com/ScalaCrypto/cryptic/tree/${version.value}"))
-  .aggregate(core, `serialization-chill`, `serialization-fst`, `serialization-upickle`, `crypto-javax`, `crypto-bouncycastle`, `crypto-test`)
+  .aggregate(core, `codec-chill`, `codec-fst`, `codec-upickle`, `crypto-javax`, `crypto-bouncycastle`, `crypto-test`)

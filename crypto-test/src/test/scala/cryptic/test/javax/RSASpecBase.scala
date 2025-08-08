@@ -4,7 +4,7 @@ package javax
 
 import cryptic.{Decrypt, Encrypt}
 import cryptic.crypto.RSA
-import cryptic.serialization.{Chill, Fst, Upickle}
+import cryptic.codec.{Chill, Fst, Upickle}
 import cryptic.test.CryptoSpecBase
 import upickle.default.*
 
@@ -19,11 +19,11 @@ trait RSASpecBase extends CryptoSpecBase:
   override def toString: String = "RSAChill"
 
 class RSAChillSpec extends RSASpecBase:
-  override given serializer[V]: Serializer[V] = Chill.serializer
+  override given codec[V]: Codec[V] = Chill.codec
 
 class RSAFstSpec extends RSASpecBase:
-  override given serializer[V]: Serializer[V] = Fst.serializer
+  override given codec[V]: Codec[V] = Fst.codec
 
 class RSAUpickleSpec[V: ReadWriter] extends RSASpecBase:
-  override given serializer[W]: Serializer[W] =
+  override given codec[W]: Codec[W] =
     Upickle[W]()(using summon[ReadWriter[V]].asInstanceOf[ReadWriter[W]])

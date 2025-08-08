@@ -36,8 +36,8 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
     val user: User =
       import cryptic.crypto.RSA.*
       import cryptic.crypto.RSA.given
-      import cryptic.serialization.Chill.*
-      import cryptic.serialization.Chill.given
+      import cryptic.codec.Chill.*
+      import cryptic.codec.Chill.given
       implicit val pubKey: PublicKey = publicKey
       // #encrypt
       val user = User(123, EmailAddress("Odd@Example.com").encrypted)
@@ -51,8 +51,8 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
     val loweredEmailOp: Cryptic.Operation[EmailAddress] =
       // # transform
       import Cryptic.*
-      import cryptic.serialization.Chill.*
-      import cryptic.serialization.Chill.given
+      import cryptic.codec.Chill.*
+      import cryptic.codec.Chill.given
       val loweredEmailOp: Operation[EmailAddress] =
         user.email.map(email => email.copy(literal = email.literal.toLowerCase))
       // # transform

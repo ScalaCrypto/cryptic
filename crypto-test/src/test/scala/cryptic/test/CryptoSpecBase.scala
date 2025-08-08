@@ -13,7 +13,7 @@ import scala.util.Success
 trait CryptoSpecBase extends AnyFlatSpecLike with Matchers with TryValues:
   given encrypt: Encrypt = deferred
   given decrypt: Decrypt = deferred
-  given serializer[V]: Serializer[V] = deferred
+  given codec[V]: Codec[V] = deferred
 
   "case class with encrypted members" should "encrypt and decrypt" in:
     case class Foo(clear: String, secret: Encrypted[String])

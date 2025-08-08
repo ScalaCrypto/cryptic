@@ -1,7 +1,6 @@
 package cryptic
-package codec
 
-import cryptic.*
+import cryptic.codec.*
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -17,31 +16,26 @@ object Foo:
 case class FooBar(secret: Encrypted[String])
 
 class ChillEncryptedSpec extends EncryptedSpecBase:
-  override def codec[V](implicit rw: ReadWriter[V]): Codec[V] =
-    Chill.codec
+  override def codec[V](implicit rw: ReadWriter[V]): Codec[V] = Chill.codec
 
 class FstEncryptedSpec extends EncryptedSpecBase:
-  override def codec[V: ReadWriter]: Codec[V] =
-    Fst.codec
+  override def codec[V: ReadWriter]: Codec[V] = Fst.codec
 
 class UpickleEncryptedSpec extends EncryptedSpecBase:
-  override def codec[V: ReadWriter]: Codec[V] =
-    Upickle[V]()
+  override def codec[V: ReadWriter]: Codec[V] = Upickle.codec
 
 trait EncryptedSpecBase extends AnyFlatSpec with Matchers with EitherValues:
-
-  import crypto.Reverse.*
-  import crypto.Reverse.given
+  import cryptic.codec.default.{*, given}
+  import cryptic.crypto.Reverse.{*, given}
   implicit def codec[V: ReadWriter]: Codec[V]
-
   "Case class with encrypted members" should "encrypt and decrypt" in:
     val foo = FooBar("secret".encrypted)
-    foo.secret.bytes shouldEqual codec[String].encode("secret").bytes.reverse
+    foo.secret.bytes shouldEqual "secret".encoded.bytes.reverse
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted case class with" should "encrypt and decrypt" in:
     val foo = Foo("clear")
     val encryptedFoo = foo.encrypted
-    val plainText = codec[Foo].encode(foo)
+    val plainText = foo.encoded
     encryptedFoo.bytes shouldBe plainText.bytes.reverse // Reveres crypto
     encryptedFoo.decrypted shouldEqual Success(foo)
   "Pending operations " should " be ran when decrypting" in:

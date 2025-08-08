@@ -12,12 +12,12 @@ case class EmailAddress(literal: String)
 case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
 class FstSpec extends AnyFlatSpec with Matchers:
-  import Fst.*
+  import Fst.{*, given}
 
   "Fst codec" should "encode string and then decode back to original string" in:
-    val plainText = codec.encode("kalle")
+    val plainText = "kalle".encoded
     plainText shouldNot equal(PlainText("kalle"))
-    val actual = codec.decode(plainText)
+    val actual = plainText.decoded
     actual shouldEqual Success("kalle")
 
   "Fst codec" should "encode user and decode back to original user" in:
@@ -27,6 +27,6 @@ class FstSpec extends AnyFlatSpec with Matchers:
       name = PersonName(first = Name("Karl"), last = Name("Nilsson")),
       email = EmailAddress("kalle@nilsson.se")
     )
-    val plainText = codec.encode(user)
-    val actual = codec.decode(plainText)
+    val plainText = user.encoded
+    val actual = plainText.decoded
     actual shouldEqual Success(user)

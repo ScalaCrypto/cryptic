@@ -3,9 +3,9 @@ package crypto
 
 import scala.util.Try
 
-/** NOTE This crypto is only for testing, use a proper algorithm 
- * 
- * The `Caesar` object provides encryption and decryption functionality using
+/** NOTE This crypto is only for testing, use a proper algorithm
+  *
+  * The `Caesar` object provides encryption and decryption functionality using
   * the Caesar cipher. It includes methods to generate keys, and implicit
   * methods to encrypt and decrypt text using a specified key.
   *

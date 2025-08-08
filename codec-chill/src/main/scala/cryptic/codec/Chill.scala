@@ -17,13 +17,12 @@ import scala.util.Try
   * The decode method converts a PlainText back to a value of type V using Kryo
   * serialization.
   */
-object Chill:
+object Chill extends Codec.Companion:
   private val kryoPool =
     KryoPool.withByteArrayOutputStream(10, new ScalaKryoInstantiator())
 
-  given codec[V]: Codec[V] = new Codec[V]:
-    def encode(value: V): PlainText = PlainText(
-      kryoPool.toBytesWithClass(value)
+  given codec: [V] => Codec[V]:
+    def encode(v: V): PlainText = PlainText(kryoPool.toBytesWithClass(v))
+    def decode(pt: PlainText): Try[V] = Try(
+      kryoPool.fromBytes(pt.bytes).asInstanceOf[V]
     )
-    def decode(plainText: PlainText): Try[V] = Try:
-      kryoPool.fromBytes(plainText.bytes).asInstanceOf[V]

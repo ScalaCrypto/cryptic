@@ -7,7 +7,7 @@ import cryptic.crypto.AES
 import cryptic.crypto.AES.AESParams
 import cryptic.codec.{Chill, Fst, Upickle}
 import cryptic.test.CryptoSpecBase
-import upickle.default.*
+import upickle.default.{*, given}
 
 trait AESSpecBase extends CryptoSpecBase:
   given aesPassword: AES.AESPassphrase =
@@ -17,9 +17,8 @@ trait AESSpecBase extends CryptoSpecBase:
   override given encrypt: Encrypt = AES.encrypt
 
 class AESChillSpec extends AESSpecBase:
-  override given codec[V]: Codec[V] = Chill.codec
+  override given stringCodec: Codec[String] = Chill.codec
 class AESFstSpec extends AESSpecBase:
-  override given codec[V]: Codec[V] = Fst.codec
+  override given stringCodec: Codec[String] = Fst.codec
 class AESUpickleSpec[V: ReadWriter] extends AESSpecBase:
-  override given codec[W]: Codec[W] =
-    Upickle[W]()(using summon[ReadWriter[V]].asInstanceOf[ReadWriter[W]])
+  override given stringCodec: Codec[String] = Upickle.codec

@@ -9,6 +9,7 @@ import scala.util.{Success, Try}
 
 class ECAppSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.{*, given}
+  import cryptic.codec.default.given
   import cryptic.crypto.EC.{*, given}
 
   val keyPair: KeyPair = keygen(256)

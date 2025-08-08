@@ -9,6 +9,7 @@ import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.Success
 
 class ECSpec extends AnyFlatSpec with Matchers:
+  import cryptic.codec.default.given
   import EC.*
   import EC.given
   private val keyPair: KeyPair = keygen(256)

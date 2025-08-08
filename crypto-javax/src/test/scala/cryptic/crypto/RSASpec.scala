@@ -8,7 +8,8 @@ import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.Success
 
 class RSASpec extends AnyFlatSpec with Matchers:
-  import RSA.{given, *}
+  import cryptic.codec.default.given
+  import RSA.{*, given}
   val keyPair: KeyPair = keygen(2048)
   given publicKey: PublicKey = keyPair.getPublic
   val text = "nisse"

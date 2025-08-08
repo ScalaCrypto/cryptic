@@ -7,6 +7,7 @@ import org.scalatest.matchers.should.Matchers
 import scala.util.Success
 
 class AESSpec extends AnyFlatSpec with Matchers:
+  import cryptic.codec.default.given
   import AES.{given, *}
   given params: AESParams = AESParams()
   given password: AESPassphrase = AESPassphrase("secret")

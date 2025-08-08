@@ -2,10 +2,10 @@ package cryptic
 package test
 package javax
 
-import cryptic.{Decrypt, Encrypt}
-import cryptic.crypto.RSA
 import cryptic.codec.{Chill, Fst, Upickle}
+import cryptic.crypto.RSA
 import cryptic.test.CryptoSpecBase
+import cryptic.{Decrypt, Encrypt}
 import upickle.default.*
 
 import java.security.{PrivateKey, PublicKey}
@@ -19,11 +19,10 @@ trait RSASpecBase extends CryptoSpecBase:
   override def toString: String = "RSAChill"
 
 class RSAChillSpec extends RSASpecBase:
-  override given codec[V]: Codec[V] = Chill.codec
+  override given stringCodec: Codec[String] = Chill.codec
 
 class RSAFstSpec extends RSASpecBase:
-  override given codec[V]: Codec[V] = Fst.codec
+  override given stringCodec: Codec[String] = Fst.codec
 
 class RSAUpickleSpec[V: ReadWriter] extends RSASpecBase:
-  override given codec[W]: Codec[W] =
-    Upickle[W]()(using summon[ReadWriter[V]].asInstanceOf[ReadWriter[W]])
+  override given stringCodec: Codec[String] = Upickle.codec

@@ -54,15 +54,11 @@ object CipherText:
   def unapplySeq(cipherText: CipherText): Option[Seq[Array[Byte]]] =
     Option(cipherText.split)
 
-trait Encrypt:
-  def apply(plainText: PlainText): CipherText
-
+type Encrypt = PlainText => CipherText
 object Encrypt:
   val Empty: Encrypt = _ ⇒ CipherText.Empty
 
-trait Decrypt:
-  def apply(cipherText: CipherText): Try[PlainText]
-
+type Decrypt = CipherText => Try[PlainText]
 object Decrypt:
   val Empty: Decrypt = _ ⇒ Success(PlainText.empty)
 

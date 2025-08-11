@@ -1,7 +1,9 @@
 import scala.collection.Seq
 
 lazy val scalaTest = ("org.scalatest" %% "scalatest" % "3.2.19").withSources()
-lazy val chill = ("com.twitter" % "chill" % "0.10.0").cross(CrossVersion.for3Use2_13).withSources()
+lazy val chill = ("com.twitter" % "chill" % "0.10.0")
+  .cross(CrossVersion.for3Use2_13)
+  .withSources()
 lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
 lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.2.1").withSources()
 lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.81").withSources()
@@ -17,13 +19,14 @@ lazy val javaBaseOpens = Seq(
   "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED",
   "--add-opens=java.base/java.util.regex=ALL-UNNAMED",
   "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
-  "--add-opens=java.sql/java.sql=ALL-UNNAMED")
+  "--add-opens=java.sql/java.sql=ALL-UNNAMED"
+)
 
 lazy val commonSettings =
   Seq(
     organization := "scalacrypto",
-    scalaVersion := "3.6.4",
-    version := "0.7.0-SNAPSHOT",
+    scalaVersion := "3.7.2",
+    version := "0.8.0-SNAPSHOT",
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := true,
     Compile / packageBin / publishArtifact := true,
@@ -31,7 +34,8 @@ lazy val commonSettings =
     javaOptions ++= javaBaseOpens
   ) ++ testSettings
 
-lazy val testSettings = Seq(Test / fork := true, Test / javaOptions ++= javaBaseOpens)
+lazy val testSettings =
+  Seq(Test / fork := true, Test / javaOptions ++= javaBaseOpens)
 
 lazy val coreSettings = commonSettings ++ Seq(
   name := "core",
@@ -41,7 +45,8 @@ lazy val coreSettings = commonSettings ++ Seq(
   },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name}-${module.revision}.${artifact.extension}"
-  })
+  }
+)
 
 lazy val codecChillSettings = commonSettings ++ Seq(
   name := "codec-chill",
@@ -51,7 +56,8 @@ lazy val codecChillSettings = commonSettings ++ Seq(
   },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
-  })
+  }
+)
 lazy val codecFstSettings = commonSettings ++ testSettings ++ Seq(
   name := "codec-fst",
   libraryDependencies ++= Seq(scalaTest % Test, fst),
@@ -60,7 +66,8 @@ lazy val codecFstSettings = commonSettings ++ testSettings ++ Seq(
   },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
-  })
+  }
+)
 
 lazy val codecUpickleSettings = commonSettings ++ Seq(
   name := "codec-upickle",
@@ -70,7 +77,8 @@ lazy val codecUpickleSettings = commonSettings ++ Seq(
   },
   artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
     s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
-  })
+  }
+)
 
 lazy val cryptoCommonSettings = (projectName: String) =>
   commonSettings ++ Seq(
@@ -79,30 +87,53 @@ lazy val cryptoCommonSettings = (projectName: String) =>
     Compile / packageBin / mappings += {
       file("LICENSE") -> "LICENSE"
     },
-    artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
-      s"cryptic-${artifact.name.replace("crypto-", "")}-${module.revision}.${artifact.extension}"
-    })
+    artifactName := {
+      (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
+        s"cryptic-${artifact.name.replace("crypto-", "")}-${module.revision}.${artifact.extension}"
+    }
+  )
 
 lazy val cryptoTestSettings =
-  commonSettings ++ testSettings ++ Seq(name := "crypto-test", libraryDependencies ++= Seq(scalaTest % Test), publish / skip := true)
+  commonSettings ++ testSettings ++ Seq(
+    name := "crypto-test",
+    libraryDependencies ++= Seq(scalaTest % Test),
+    publish / skip := true
+  )
 
 lazy val core = (project in file("core")).settings(coreSettings)
 
-lazy val `codec-chill` = (project in file("codec-chill")).settings(codecChillSettings).dependsOn(core)
+lazy val `codec-chill` =
+  (project in file("codec-chill")).settings(codecChillSettings).dependsOn(core)
 
-lazy val `codec-fst` = (project in file("codec-fst")).settings(codecFstSettings).dependsOn(core)
+lazy val `codec-fst` =
+  (project in file("codec-fst")).settings(codecFstSettings).dependsOn(core)
 
-lazy val `codec-upickle` = (project in file("codec-upickle")).settings(codecUpickleSettings).dependsOn(core)
+lazy val `codec-upickle` = (project in file("codec-upickle"))
+  .settings(codecUpickleSettings)
+  .dependsOn(core)
 
-lazy val `crypto-javax` = (project in file("crypto-javax")).settings(cryptoCommonSettings("crypto-javax")).dependsOn(core)
+lazy val `crypto-javax` = (project in file("crypto-javax"))
+  .settings(cryptoCommonSettings("crypto-javax"))
+  .dependsOn(core)
 
 lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle"))
-  .settings(cryptoCommonSettings("crypto-bouncycastle") ++ Seq(libraryDependencies ++= Seq(bc, scalaTest % Test)))
+  .settings(
+    cryptoCommonSettings("crypto-bouncycastle") ++ Seq(
+      libraryDependencies ++= Seq(bc, scalaTest % Test)
+    )
+  )
   .dependsOn(core)
 
 lazy val `crypto-test` = (project in file("crypto-test"))
   .settings(cryptoTestSettings)
-  .dependsOn(core, `codec-chill`, `codec-fst`, `codec-upickle`, `crypto-bouncycastle`, `crypto-javax`)
+  .dependsOn(
+    core,
+    `codec-chill`,
+    `codec-fst`,
+    `codec-upickle`,
+    `crypto-bouncycastle`,
+    `crypto-javax`
+  )
 
 lazy val cryptic = (project in file("."))
   .enablePlugins(ParadoxPlugin)
@@ -111,5 +142,16 @@ lazy val cryptic = (project in file("."))
     name := "cryptic",
     publish / skip := true,
     paradoxTheme := Some(builtinParadoxTheme("generic")),
-    Compile / paradoxProperties ++= Map("github.base_url" -> s"https://github.com/ScalaCrypto/cryptic/tree/${version.value}"))
-  .aggregate(core, `codec-chill`, `codec-fst`, `codec-upickle`, `crypto-javax`, `crypto-bouncycastle`, `crypto-test`)
+    Compile / paradoxProperties ++= Map(
+      "github.base_url" -> s"https://github.com/ScalaCrypto/cryptic/tree/${version.value}"
+    )
+  )
+  .aggregate(
+    core,
+    `codec-chill`,
+    `codec-fst`,
+    `codec-upickle`,
+    `crypto-javax`,
+    `crypto-bouncycastle`,
+    `crypto-test`
+  )

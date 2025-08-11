@@ -26,61 +26,10 @@ object PlainText:
   val empty: PlainText = PlainText(Array.emptyByteArray)
   def apply(x: Array[Byte]): PlainText = new PlainText(x)
   def apply(x: String): PlainText = apply(x.getBytes())
-  def apply(x: Int): PlainText =
-    val buffer = ByteBuffer.allocate(4)
-    buffer.putInt(x)
-    apply(buffer.array())
-  def apply(x: Long): PlainText =
-    val buffer = ByteBuffer.allocate(8)
-    buffer.putLong(x)
-    apply(buffer.array())
-  def apply(x: Float): PlainText =
-    val buffer = ByteBuffer.allocate(4)
-    buffer.putFloat(x)
-    apply(buffer.array())
-  def apply(x: Double): PlainText =
-    val buffer = ByteBuffer.allocate(8)
-    buffer.putDouble(x)
-    apply(buffer.array())
-  def unapply[T](plainText: PlainText)(using ct: ClassTag[T]): Try[T] =
-    def checkSize(n: Int): Try[PlainText] =
-      if plainText.bytes.length == n then Success(plainText)
-      else
-        Failure(
-          new IllegalArgumentException(
-            s"PlainText must be exactly $n bytes for $ct extraction"
-          )
-        )
-    ct.runtimeClass match
-      case c if c == classOf[String] =>
-        Try(new String(plainText.bytes).trim.asInstanceOf[T])
-      case c if c == classOf[Int] =>
-        checkSize(4).map(plainText =>
-          ByteBuffer.wrap(plainText.bytes).getInt.asInstanceOf[T]
-        )
-      case c if c == classOf[Float] =>
-        checkSize(4).map(plainText =>
-          ByteBuffer.wrap(plainText.bytes).getFloat.asInstanceOf[T]
-        )
-      case c if c == classOf[Double] =>
-        checkSize(8).map(plainText =>
-          ByteBuffer.wrap(plainText.bytes).getDouble.asInstanceOf[T]
-        )
-      case c if c == classOf[Long] =>
-        checkSize(8).map(plainText =>
-          ByteBuffer.wrap(plainText.bytes).getLong.asInstanceOf[T]
-        )
-      case _ =>
-        Failure(
-          new IllegalArgumentException(
-            s"Unsupported type $ct for extraction. " +
-              "Supported types are: Double, Int, Long and String"
-          )
-        )
-def hash(plainText: PlainText): Hash =
-  import java.security.MessageDigest
-  val digest = MessageDigest.getInstance("SHA-256")
-  digest.digest(plainText.bytes).toVector // Todo handle manifest?
+  def hash(plainText: PlainText): Hash =
+    import java.security.MessageDigest
+    val digest = MessageDigest.getInstance("SHA-256")
+    digest.digest(plainText.bytes).toVector // Todo handle manifest?
 
 case class CipherText(bytes: Array[Byte]):
   def buffer: ByteBuffer = ByteBuffer.wrap(bytes)

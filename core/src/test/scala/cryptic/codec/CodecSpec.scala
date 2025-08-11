@@ -14,25 +14,19 @@ class CodecSpec extends AnyFlatSpec with Matchers:
   val long = 4711L
   val double: Double = math.E
   val float: Float = double.toFloat
-  val bytesPT: PlainText = PlainText(bytes)
-  val textPT: PlainText = PlainText(text)
-  val intPT: PlainText = PlainText(int)
-  val longPT: PlainText = PlainText(long)
-  val floatPT: PlainText = PlainText(float)
-  val doublePT: PlainText = PlainText(double)
   "Codec" should "encode simple types to plain text" in:
-    bytes.encoded shouldEqual bytesPT
-    text.encoded shouldEqual textPT
-    int.encoded shouldEqual intPT
-    long.encoded shouldEqual longPT
-    float.encoded shouldEqual floatPT
-    double.encoded shouldEqual doublePT
+    bytes.encoded.bytes shouldEqual bytes
+    text.encoded.bytes shouldEqual text.getBytes
+    int.encoded.bytes shouldEqual Array[Byte](0,0,0,17)
+    long.encoded.bytes shouldEqual Array(0, 0, 0, 0, 0, 0, 18, 103)
+    float.encoded.bytes shouldEqual Array(64, 45, -8, 84)
+    double.encoded.bytes shouldEqual Array(64, 5, -65, 10, -117, 20, 87, 105)
 
-  "Codec" should "decode cypher text to simple types" in:
+  "Codec" should "decode PlainText to specified types" in:
     def decode[V: Codec](pt: PlainText): Try[V] = (pt.decoded): Try[V]
-    decode[Array[Byte]](bytesPT) shouldEqual Success(bytes)
-    decode[String](textPT) shouldEqual Success(text)
-    decode[Int](intPT) shouldEqual Success(int)
-    decode[Long](longPT) shouldEqual Success(long)
-    decode[Float](floatPT) shouldEqual Success(float)
-    decode[Double](doublePT) shouldEqual Success(double)
+    decode[Array[Byte]](bytes.encoded) shouldEqual Success(bytes)
+    decode[String](text.encoded) shouldEqual Success(text)
+    decode[Int](int.encoded) shouldEqual Success(int)
+    decode[Long](long.encoded) shouldEqual Success(long)
+    decode[Float](float.encoded) shouldEqual Success(float)
+    decode[Double](double.encoded) shouldEqual Success(double)

@@ -10,21 +10,21 @@ import scala.util.{Success, Try}
 case class Name(literal: String)
 
 object Name:
-  implicit val rw: ReadWriter[Name] = macroRW[Name]
+  given rw: ReadWriter[Name] = macroRW[Name]
 
 case class PersonName(first: Name, middle: Option[Name] = None, last: Name)
 
 object PersonName:
-  implicit val rw: ReadWriter[PersonName] = macroRW[PersonName]
+  given rw: ReadWriter[PersonName] = macroRW[PersonName]
 
 case class EmailAddress(literal: String)
 
 object EmailAddress:
-  implicit val rw: ReadWriter[EmailAddress] = macroRW[EmailAddress]
+  given rw: ReadWriter[EmailAddress] = macroRW[EmailAddress]
 case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
 object User:
-  implicit val rw: ReadWriter[User] = macroRW[User]
+  given rw: ReadWriter[User] = macroRW[User]
 class UpickleSpec extends AnyFlatSpec with Matchers:
   import cryptic.codec.Upickle.{*, given}
   val user: User = User(

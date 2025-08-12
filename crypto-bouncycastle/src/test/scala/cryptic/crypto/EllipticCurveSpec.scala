@@ -13,7 +13,7 @@ class EllipticCurveSpec extends AnyFlatSpec with Matchers:
   import EllipticCurve.*
   import EllipticCurve.given
   private val keyPair: KeyPair = keygen(256)
-  implicit val publicKey: PublicKey = keyPair.getPublic
+  given publicKey: PublicKey = keyPair.getPublic
   private val text = "secret"
 
   "EC" should "support encryption and decryption" in:

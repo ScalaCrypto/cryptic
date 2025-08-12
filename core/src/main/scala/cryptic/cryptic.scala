@@ -1,7 +1,6 @@
 package cryptic
 
 import java.nio.ByteBuffer
-import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
 
@@ -104,10 +103,10 @@ extension (buffer: ByteBuffer)
 sealed abstract class Cryptic[V: Codec]:
   import Cryptic.*
 
-  /** Decrypts the data using the provided implicit decryption mechanism.
+  /** Decrypts the data using the provided given decryption mechanism.
     *
     * @param decrypt
-    *   The implicit decryption logic that will be used to decrypt the data.
+    *   The given decryption logic that will be used to decrypt the data.
     * @return
     *   Returns a Try instance containing the decrypted value of type V if
     *   successful, or a Failure if the decryption fails.
@@ -120,7 +119,7 @@ sealed abstract class Cryptic[V: Codec]:
     * @param default
     *   the value to return if decryption fails or if the value is not present
     * @param decrypt
-    *   an implicit decryption context
+    *   a given decryption context
     * @return
     *   the decrypted value if successful, otherwise the default value
     */
@@ -219,7 +218,7 @@ object Cryptic:
         encrypt: Encrypt,
         decrypt: Decrypt
     ): Try[Encrypted[W]] =
-      decrypted.map(w => Encrypted(encrypt(implicitly[Codec[W]].encode(w))))
+      decrypted.map(w => Encrypted(encrypt(summon[Codec[W]].encode(w))))
   final case class Mapped[V: Codec, W: Codec](
       src: Cryptic[V],
       f: V => W
@@ -322,7 +321,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @param value
     *   The value to be checked.
     * @param decrypt
-    *   Implicit parameter to handle decryption.
+    *   given parameter to handle decryption.
     * @return
     *   True if the value is contained, false otherwise.
     */
@@ -441,7 +440,7 @@ object Encrypted:
     * @param value
     *   The value to be encrypted.
     * @param encrypt
-    *   An given encryption function that will be used to encrypt the encoded
+    *   a given encryption function that will be used to encrypt the encoded
     *   value.
     * @tparam V
     *   The type of the value being encrypted. A Codec must be available for
@@ -454,7 +453,7 @@ object Encrypted:
       value: V
   )(using encrypt: Encrypt): Encrypted[V] =
     if value == null then empty
-    else Encrypted[V](encrypt(implicitly[Codec[V]].encode(value)))
+    else Encrypted[V](encrypt(summon[Codec[V]].encode(value)))
 
   /** Constructs an empty Encrypted instance.
     *
@@ -463,7 +462,7 @@ object Encrypted:
     */
   def empty[V: Codec]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]
   object Empty extends Encrypted[Nothing](CipherText.Empty):
-    override def decrypted(implicit decrypt: Decrypt): Try[Nothing] = Failure(
+    override def decrypted(using decrypt: Decrypt): Try[Nothing] = Failure(
       new UnsupportedOperationException("decrypted called on empty")
     )
     override def isEmpty: Boolean = true

@@ -19,12 +19,12 @@ trait CryptoSpecBase extends AnyFlatSpecLike with Matchers with TryValues:
     case class Foo(clear: String, secret: Encrypted[String])
     val foo =
       Foo("clear", "secret".encrypted)
-    foo.secret.bytes shouldNot be(null)
+    foo.secret.bytes.mutable shouldNot be(null)
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted bytes" should "be callable without decrypt in scope" in:
     given e: Encrypt = encrypt
     val encrypted = Encrypted[String]("secret")
-    encrypted.bytes shouldNot be(null)
+    encrypted.bytes.mutable shouldNot be(null)
   "Encrypted same plain text " should "have different cipher text " in:
     given e: Encrypt = encrypt
     val enc1 = "nisse".encrypted

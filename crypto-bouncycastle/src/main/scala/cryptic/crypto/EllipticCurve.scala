@@ -18,13 +18,18 @@ object EllipticCurve:
   given encrypt(using key: PublicKey): Encrypt =
     (plainText: PlainText) =>
       cipher.init(Cipher.ENCRYPT_MODE, key)
-      CipherText(plainText.manifest, cipher.doFinal(plainText.bytes))
+      CipherText(
+        plainText.manifest,
+        cipher.doFinal(plainText.bytes.mutable).immutable
+      )
 
   given decrypt(using key: PrivateKey): Decrypt =
     (cipherText: CipherText) =>
-      val Array(manifest, bytes) = cipherText.split
+      val IArray(manifest, bytes) = cipherText.split
       cipher.init(Cipher.DECRYPT_MODE, key)
-      Try[PlainText](PlainText(cipher.doFinal(bytes), manifest))
+      Try[PlainText](
+        PlainText(cipher.doFinal(bytes.mutable).immutable, manifest)
+      )
 
   /** Generates a new elliptic curve key pair.
     *

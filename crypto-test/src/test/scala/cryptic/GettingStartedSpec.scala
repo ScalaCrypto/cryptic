@@ -42,7 +42,7 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
       user
 
     // #access
-    val bytes: Array[Byte] = user.email.bytes
+    val bytes: IArray[Byte] = user.email.bytes
     // #access
 
     val loweredEmailOp: Cryptic.Operation[EmailAddress] =

@@ -21,7 +21,7 @@ class AesSpec extends AnyFlatSpec with Matchers:
       case x ⇒ fail(s"does not decrypt: $x")
 
   "AES" should "hide plaintext" in:
-    new String(text.encrypted.bytes)
+    new String(text.encrypted.bytes.mutable)
       .contains(text.getBytes()) shouldBe false
 
   "AESParams keyspecLength" should

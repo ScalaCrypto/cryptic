@@ -112,10 +112,6 @@ lazy val `codec-upickle` = (project in file("codec-upickle"))
   .settings(codecUpickleSettings)
   .dependsOn(core)
 
-lazy val `crypto-javax` = (project in file("crypto-javax"))
-  .settings(cryptoCommonSettings("crypto-javax"))
-  .dependsOn(core)
-
 lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle"))
   .settings(
     cryptoCommonSettings("crypto-bouncycastle") ++ Seq(
@@ -131,8 +127,7 @@ lazy val `crypto-test` = (project in file("crypto-test"))
     `codec-chill`,
     `codec-fst`,
     `codec-upickle`,
-    `crypto-bouncycastle`,
-    `crypto-javax`
+    `crypto-bouncycastle`
   )
 
 lazy val cryptic = (project in file("."))
@@ -151,7 +146,6 @@ lazy val cryptic = (project in file("."))
     `codec-chill`,
     `codec-fst`,
     `codec-upickle`,
-    `crypto-javax`,
     `crypto-bouncycastle`,
     `crypto-test`
   )

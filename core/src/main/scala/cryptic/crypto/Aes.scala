@@ -3,8 +3,8 @@ package crypto
 
 import java.nio.ByteBuffer
 import java.security.SecureRandom
-import javax.crypto.{Cipher, SecretKey, SecretKeyFactory}
 import javax.crypto.spec.{IvParameterSpec, PBEKeySpec, SecretKeySpec}
+import javax.crypto.{Cipher, SecretKey, SecretKeyFactory}
 import scala.util.{Failure, Try}
 
 /** Object AES provides encryption and decryption utilities using the AES
@@ -58,18 +58,23 @@ object Aes:
     cipher.init(Cipher.ENCRYPT_MODE, key)
     val params = cipher.getParameters
     val initVector = params.getParameterSpec(classOf[IvParameterSpec]).getIV
-    val cipherText = cipher.doFinal(plainText.bytes)
-    CipherText(plainText.manifest, salt.bytes, initVector, cipherText)
+    val cipherText = cipher.doFinal(plainText.bytes.mutable)
+    CipherText(
+      plainText.manifest,
+      salt.bytes.immutable,
+      initVector.immutable,
+      cipherText.immutable
+    )
 
   given decrypt(using
       passphrase: AESPassphrase,
       aesParams: AESParams
   ): Decrypt = (cipherText: CipherText) =>
-    val Array(manifest, salt, iv, bytes) = cipherText.split
-    val key = keygen(passphrase, Salt(salt))
+    val IArray(manifest, salt, iv, bytes) = cipherText.split
+    val key = keygen(passphrase, Salt(salt.mutable))
     val cipher = newCipher
-    cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv))
-    Try[PlainText](PlainText(cipher.doFinal(bytes), manifest))
+    cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv.mutable))
+    Try[PlainText](PlainText(cipher.doFinal(bytes.mutable).immutable, manifest))
 
   /** Generates a secret key using the provided password and salt.
     *

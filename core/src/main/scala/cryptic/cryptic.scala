@@ -95,6 +95,8 @@ extension (array: Array[Byte])
 
 extension (array: IArray[Byte])
   def mutable: Array[Byte] = IArray.wrapByteIArray(array).unsafeArray
+extension (array: IArray[Char])
+  def mutable: Array[Char] = IArray.wrapCharIArray(array).unsafeArray
 
 extension (buffer: ByteBuffer)
   def nextBytes(): Array[Byte] =

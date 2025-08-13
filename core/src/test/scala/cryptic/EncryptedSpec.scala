@@ -19,7 +19,7 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.crypto.Reverse.given
 
   private val clear = "nisse"
-  private val enc1: Encrypted[String] = Encrypted(clear)
+  private val enc1: Encrypted[String] = clear.encrypted
   private val emptyString: Encrypted[String] = Encrypted.empty[String]
 
   "Case class with encrypted members" should "encrypt and decrypt" in:
@@ -28,13 +28,13 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
     foo.secret.bytes shouldEqual Array(116, 101, 114, 99, 101, 115)
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted bytes" should "be callable without decrypt in scope" in:
-    val e = Encrypted[String]("secret")
+    val e = "secret".encrypted
     e.bytes shouldEqual Array(116, 101, 114, 99, 101, 115)
   "Encrypted" should "have same value in encrypted space" in:
-    val enc2 = Encrypted(clear)
+    val enc2 = clear.encrypted
     enc1 shouldEqual enc2
   "Encrypted" should "not equal different values" in:
-    val enc2 = Encrypted("kalle")
+    val enc2 = "kalle".encrypted
     (enc1 == enc2) shouldBe false
   "Encrypted" should "have exists" in:
     enc1.exists(_ == clear) shouldBe true

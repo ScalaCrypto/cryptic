@@ -11,7 +11,7 @@ type Manifest = IArray[Byte]
 object Manifest:
   val empty: Manifest = IArray.emptyByteIArray
 
-case class PlainText(bytes: IArray[Byte], manifest: Manifest = Manifest.empty):
+case class PlainText(bytes: IArray[Byte], manifest: Manifest):
   // override def toString: String = "\uD83D\uDD12"
   override def equals(obj: Any): Boolean = obj match
     case other: PlainText =>
@@ -26,8 +26,12 @@ case class PlainText(bytes: IArray[Byte], manifest: Manifest = Manifest.empty):
 
 object PlainText:
   val empty: PlainText = PlainText(IArray.emptyByteIArray)
-  def apply(x: IArray[Byte]): PlainText = new PlainText(x)
-  def apply(x: String): PlainText = apply(x.getBytes().immutable)
+  def apply(x: IArray[Byte]): PlainText = apply(x, Manifest.empty)
+  def apply(x: IArray[Byte], manifest: Manifest): PlainText =
+    new PlainText(x, manifest)
+  def apply(x: String): PlainText = apply(x, Manifest.empty)
+  def apply(x: String, manifest: Manifest): PlainText =
+    apply(x.getBytes().immutable, manifest)
   def hash(plainText: PlainText): Hash =
     import java.security.MessageDigest
     val digest = MessageDigest.getInstance("SHA-256")
@@ -45,14 +49,7 @@ case class CipherText(bytes: IArray[Byte]):
 object CipherText:
   val Empty: CipherText = CipherText(IArray.emptyByteIArray)
   def apply(array: IArray[Byte], arrays: IArray[Byte]*): CipherText =
-    val count = 1 + arrays.length
-    val buffer = ByteBuffer.allocate(4 + count * 4 + arrays.foldLeft(0):
-      case (length, bytes) => length + bytes.length)
-    buffer.putInt(count)
-    buffer.nextBytes(array.mutable)
-    arrays.foldLeft(buffer):
-      case (buffer, bytes) => buffer.nextBytes(bytes.mutable)
-    new CipherText(buffer.array().immutable)
+    new CipherText(IArray.join(array, arrays*))
   def unapplySeq(cipherText: CipherText): Option[Seq[IArray[Byte]]] =
     Option(cipherText.split)
 
@@ -68,7 +65,7 @@ type Sign = PlainText => Array[Byte]
 type Verify = Array[Byte] => Boolean
 
 trait Codec[V]:
-  def encode(v: V): PlainText
+  def encode(v: V, manifest: Manifest = Manifest.empty): PlainText
   def decode(plainText: PlainText): Try[V]
 
 object Codec:
@@ -79,7 +76,8 @@ object Codec:
       def decoded: Try[V] = summon[Codec[V]].decode(plainText)
 
 given Codec[Nothing]:
-  def encode(v: Nothing): PlainText = PlainText.empty
+  def encode(v: Nothing, manifest: Manifest): PlainText =
+    PlainText(IArray.emptyByteIArray, manifest)
   def decode(pt: PlainText): Try[Nothing] =
     Failure(
       new IllegalArgumentException(
@@ -88,7 +86,10 @@ given Codec[Nothing]:
     )
 
 extension [V: Codec](value: V)
-  def encrypted(using encrypt: Encrypt): Encrypted[V] = Encrypted(value)
+  def encrypted(using encrypt: Encrypt): Encrypted[V] =
+    Encrypted(value, Manifest.empty)
+  def encrypted(manifest: Manifest)(using encrypt: Encrypt): Encrypted[V] =
+    Encrypted(value, manifest)
 
 extension (array: Array[Byte])
   def immutable: IArray[Byte] = IArray.unsafeFromArray(array)
@@ -113,6 +114,18 @@ extension (buffer: ByteBuffer)
     val arrays = Array.ofDim[IArray[Byte]](count)
     for i <- 0 until count do arrays(i) = buffer.nextBytes().immutable
     IArray.unsafeFromArray(arrays)
+
+extension (iarrayObject: IArray.type)
+  def join(array: IArray[Byte], arrays: IArray[Byte]*): IArray[Byte] =
+    val count = 1 + arrays.length
+    val buffer =
+      ByteBuffer.allocate(4 + count * 4 + arrays.foldLeft(array.length):
+        case (length, bytes) => length + bytes.length)
+    buffer.putInt(count)
+    buffer.nextBytes(array.mutable)
+    arrays.foldLeft(buffer):
+      case (buffer, bytes) => buffer.nextBytes(bytes.mutable)
+    buffer.array().immutable
 
 sealed abstract class Cryptic[V: Codec]:
   import Cryptic.*
@@ -473,10 +486,11 @@ object Encrypted:
     *   empty Encrypted instance if the input value is null.
     */
   def apply[V: Codec](
-      value: V
+      value: V,
+      manifest: Manifest
   )(using encrypt: Encrypt): Encrypted[V] =
     if value == null then empty
-    else Encrypted[V](encrypt(summon[Codec[V]].encode(value)))
+    else Encrypted[V](encrypt(summon[Codec[V]].encode(value, manifest)))
 
   /** Constructs an empty Encrypted instance.
     *

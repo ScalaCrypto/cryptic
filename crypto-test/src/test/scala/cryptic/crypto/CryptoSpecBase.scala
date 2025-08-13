@@ -5,7 +5,6 @@ import cryptic.*
 import org.scalatest.TryValues
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
-import upickle.default.ReadWriter
 
 import scala.compiletime.deferred
 import scala.util.Success
@@ -23,7 +22,7 @@ trait CryptoSpecBase extends AnyFlatSpecLike with Matchers with TryValues:
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted bytes" should "be callable without decrypt in scope" in:
     given e: Encrypt = encrypt
-    val encrypted = Encrypted[String]("secret")
+    val encrypted = "secret".encrypted
     encrypted.bytes.mutable shouldNot be(null)
   "Encrypted same plain text " should "have different cipher text " in:
     given e: Encrypt = encrypt
@@ -32,8 +31,8 @@ trait CryptoSpecBase extends AnyFlatSpecLike with Matchers with TryValues:
     enc1 shouldNot equal(enc2)
   "Different encrypted plain texts" should "have different encrypted values" in:
     given e: Encrypt = encrypt
-    val enc1 = Encrypted("nisse")
-    val enc2 = Encrypted("kalle")
+    val enc1 = "nisse".encrypted
+    val enc2 = "kalle".encrypted
     (enc1 == enc2) shouldBe false
   "Pending operations " should " be ran when decrypting" in:
     val encrypted: Encrypted[String] =

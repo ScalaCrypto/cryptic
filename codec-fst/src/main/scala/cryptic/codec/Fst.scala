@@ -8,7 +8,7 @@ import scala.util.Try
 /** The `Fst` object provides a mechanism for encoding and decoding using the
   * FST (Fast Serialization) library.
   *
-  * It contains a default FST configuration and an implicit `Codec` for generic
+  * It contains a default FST configuration and a given `Codec` for generic
   * types.
   *
   * Members:

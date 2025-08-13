@@ -27,15 +27,15 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
 
     val (publicKey, privateKey) =
       // #extract-key
-      implicit val publicKey: PublicKey = key.getPublic
-      implicit val privateKey: PrivateKey = key.getPrivate
+      given publicKey: PublicKey = key.getPublic
+      given privateKey: PrivateKey = key.getPrivate
       // #extract-key
       (publicKey, privateKey)
 
     val user: User =
       import cryptic.codec.Chill.{*, given}
       import cryptic.crypto.Rsa.{*, given}
-      implicit val pubKey: PublicKey = publicKey
+      given pubKey: PublicKey = publicKey
       // #encrypt
       val user = User(123, EmailAddress("Odd@Example.com").encrypted)
       // #encrypt
@@ -56,8 +56,8 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
     val userWithLoweredEmail: Try[User] =
       // #run
       import cryptic.crypto.Rsa.{*, given}
-      implicit val publicKey: PublicKey = key.getPublic
-      implicit val privateKey: PrivateKey = key.getPrivate
+      given publicKey: PublicKey = key.getPublic
+      given privateKey: PrivateKey = key.getPrivate
       val userWithLoweredEmail: Try[User] =
         loweredEmailOp.run.map(email => user.copy(email = email))
       // #run
@@ -65,7 +65,7 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
     val loweredEmail =
       // #decrypt
       import cryptic.crypto.Rsa.{*, given}
-      implicit val privateKey: PrivateKey = key.getPrivate
+      given privateKey: PrivateKey = key.getPrivate
       val loweredEmail: Try[EmailAddress] =
         userWithLoweredEmail.flatMap(_.email.decrypted)
       // #decrypt

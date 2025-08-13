@@ -6,7 +6,7 @@ import scala.util.Try
 /** NOTE This crypto is only for testing, use a proper algorithm
   *
   * The `Caesar` object provides encryption and decryption functionality using
-  * the Caesar cipher. It includes methods to generate keys, and implicit
+  * the Caesar cipher. It includes methods to generate keys, and given
   * methods to encrypt and decrypt text using a specified key.
   *
   * The Caesar cipher is a type of substitution cipher in which each letter in

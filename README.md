@@ -29,13 +29,13 @@ To encrypt with AES or RSA
 "scalacrypto" %% "crypto-javax" % "1.0.0"
 ```
 
-To encrypt with EC
+To encrypt with Elliptic Curve, ECIES 
 
 ```sbt 
 "scalacrypto" %% "crypto-bouncycastle" % "1.0.0"
 ```
 
-Select codec one of
+Use the default codec for scala types or select one of
 
 ```sbt
 "scalacrypto" %% "codec-chill" % "1.0.0"
@@ -50,8 +50,7 @@ Select codec one of
 Import base package and syntax extension:
 
 ```scala
-import cryptic.*
-import cryptic.syntax.*
+import cryptic.{given,*}
 ```
 
 Define your data types:
@@ -72,11 +71,11 @@ Encrypt your data using convenient syntax, a crypto and a codec must be availabl
 
 ```scala
 import java.security.{KeyPair, PrivateKey, PublicKey}
-import cryptic.crypto.EC.{ given, * } // Elliptic Curve encryption
+import cryptic.crypto.EllipticCurve.{ given, * } // Elliptic Curve encryption
 import cryptic.codec.Chill.* // Brings the Chill codec in scope
 
-// We need a given public key to enable encryption for EC
-private val keyPair: KeyPair = EC.keygen(256)
+// We need a given public key to enable encryption for Elliptic Curve
+private val keyPair: KeyPair = EllipticCurve.keygen(256)
 given private val publicKey: PublicKey = keyPair.getPublic
 
 val user = User(123, EmailAddress("odd@example.com").encrypted)
@@ -125,10 +124,11 @@ val emailInLower = user2.email.decrypted
 
 - AES
 - RSA
-- EC
+- ECIES
 
 ## Provided codecs
 
+- Default
 - Chill
 - Fst
 - Upickle
@@ -153,8 +153,8 @@ import scala.util.Try
 
 object MyCodec:
   given codec[V]: Codec[V] = new Codec[V]:
-    override def encode(value: V): PlainText = ???
-    override def decode(plainText: PlainText): Either[String, V] = ???
+    def encode(value: V): PlainText = ???
+    def decode(plainText: PlainText): Either[String, V] = ???
 ```
 
 ### Crypto
@@ -162,11 +162,8 @@ object MyCodec:
 Provide implementations of the Encrypt and Decrypt traits and probably a Key:
 
 ```scala
-trait Encrypt:
-  def apply(plainText: PlainText): CipherText
-
-trait Decrypt:
-  def apply(cipherText: CipherText): Either[String, PlainText]
+given encrypt(plainText: PlainText): CipherText
+given decrypt(cipherText: CipherText): Either[String, PlainText]
 ```
 
 Example Caesar crypto:

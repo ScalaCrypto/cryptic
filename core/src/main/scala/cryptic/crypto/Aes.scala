@@ -1,7 +1,6 @@
 package cryptic
 package crypto
 
-import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.security.spec.AlgorithmParameterSpec
 import javax.crypto.spec.{
@@ -11,7 +10,7 @@ import javax.crypto.spec.{
   SecretKeySpec
 }
 import javax.crypto.{Cipher, SecretKey, SecretKeyFactory}
-import scala.util.{Failure, Try}
+import scala.util.Try
 
 /** Object AES provides encryption and decryption utilities using the AES
   * algorithm. The functions provided allow encryption of plaintext into
@@ -107,12 +106,12 @@ object Aes:
     val iv = aesParams.iv
     val ivSpec = aesParams.paramSpec(iv)
     cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
-    val cipherText = cipher.doFinal(plainText.bytes.mutable).immutable
+    val cipherText = cipher.doFinal(plainText.bytes.mutable)
     CipherText(
       plainText.manifest,
       salt.bytes,
       iv.immutable,
-      cipherText
+      cipherText.immutable
     )
 
   given decrypt(using

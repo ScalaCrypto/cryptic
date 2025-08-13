@@ -12,7 +12,7 @@ class ReverseAppSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.crypto.Reverse.given
 
   val clear = "secret"
-  val encrypted: Encrypted[String] = Encrypted(clear)
+  val encrypted: Encrypted[String] = clear.encrypted
   val decrypted: Try[String] = encrypted.decrypted
 
   "Cryptic" should "encrypt" in:

@@ -34,10 +34,10 @@ trait EncryptedSpecBase extends AnyFlatSpec with Matchers with EitherValues:
     val pending: Cryptic[String] = encrypted.map(_.toUpperCase)
     pending.decrypted shouldEqual Success("SECRET")
   "Encrypted without a decryption key" should "have the same value in encrypted space" in:
-    val enc1 = Encrypted("nisse")
-    val enc2 = Encrypted("nisse")
+    val enc1 = "nisse".encrypted
+    val enc2 = "nisse".encrypted
     enc1 shouldEqual enc2
   "Encrypted values" should "not be equal" in:
-    val enc1 = Encrypted("nisse")
-    val enc2 = Encrypted("kalle")
+    val enc1 = "nisse".encrypted
+    val enc2 = "kalle".encrypted
     (enc1 == enc2) shouldBe false

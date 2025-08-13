@@ -11,7 +11,7 @@ class ReverseSpec extends AnyFlatSpec with Matchers:
   import Reverse.{*, given}
 
   private val text = "nisse"
-  private val encrypted: Encrypted[String] = Encrypted(text)
+  private val encrypted: Encrypted[String] = text.encrypted
 
   "Reverse Encrypted" should "support encryption and decryption" in:
     encrypted.decrypted match

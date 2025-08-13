@@ -13,7 +13,7 @@ class CaesarSpec extends AnyFlatSpec with Matchers:
   given key1: Key = Caesar.Key(1)
 
   private val text = "nisse"
-  private val encrypted = Encrypted(text)
+  private val encrypted = text.encrypted
   "Caesar Encrypted" should "support encryption and decryption" in:
     encrypted.decrypted match
       case Success(decrypted) ⇒ decrypted shouldEqual text

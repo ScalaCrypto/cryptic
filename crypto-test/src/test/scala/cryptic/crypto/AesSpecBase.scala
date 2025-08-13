@@ -2,14 +2,14 @@ package cryptic
 package crypto
 
 import cryptic.codec.{Chill, Fst, Upickle}
-import cryptic.crypto.Aes.AESParams
+import cryptic.crypto.Aes.{AesParams, GcmParams}
 import cryptic.{Codec, Decrypt, Encrypt}
 import upickle.default.{*, given}
 
 trait AesSpecBase extends CryptoSpecBase:
-  given aesPassword: Aes.AESPassphrase =
-    Aes.AESPassphrase("correct horse battery staple")
-  given aesParams: AESParams = AESParams()
+  given aesPassword: Aes.AesPassphrase =
+    Aes.AesPassphrase("correct horse battery staple")
+  given aesParams: AesParams = GcmParams()
   override given decrypt: Decrypt = Aes.decrypt
   override given encrypt: Encrypt = Aes.encrypt
 

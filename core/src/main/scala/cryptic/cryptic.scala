@@ -4,35 +4,38 @@ import java.nio.ByteBuffer
 import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
 
-type Hash = Vector[Byte]
-type Manifest = Array[Byte]
+type Hash = IArray[Byte]
+type Signature = IArray[Byte]
+type Manifest = IArray[Byte]
 
 object Manifest:
-  val empty: Array[Byte] = Array.emptyByteArray
+  val empty: Manifest = IArray.emptyByteIArray
 
-case class PlainText(bytes: Array[Byte], manifest: Manifest = Manifest.empty):
-  //    override def toString: String = "\uD83D\uDD12"
+case class PlainText(bytes: IArray[Byte], manifest: Manifest = Manifest.empty):
+  // override def toString: String = "\uD83D\uDD12"
   override def equals(obj: Any): Boolean = obj match
     case other: PlainText =>
       manifest.sameElements(other.manifest) && bytes.sameElements(other.bytes)
     case _ => false
   override def hashCode: Int =
-    java.util.Arrays.hashCode(bytes) * 31 + java.util.Arrays.hashCode(
-      manifest
+    java.util.Arrays.hashCode(
+      bytes.mutable
+    ) * 31 + java.util.Arrays.hashCode(
+      manifest.mutable
     )
 
 object PlainText:
-  val empty: PlainText = PlainText(Array.emptyByteArray)
-  def apply(x: Array[Byte]): PlainText = new PlainText(x)
-  def apply(x: String): PlainText = apply(x.getBytes())
+  val empty: PlainText = PlainText(IArray.emptyByteIArray)
+  def apply(x: IArray[Byte]): PlainText = new PlainText(x)
+  def apply(x: String): PlainText = apply(x.getBytes().immutable)
   def hash(plainText: PlainText): Hash =
     import java.security.MessageDigest
     val digest = MessageDigest.getInstance("SHA-256")
-    digest.digest(plainText.bytes).toVector // Todo handle manifest?
+    digest.digest(plainText.bytes.mutable).immutable // Todo handle manifest?
 
-case class CipherText(bytes: Array[Byte]):
-  def buffer: ByteBuffer = ByteBuffer.wrap(bytes)
-  def split: Array[Array[Byte]] = buffer.split
+case class CipherText(bytes: IArray[Byte]):
+  def buffer: ByteBuffer = ByteBuffer.wrap(bytes.mutable)
+  def split: IArray[IArray[Byte]] = buffer.split
   override def equals(obj: scala.Any): Boolean = obj match
     case CipherText(other) ⇒ bytes.sameElements(other)
     case _ ⇒ false
@@ -40,17 +43,17 @@ case class CipherText(bytes: Array[Byte]):
     s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
 
 object CipherText:
-  val Empty: CipherText = CipherText(Array.emptyByteArray)
-  def apply(array: Array[Byte], arrays: Array[Byte]*): CipherText =
+  val Empty: CipherText = CipherText(IArray.emptyByteIArray)
+  def apply(array: IArray[Byte], arrays: IArray[Byte]*): CipherText =
     val count = 1 + arrays.length
     val buffer = ByteBuffer.allocate(4 + count * 4 + arrays.foldLeft(0):
       case (length, bytes) => length + bytes.length)
     buffer.putInt(count)
-    buffer.nextBytes(array)
+    buffer.nextBytes(array.mutable)
     arrays.foldLeft(buffer):
-      case (buffer, bytes) => buffer.nextBytes(bytes)
-    new CipherText(buffer.array())
-  def unapplySeq(cipherText: CipherText): Option[Seq[Array[Byte]]] =
+      case (buffer, bytes) => buffer.nextBytes(bytes.mutable)
+    new CipherText(buffer.array().immutable)
+  def unapplySeq(cipherText: CipherText): Option[Seq[IArray[Byte]]] =
     Option(cipherText.split)
 
 type Encrypt = PlainText => CipherText
@@ -60,6 +63,9 @@ object Encrypt:
 type Decrypt = CipherText => Try[PlainText]
 object Decrypt:
   val Empty: Decrypt = _ ⇒ Success(PlainText.empty)
+
+type Sign = PlainText => Array[Byte]
+type Verify = Array[Byte] => Boolean
 
 trait Codec[V]:
   def encode(v: V): PlainText
@@ -84,6 +90,14 @@ given Codec[Nothing]:
 extension [V: Codec](value: V)
   def encrypted(using encrypt: Encrypt): Encrypted[V] = Encrypted(value)
 
+extension (array: Array[Byte])
+  def immutable: IArray[Byte] = IArray.unsafeFromArray(array)
+
+extension (array: IArray[Byte])
+  def mutable: Array[Byte] = IArray.wrapByteIArray(array).unsafeArray
+extension (array: IArray[Char])
+  def mutable: Array[Char] = IArray.wrapCharIArray(array).unsafeArray
+
 extension (buffer: ByteBuffer)
   def nextBytes(): Array[Byte] =
     val length = buffer.getInt()
@@ -94,11 +108,11 @@ extension (buffer: ByteBuffer)
   def nextBytes(bytes: Array[Byte]): ByteBuffer =
     buffer.putInt(bytes.length)
     buffer.put(bytes)
-  def split: Array[Array[Byte]] =
+  def split: IArray[IArray[Byte]] =
     val count = buffer.getInt()
-    val arrays = Array.ofDim[Array[Byte]](count)
-    for i <- 0 until count do arrays(i) = buffer.nextBytes()
-    arrays
+    val arrays = Array.ofDim[IArray[Byte]](count)
+    for i <- 0 until count do arrays(i) = buffer.nextBytes().immutable
+    IArray.unsafeFromArray(arrays)
 
 sealed abstract class Cryptic[V: Codec]:
   import Cryptic.*
@@ -209,6 +223,15 @@ sealed abstract class Cryptic[V: Codec]:
   ): Operation[W] =
     new OrElsed(this, alternative)
 object Cryptic:
+  export cryptic.{
+    encrypted,
+    Encrypted,
+    Encrypt,
+    Decrypt,
+    Codec,
+    PlainText,
+    CipherText
+  }
   import Encrypted.*
   sealed abstract class Operation[V: Codec] extends Cryptic[V]:
     def run(using encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[V]]
@@ -300,7 +323,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @return
     *   the byte array of the cipher text
     */
-  def bytes: Array[Byte] = cipherText.bytes
+  def bytes: IArray[Byte] = cipherText.bytes
 
   /** Checks if the option is non-empty (defined).
     *

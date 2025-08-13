@@ -16,5 +16,5 @@ object Upickle extends Codec.Companion:
   given codec: [V: {Writer, Reader}] => Codec[V]:
     def encode(v: V): PlainText = PlainText(write(v))
     def decode(pt: PlainText): Try[V] = Try(
-      read[V](pt.bytes)
+      read[V](pt.bytes.mutable)
     )

@@ -24,5 +24,5 @@ class RsaSpec extends AnyFlatSpec with Matchers:
       case x ⇒ fail(s"does not decrypt: $x")
 
   "RSA" should "hide plaintext" in:
-    new String(text.encrypted.bytes)
+    new String(text.encrypted.bytes.mutable)
       .contains(text.getBytes()) shouldBe false

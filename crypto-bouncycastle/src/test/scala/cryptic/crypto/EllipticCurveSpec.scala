@@ -26,5 +26,5 @@ class EllipticCurveSpec extends AnyFlatSpec with Matchers:
       case x ⇒ fail(s"does not decrypt: $x")
 
   "EC" should "hide the plain text" in:
-    new String(text.encrypted.bytes)
+    new String(text.encrypted.bytes.mutable)
       .contains(text.getBytes()) shouldBe false

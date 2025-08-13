@@ -28,7 +28,7 @@ object Fst extends Codec.Companion:
   private val fst: FSTConfiguration =
     FSTConfiguration.createDefaultConfiguration()
   given codec: [V] => Codec[V]:
-    def encode(v: V): PlainText = PlainText(fst.asByteArray(v))
+    def encode(v: V): PlainText = PlainText(fst.asByteArray(v).immutable)
     def decode(pt: PlainText): Try[V] = Try(
-      fst.asObject(pt.bytes).asInstanceOf[V]
+      fst.asObject(pt.bytes.mutable).asInstanceOf[V]
     )

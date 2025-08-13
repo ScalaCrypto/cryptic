@@ -20,7 +20,7 @@ class CaesarSpec extends AnyFlatSpec with Matchers:
       case x ⇒ fail(s"does not decrypt: $x")
 
   "Caesar Encrypted" should "hide plaintext" in:
-    new String(encrypted.bytes)
+    new String(encrypted.bytes.mutable)
       .contains(text) shouldBe false
 
   "Caesar key zero" should "not be valid" in:
@@ -28,4 +28,4 @@ class CaesarSpec extends AnyFlatSpec with Matchers:
       Caesar.Key(0)
 
   "Caesar Encrypted" should "be rotated" in:
-    encrypted.bytes shouldEqual "ojttf".getBytes
+    encrypted.bytes.mutable shouldEqual "ojttf".getBytes

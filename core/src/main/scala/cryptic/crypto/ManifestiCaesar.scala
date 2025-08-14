@@ -34,10 +34,12 @@ object ManifestCaesar:
         .immutable
       CipherText(plainText.manifest, bytes)
   given decrypt(using keys: Keys): Decrypt = (cipherText: CipherText) =>
-    val IArray(manifest, bytes) = cipherText.split
-    val keyId = manifest.toKeyId
-    val offset = keys.get(keyId)
-    Try[PlainText](PlainText(bytes.map(b => (b - offset).toByte)))
+    Try:
+      val IArray(manifest, bytes) = cipherText.split
+      val keyId = manifest.toKeyId
+      val offset = keys.get(keyId)
+      val decoded = bytes.map(b => (b - offset).toByte)
+      PlainText(decoded, manifest)
 
   def keygen(keyId: Int, offset: Int): Keys = Keys(keyId -> offset)
 extension (n: Int)

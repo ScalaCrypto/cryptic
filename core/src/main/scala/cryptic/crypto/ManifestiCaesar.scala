@@ -12,7 +12,7 @@ import scala.util.Try
   * decrypting, the correct key is retrieved based on the contents of the
   * manifest.
   */
-object MultiCaesar:
+object ManifestCaesar:
   case class Keys(offsets: Map[Int, Int]):
     require(offsets.nonEmpty, "Offsets map cannot be empty")
     require(offsets.forall(_._2 != 0), "Offsets cannot be zero")

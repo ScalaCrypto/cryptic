@@ -29,17 +29,15 @@ object ManifestCaesar:
   given encrypt(using keys: Keys): Encrypt =
     (plainText: PlainText) =>
       val offset = keys.get(plainText.manifest.toKeyId)
-      val bytes =
-        plainText.bytes.mutable
-          .map: b =>
-            (b + offset).toByte
-          .immutable
+      val bytes = plainText.bytes.mutable
+        .map(b => (b + offset).toByte)
+        .immutable
       CipherText(plainText.manifest, bytes)
   given decrypt(using keys: Keys): Decrypt = (cipherText: CipherText) =>
     val IArray(manifest, bytes) = cipherText.split
-    Try[PlainText](
-      PlainText(bytes.map(b => (b - keys.get(manifest.toKeyId)).toByte))
-    )
+    val keyId = manifest.toKeyId
+    val offset = keys.get(keyId)
+    Try[PlainText](PlainText(bytes.map(b => (b - offset).toByte)))
 
   def keygen(keyId: Int, offset: Int): Keys = Keys(keyId -> offset)
 extension (n: Int)

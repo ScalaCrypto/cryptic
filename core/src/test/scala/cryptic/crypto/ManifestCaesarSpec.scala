@@ -9,10 +9,10 @@ import scala.util.Success
 class ManifestCaesarSpec extends AnyFlatSpec with Matchers:
   import ManifestCaesar.{*, given}
   import cryptic.codec.default.given
-  given keys: Keys = ManifestCaesar.Keys(1 -> 2, 12 -> 1)
+  given keys: Keys = ManifestCaesar.Keys(100 -> 1, 400 -> 2)
 
-  private val text = "nisse"
-  private val encrypted = text.encrypted(12.toManifest)
+  private val text = "secret"
+  private val encrypted = text.encrypted(100.toManifest)
   "ManifestCaesar Encrypted" should "support encryption and decryption" in:
     encrypted.decrypted match
       case Success(decrypted) => decrypted shouldEqual text
@@ -28,6 +28,6 @@ class ManifestCaesarSpec extends AnyFlatSpec with Matchers:
 
   "ManifestCaesar encrypted" should "be rotated" in:
     encrypted.bytes.mutable shouldEqual IArray.join(
-      12.toManifest,
-      "ojttf".getBytes.immutable
+      100.toManifest,
+      "tfdsfu".getBytes.immutable
     )

@@ -24,14 +24,16 @@ object RsaAse:
 
   given encrypt(using key: PublicKey, aesParams: AesParams): Encrypt =
     (plainText: PlainText) =>
-      given passphrase: AesPassphrase = AesPassphrase(30) //Todo parametrize
-      val cipherText: CipherText = Aes.encrypt(plainText)
+      given passphrase: AesPassphrase = AesPassphrase(
+        math.max(32, aesParams.keyspecLength / 8)
+      )
+      val encryptedText: CipherText = Aes.encrypt(plainText)
       val cipher: Cipher = Rsa.newCipher(Cipher.ENCRYPT_MODE, key)
       val encryptedPassphrase = cipher.doFinal(passphrase.bytes.mutable)
       CipherText(
         plainText.manifest,
         encryptedPassphrase.immutable,
-        cipherText.bytes
+        encryptedText.bytes
       )
 
   given decrypt(using key: PrivateKey, aesParams: AesParams): Decrypt =

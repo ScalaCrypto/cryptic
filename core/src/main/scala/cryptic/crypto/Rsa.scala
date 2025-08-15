@@ -1,7 +1,7 @@
 package cryptic
 package crypto
 
-import java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
+import java.security.{Key, KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 import javax.crypto.Cipher
 import scala.util.Try
 
@@ -19,10 +19,16 @@ import scala.util.Try
   */
 object Rsa:
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
-  val cipher: Cipher = Cipher.getInstance("RSA")
+
+  def newCipher(opMode:Int, key:Key): Cipher = {
+    val cipher = Cipher.getInstance("RSA")
+    cipher.init(opMode, key)
+    cipher
+  }
+
   given encrypt(using key: PublicKey): Encrypt =
     (plainText: PlainText) =>
-      cipher.init(Cipher.ENCRYPT_MODE, key)
+      val cipher: Cipher = newCipher(Cipher.ENCRYPT_MODE, key)
       CipherText(
         plainText.manifest,
         cipher.doFinal(plainText.bytes.mutable).immutable
@@ -30,8 +36,8 @@ object Rsa:
 
   given decrypt(using key: PrivateKey): Decrypt =
     (cipherText: CipherText) =>
+      val cipher: Cipher = newCipher(Cipher.DECRYPT_MODE, key)
       val IArray(manifest, bytes) = cipherText.split
-      cipher.init(Cipher.DECRYPT_MODE, key)
       Try[PlainText](
         PlainText(cipher.doFinal(bytes.mutable).immutable, manifest)
       )

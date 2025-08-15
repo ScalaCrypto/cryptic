@@ -19,7 +19,7 @@ import scala.util.Try
   */
 object Aes:
   private val secureRandom = new SecureRandom()
-  private val keyAlgorithm = "AES"
+  val keyAlgorithm = "AES"
 
   trait AesParams:
     val factoryAlgorithm: String
@@ -92,9 +92,14 @@ object Aes:
     def apply(password: String): AesPassphrase = new AesPassphrase(
       password.getBytes.immutable
     )
+    def apply(n: Int): AesPassphrase = {
+      val array = new Array[Byte](n)
+      secureRandom.nextBytes(array)
+      apply(array.immutable)
+    }
 
-  private def newCipher(aesParams: AesParams): Cipher =
-    Cipher.getInstance(s"$keyAlgorithm/${aesParams.mode}")
+  private def newCipher(mode:String): Cipher =
+    Cipher.getInstance(s"$keyAlgorithm/${mode}")
 
   given encrypt(using
       passphrase: AesPassphrase,
@@ -102,7 +107,7 @@ object Aes:
   ): Encrypt = (plainText: PlainText) =>
     val salt = Salt(aesParams.saltLength)
     val key = keygen(passphrase, salt)
-    val cipher = newCipher(aesParams)
+    val cipher = newCipher(aesParams.mode)
     val iv = aesParams.iv
     val ivSpec = aesParams.paramSpec(iv)
     cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
@@ -120,7 +125,7 @@ object Aes:
   ): Decrypt = (cipherText: CipherText) =>
     val IArray(manifest, salt, iv, bytes) = cipherText.split
     val key = keygen(passphrase, Salt(salt))
-    val cipher = newCipher(aesParams)
+    val cipher = newCipher(aesParams.mode)
     val ivSpec = aesParams.paramSpec(iv.mutable)
     cipher.init(Cipher.DECRYPT_MODE, key, ivSpec)
     Try[PlainText](PlainText(cipher.doFinal(bytes.mutable).immutable, manifest))

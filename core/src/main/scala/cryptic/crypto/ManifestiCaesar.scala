@@ -12,7 +12,7 @@ import scala.util.Try
   * decrypting, the correct key is retrieved based on the contents of the
   * manifest.
   */
-object MultiCaesar:
+object ManifestCaesar:
   case class Keys(offsets: Map[Int, Int]):
     require(offsets.nonEmpty, "Offsets map cannot be empty")
     require(offsets.forall(_._2 != 0), "Offsets cannot be zero")
@@ -29,17 +29,17 @@ object MultiCaesar:
   given encrypt(using keys: Keys): Encrypt =
     (plainText: PlainText) =>
       val offset = keys.get(plainText.manifest.toKeyId)
-      val bytes =
-        plainText.bytes.mutable
-          .map: b =>
-            (b + offset).toByte
-          .immutable
+      val bytes = plainText.bytes.mutable
+        .map(b => (b + offset).toByte)
+        .immutable
       CipherText(plainText.manifest, bytes)
   given decrypt(using keys: Keys): Decrypt = (cipherText: CipherText) =>
-    val IArray(manifest, bytes) = cipherText.split
-    Try[PlainText](
-      PlainText(bytes.map(b => (b - keys.get(manifest.toKeyId)).toByte))
-    )
+    Try:
+      val IArray(manifest, bytes) = cipherText.split
+      val keyId = manifest.toKeyId
+      val offset = keys.get(keyId)
+      val decoded = bytes.map(b => (b - offset).toByte)
+      PlainText(decoded, manifest)
 
   def keygen(keyId: Int, offset: Int): Keys = Keys(keyId -> offset)
 extension (n: Int)

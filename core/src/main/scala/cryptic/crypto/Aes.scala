@@ -92,13 +92,12 @@ object Aes:
     def apply(password: String): AesPassphrase = new AesPassphrase(
       password.getBytes.immutable
     )
-    def apply(n: Int): AesPassphrase = {
+    def apply(n: Int): AesPassphrase =
       val array = new Array[Byte](n)
       secureRandom.nextBytes(array)
       apply(array.immutable)
-    }
 
-  private def newCipher(mode:String): Cipher =
+  private def newCipher(mode: String): Cipher =
     Cipher.getInstance(s"$keyAlgorithm/${mode}")
 
   given encrypt(using

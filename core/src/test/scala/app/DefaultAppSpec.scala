@@ -1,5 +1,6 @@
 package app
 
+import cryptic.crypto.Aes.{AesParams, GcmParams}
 import org.scalatest.TryValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -12,6 +13,7 @@ class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
   val keyPair: KeyPair = keygen(2048)
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
+  given aesParams: AesParams = GcmParams()
   val clear = "secret"
   val encrypted: Encrypted[String] = clear.encrypted
   val decrypted: Try[String] = encrypted.decrypted

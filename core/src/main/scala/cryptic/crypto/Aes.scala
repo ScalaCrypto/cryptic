@@ -9,7 +9,7 @@ import javax.crypto.spec.{
   PBEKeySpec,
   SecretKeySpec
 }
-import javax.crypto.{Cipher, SecretKey, SecretKeyFactory}
+import javax.crypto.{Cipher, KeyGenerator, SecretKey, SecretKeyFactory}
 import scala.util.Try
 
 /** Object AES provides encryption and decryption utilities using the AES
@@ -29,7 +29,7 @@ object Aes:
     val saltLength: Int
     val ivLength: Int
     def paramSpec(iv: Array[Byte]): AlgorithmParameterSpec
-    def iv: Array[Byte] =
+    def newIv(): Array[Byte] =
       val iv = new Array[Byte](ivLength)
       secureRandom.nextBytes(iv)
       iv
@@ -106,28 +106,46 @@ object Aes:
   ): Encrypt = (plainText: PlainText) =>
     val salt = Salt(aesParams.saltLength)
     val key = keygen(passphrase, salt)
-    val cipher = newCipher(aesParams.mode)
-    val iv = aesParams.iv
+    val iv = aesParams.newIv()
     val ivSpec = aesParams.paramSpec(iv)
-    cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
-    val cipherText = cipher.doFinal(plainText.bytes.mutable)
+    val cipherText = encrypt(plainText.bytes, key, ivSpec, aesParams.mode)
     CipherText(
       plainText.manifest,
       salt.bytes,
       iv.immutable,
-      cipherText.immutable
+      cipherText
     )
+
+  def encrypt(
+      bytes: IArray[Byte],
+      key: SecretKey,
+      ivSpec: AlgorithmParameterSpec,
+      mode: String
+  ): IArray[Byte] =
+    val cipher = newCipher(mode)
+    cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
+    cipher.doFinal(bytes.mutable).immutable
 
   given decrypt(using
       passphrase: AesPassphrase,
       aesParams: AesParams
   ): Decrypt = (cipherText: CipherText) =>
-    val IArray(manifest, salt, iv, bytes) = cipherText.split
-    val key = keygen(passphrase, Salt(salt))
-    val cipher = newCipher(aesParams.mode)
-    val ivSpec = aesParams.paramSpec(iv.mutable)
+    Try:
+      val IArray(manifest, salt, iv, bytes) = cipherText.split
+      val key = keygen(passphrase, Salt(salt))
+      val ivSpec = aesParams.paramSpec(iv.mutable)
+      val decrypted = decrypt(bytes, key, ivSpec, aesParams.mode)
+      PlainText(decrypted, manifest)
+
+  def decrypt(
+      bytes: IArray[Byte],
+      key: SecretKey,
+      ivSpec: AlgorithmParameterSpec,
+      mode: String
+  ): IArray[Byte] =
+    val cipher = newCipher(mode)
     cipher.init(Cipher.DECRYPT_MODE, key, ivSpec)
-    Try[PlainText](PlainText(cipher.doFinal(bytes.mutable).immutable, manifest))
+    cipher.doFinal(bytes.mutable).immutable
 
   /** Generates a secret key using the provided password and salt.
     *
@@ -156,3 +174,11 @@ object Aes:
       factory.generateSecret(keySpec).getEncoded,
       keyAlgorithm
     )
+
+  def keygen(size: Int = 256): SecretKey =
+    val keyGenerator = KeyGenerator.getInstance("AES")
+    keyGenerator.init(size)
+    keyGenerator.generateKey()
+
+  def key(bytes: IArray[Byte]): SecretKey =
+    new SecretKeySpec(bytes.mutable, keyAlgorithm)

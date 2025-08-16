@@ -9,8 +9,12 @@ import scala.util.Success
 
 class RsaAesSpec extends AnyFlatSpec with Matchers:
   import cryptic.codec.default.given
-  import RsaAse.{*, given}
-  val keyPair: KeyPair = keygen(2048)
+//  import RsaAes.{*, given}
+  import RsaAes.encrypt
+  import RsaAes.decrypt
+  import RsaAes.given
+
+  val keyPair: KeyPair = RsaAes.keygen(2048)
   given publicKey: PublicKey = keyPair.getPublic
   val text: String = "secret" * 10000 // Large data
   given aesParams: Aes.GcmParams = Aes.GcmParams()

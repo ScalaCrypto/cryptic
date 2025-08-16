@@ -17,39 +17,13 @@ import scala.util.Try
   * @define keygen
   *   Generates an RSA key pair with the specified size.
   */
-object Rsa:
+object Rsa extends Asymmetric:
+
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 
-  def newCipher(opMode:Int, key:Key): Cipher = {
-    val cipher = Cipher.getInstance("RSA")
-    cipher.init(opMode, key)
-    cipher
-  }
+  private val algorithmName = "RSA"
 
-  given encrypt(using key: PublicKey): Encrypt =
-    (plainText: PlainText) =>
-      val cipher: Cipher = newCipher(Cipher.ENCRYPT_MODE, key)
-      CipherText(
-        plainText.manifest,
-        cipher.doFinal(plainText.bytes.mutable).immutable
-      )
+  def newCipher(): Cipher = Cipher.getInstance(algorithmName)
 
-  given decrypt(using key: PrivateKey): Decrypt =
-    (cipherText: CipherText) =>
-      val cipher: Cipher = newCipher(Cipher.DECRYPT_MODE, key)
-      val IArray(manifest, bytes) = cipherText.split
-      Try[PlainText](
-        PlainText(cipher.doFinal(bytes.mutable).immutable, manifest)
-      )
-
-  /** Generates a new RSA key pair with the specified key size.
-    *
-    * @param size
-    *   the size of the keys to generate, in bits
-    * @return
-    *   a new KeyPair instance containing the generated public and private keys
-    */
-  def keygen(size: Int): KeyPair =
-    val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance("RSA")
-    keyPairGenerator.initialize(size)
-    keyPairGenerator.genKeyPair
+  def newKeyPairGenerator(): KeyPairGenerator =
+    KeyPairGenerator.getInstance(algorithmName)

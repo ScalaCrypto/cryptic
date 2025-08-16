@@ -12,33 +12,10 @@ import scala.util.Try
   * keys. The public key should be given for encryption and the private key for
   * decryption
   */
-object EllipticCurve:
+object EllipticCurve extends Asymmetric:
   Security.addProvider(new BouncyCastleProvider())
-  val cipher: Cipher = Cipher.getInstance("ECIES", "BC")
-  given encrypt(using key: PublicKey): Encrypt =
-    (plainText: PlainText) =>
-      cipher.init(Cipher.ENCRYPT_MODE, key)
-      CipherText(
-        plainText.manifest,
-        cipher.doFinal(plainText.bytes.mutable).immutable
-      )
 
-  given decrypt(using key: PrivateKey): Decrypt =
-    (cipherText: CipherText) =>
-      val IArray(manifest, bytes) = cipherText.split
-      cipher.init(Cipher.DECRYPT_MODE, key)
-      Try[PlainText](
-        PlainText(cipher.doFinal(bytes.mutable).immutable, manifest)
-      )
+  def newCipher(): Cipher = Cipher.getInstance("ECIES", "BC")
 
-  /** Generates a new elliptic curve key pair.
-    *
-    * @param size
-    *   the size of the key to generate
-    * @return
-    *   a newly generated KeyPair
-    */
-  def keygen(size: Int): KeyPair =
-    val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance("EC")
-    keyPairGenerator.initialize(size)
-    keyPairGenerator.genKeyPair
+  def newKeyPairGenerator(): KeyPairGenerator =
+    KeyPairGenerator.getInstance("EC")

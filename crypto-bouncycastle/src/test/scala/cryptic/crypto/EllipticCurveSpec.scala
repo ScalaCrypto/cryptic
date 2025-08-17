@@ -10,13 +10,12 @@ import scala.util.Success
 
 class EllipticCurveSpec extends AnyFlatSpec with Matchers:
   import cryptic.codec.default.given
-  import EllipticCurve.*
-  import EllipticCurve.given
-  private val keyPair: KeyPair = keygen(256)
+  import EllipticCurve.{*, given}
+  private val keyPair: KeyPair = newKeyPair()
   given publicKey: PublicKey = keyPair.getPublic
   private val text = "secret"
 
-  "EC" should "support encryption and decryption" in:
+  "EllipticCurve" should "support encryption and decryption" in:
     // Note no need for the private key when encrypting
     val encrypted: Encrypted[String] = text.encrypted
 
@@ -25,6 +24,12 @@ class EllipticCurveSpec extends AnyFlatSpec with Matchers:
       case Success(actual) => actual shouldEqual text
       case x ⇒ fail(s"does not decrypt: $x")
 
-  "EC" should "hide the plain text" in:
+  "EllipticCurve" should "handle large data" in:
+    given privateKey: PrivateKey = keyPair.getPrivate
+    val large = "secret" * 1000
+    val enc = large.encrypted
+    enc.decrypted shouldBe Success(large)
+
+  "EllipticCurve" should "hide the plain text" in:
     new String(text.encrypted.bytes.mutable)
       .contains(text.getBytes()) shouldBe false

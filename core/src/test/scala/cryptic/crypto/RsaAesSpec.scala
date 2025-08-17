@@ -9,16 +9,14 @@ import scala.util.Success
 
 class RsaAesSpec extends AnyFlatSpec with Matchers:
   import cryptic.codec.default.given
-//  import RsaAes.{*, given}
-  import RsaAes.encrypt
-  import RsaAes.decrypt
-  import RsaAes.given
 
-  val keyPair: KeyPair = RsaAes.keygen(2048)
+  import RsaAes.{*, given}
+
+  val keyPair: KeyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   val text: String = "secret" * 10000 // Large data
   given aesParams: Aes.GcmParams = Aes.GcmParams()
-  "RsaAse" should "support encryption and decryption" in:
+  "RsaAes" should "support encryption and decryption" in:
     // Note no need for the private key when encrypting
     val encrypted = text.encrypted
 
@@ -27,6 +25,6 @@ class RsaAesSpec extends AnyFlatSpec with Matchers:
       case Success(actual) => actual shouldEqual text
       case x ⇒ fail(s"does not decrypt: $x")
 
-  "Rra Ase" should "hide plaintext" in:
+  "RsaAes" should "hide plaintext" in:
     new String(text.encrypted.bytes.mutable)
       .contains(text.getBytes()) shouldBe false

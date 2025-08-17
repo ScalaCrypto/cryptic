@@ -19,13 +19,8 @@ import scala.util.Try
 trait Asymmetric:
   // export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 
-  def newCipher(): Cipher
-  def newCipher(mode: Int, key: Key): Cipher =
-    val cipher = newCipher()
-    cipher.init(mode, key)
-    cipher
-  def newKeyPairGenerator(): KeyPairGenerator
-
+  def newCipher(mode: Int, key: Key): Cipher
+  
   given encrypt(using key: PublicKey): Encrypt =
     (plainText: PlainText) =>
       val encrypted = encrypt(plainText.bytes, key)
@@ -45,15 +40,3 @@ trait Asymmetric:
   def decrypt(bytes: IArray[Byte], privateKey: PrivateKey): IArray[Byte] =
     val cipher: Cipher = newCipher(Cipher.DECRYPT_MODE, privateKey)
     cipher.doFinal(bytes.mutable).immutable
-
-  /** Generates a key pair with the specified key size.
-    *
-    * @param size
-    *   the size of the keys to generate, in bits
-    * @return
-    *   a new KeyPair instance containing the generated public and private keys
-    */
-  def keygen(size: Int): KeyPair =
-    val keyPairGenerator: KeyPairGenerator = newKeyPairGenerator()
-    keyPairGenerator.initialize(size)
-    keyPairGenerator.genKeyPair

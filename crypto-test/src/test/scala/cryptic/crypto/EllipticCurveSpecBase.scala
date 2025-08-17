@@ -8,7 +8,7 @@ import upickle.default.{ReadWriter, Writer, Reader, given}
 import java.security.{KeyPair, PrivateKey, PublicKey}
 
 trait EllipticCurveSpecBase extends CryptoSpecBase:
-  private val keyPair: KeyPair = EllipticCurve.keygen(256)
+  private val keyPair: KeyPair = EllipticCurve.newKeyPair()
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
   override given encrypt: Encrypt = EllipticCurve.encrypt

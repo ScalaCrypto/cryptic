@@ -3,10 +3,12 @@ package crypto
 
 import cryptic.{CipherText, Decrypt, Encrypt, PlainText}
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.jce.spec.IESParameterSpec
+import org.bouncycastle.util.encoders.Hex
 
 import java.security.*
+import java.security.spec.ECGenParameterSpec
 import javax.crypto.Cipher
-import scala.util.Try
 
 /** Elliptic Curve Integrated Encryption Scheme depends on private and public
   * keys. The public key should be given for encryption and the private key for
@@ -15,7 +17,27 @@ import scala.util.Try
 object EllipticCurve extends Asymmetric:
   Security.addProvider(new BouncyCastleProvider())
 
-  def newCipher(): Cipher = Cipher.getInstance("ECIES", "BC")
+  private val generator: KeyPairGenerator = KeyPairGenerator.getInstance("EC")
+  generator.initialize(new ECGenParameterSpec("secp256r1"))
+    
+  def newKeyPair():KeyPair = generator.generateKeyPair()
 
-  def newKeyPairGenerator(): KeyPairGenerator =
-    KeyPairGenerator.getInstance("EC")
+  override def newCipher(mode: Int, key: Key): Cipher =
+    val derivation = Hex.decode("00112233445566778899AABBCCDDEEFF")
+    val encoding = Hex.decode("112233445566778899AABBCCDDEEFF00")
+    val macKeySize = 128
+    val cipherKeySize = 128
+    val nonce = new Array[Byte](16) // Should be random/unique per encryption
+
+    val iesParams =
+      new IESParameterSpec(
+        derivation,
+        encoding,
+        macKeySize,
+        cipherKeySize,
+        nonce
+      )
+
+    val cipher = Cipher.getInstance("ECIESwithAES-CBC/NONE/PKCS7Padding", "BC")
+    cipher.init(mode, key, iesParams)
+    cipher

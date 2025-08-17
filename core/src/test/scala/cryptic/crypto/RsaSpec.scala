@@ -11,7 +11,7 @@ import scala.util.Success
 class RsaSpec extends AnyFlatSpec with Matchers:
   import cryptic.codec.default.given
   import Rsa.{*, given}
-  val keyPair: KeyPair = keygen(2048)
+  val keyPair: KeyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   val text = "secret"
 

@@ -21,7 +21,7 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
     val key =
       // #generate-key
       import cryptic.crypto.Rsa.*
-      val key = keygen(2048)
+      val key = newKeyPair(2048)
       // #generate-key
       key
 

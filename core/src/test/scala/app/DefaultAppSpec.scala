@@ -5,12 +5,13 @@ import org.scalatest.TryValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
+import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.{Success, Try}
 
 class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.default.{given, *}
 
-  val keyPair: KeyPair = keygen(2048)
+  val keyPair: KeyPair = newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
   given aesParams: AesParams = GcmParams()

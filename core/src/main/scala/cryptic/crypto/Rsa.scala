@@ -1,9 +1,10 @@
 package cryptic
 package crypto
 
-import java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
+import java.security.{Key, KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
+import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
-import scala.util.Try
+import javax.crypto.spec.{OAEPParameterSpec, PSource}
 
 /** RSA object provides encryption, decryption, and key generation
   * functionalities using the RSA algorithm.
@@ -17,33 +18,22 @@ import scala.util.Try
   * @define keygen
   *   Generates an RSA key pair with the specified size.
   */
-object Rsa:
+object Rsa extends Asymmetric:
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
-  val cipher: Cipher = Cipher.getInstance("RSA")
-  given encrypt(using key: PublicKey): Encrypt =
-    (plainText: PlainText) =>
-      cipher.init(Cipher.ENCRYPT_MODE, key)
-      CipherText(
-        plainText.manifest,
-        cipher.doFinal(plainText.bytes.mutable).immutable
-      )
 
-  given decrypt(using key: PrivateKey): Decrypt =
-    (cipherText: CipherText) =>
-      val IArray(manifest, bytes) = cipherText.split
-      cipher.init(Cipher.DECRYPT_MODE, key)
-      Try[PlainText](
-        PlainText(cipher.doFinal(bytes.mutable).immutable, manifest)
-      )
+  def newCipher(mode: Int, key: Key): Cipher =
+    val oaepParams: OAEPParameterSpec = new OAEPParameterSpec(
+      "SHA-256",
+      "MGF1",
+      MGF1ParameterSpec.SHA256,
+      PSource.PSpecified.DEFAULT
+    )
+    val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
+    cipher.init(mode, key, oaepParams)
+    cipher
 
-  /** Generates a new RSA key pair with the specified key size.
-    *
-    * @param size
-    *   the size of the keys to generate, in bits
-    * @return
-    *   a new KeyPair instance containing the generated public and private keys
-    */
-  def keygen(size: Int): KeyPair =
-    val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance("RSA")
-    keyPairGenerator.initialize(size)
-    keyPairGenerator.genKeyPair
+  def newKeyPair(size:Int): KeyPair = {
+    val generator = KeyPairGenerator.getInstance("RSA")
+    generator.initialize(size)
+    generator.generateKeyPair()
+  }

@@ -12,7 +12,7 @@ class EllipticCurveAppSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.codec.default.given
   import cryptic.crypto.EllipticCurve.{*, given}
 
-  val keyPair: KeyPair = keygen(256)
+  val keyPair: KeyPair = newKeyPair()
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
 

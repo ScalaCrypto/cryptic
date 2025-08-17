@@ -8,7 +8,7 @@ import upickle.default.*
 import java.security.{PrivateKey, PublicKey}
 
 trait RsaSpecBase extends CryptoSpecBase:
-  private val keyPair = Rsa.keygen(512)
+  private val keyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
   override given encrypt: Encrypt = Rsa.encrypt

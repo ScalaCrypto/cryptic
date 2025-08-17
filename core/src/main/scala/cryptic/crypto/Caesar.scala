@@ -23,8 +23,7 @@ object Caesar:
       plainText.bytes.mutable.map(b ⇒ (b + key.offset).toByte).immutable
     CipherText(bytes)
   given decrypt(using key: Key): Decrypt = (cipherText: CipherText) =>
-    Try[PlainText](
+    Try:
       PlainText(cipherText.bytes.map(b => (b - key.offset).toByte))
-    )
 
   def keygen(offset: Int): Key = Key(offset)

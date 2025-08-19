@@ -5,17 +5,12 @@ import java.security.*
 import javax.crypto.Cipher
 import scala.util.Try
 
-/** Asymetric trait provides encryption, decryption, and key generation
-  * functionalities.
-  *
-  * @define encrypt
-  *   Performs encryption on the given plain text using the provided public key.
-  * @define decrypt
-  *   Performs decryption on the given cipher text using the provided private
-  *   key.
-  * @define keygen
-  *   Generates a key pair with the specified size.
-  */
+/**
+ * Trait representing asymmetric encryption and decryption functionality.
+ *
+ * Provides a mechanism to encrypt and decrypt data using public and private keys
+ * following asymmetric cryptographic principles.
+ */
 trait Asymmetric:
   // export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 

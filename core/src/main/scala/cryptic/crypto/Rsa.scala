@@ -6,18 +6,21 @@ import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
 import javax.crypto.spec.{OAEPParameterSpec, PSource}
 
-/** RSA object provides encryption, decryption, and key generation
-  * functionalities using the RSA algorithm.
-  *
-  * @define encrypt
-  *   Performs RSA encryption on the given plain text using the provided public
-  *   key.
-  * @define decrypt
-  *   Performs RSA decryption on the given cipher text using the provided
-  *   private key.
-  * @define keygen
-  *   Generates an RSA key pair with the specified size.
-  */
+/** The Rsa object provides encryption, decryption, and key generation
+ * functionalities using the RSA algorithm. This object extends the
+ * Asymmetric trait and implements methods to create a cipher and generate
+ * RSA key pairs.
+ *
+ * This object uses RSA/ECB/OAEPWithSHA-256AndMGF1Padding as the cipher
+ * transformation, ensuring modern and secure default configurations for
+ * encryption and decryption processes.
+ *
+ * Methods:
+ *
+ *   - newCipher: Creates a new RSA cipher instance configured with the 
+ *     specified mode (encrypt or decrypt) and key.
+ *   - newKeyPair: Generates a new RSA key pair with the specified key size.
+ */
 object Rsa extends Asymmetric:
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 
@@ -32,8 +35,7 @@ object Rsa extends Asymmetric:
     cipher.init(mode, key, oaepParams)
     cipher
 
-  def newKeyPair(size:Int): KeyPair = {
+  def newKeyPair(size: Int): KeyPair =
     val generator = KeyPairGenerator.getInstance("RSA")
     generator.initialize(size)
     generator.generateKeyPair()
-  }

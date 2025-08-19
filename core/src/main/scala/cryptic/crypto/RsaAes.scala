@@ -1,8 +1,6 @@
 package cryptic
 package crypto
 
-import cryptic.crypto.Aes.AesParams
-
 import java.security.{PrivateKey, PublicKey}
 import scala.util.Try
 
@@ -19,17 +17,15 @@ import scala.util.Try
   *   Generates an RSA key pair with the specified size.
   */
 object RsaAes:
-
   given encrypt(using
-      publicKey: PublicKey,
-      aesParams: AesParams
+      publicKey: PublicKey
   ): Encrypt =
     (plainText: PlainText) =>
       val aesKey = Aes.keygen()
-      val iv = aesParams.newIv()
-      val ivSpec = aesParams.paramSpec(iv)
+      val iv = Aes.newIv()
+      val ivSpec = Aes.paramSpec(iv)
       val encryptedText =
-        Aes.encrypt(plainText.bytes, aesKey, ivSpec, aesParams.mode)
+        Aes.encrypt(plainText.bytes, aesKey, ivSpec)
       val encryptedAesKey =
         Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
       CipherText(
@@ -40,14 +36,13 @@ object RsaAes:
       )
 
   given decrypt(using
-      privateKey: PrivateKey,
-      aesParams: AesParams
+      privateKey: PrivateKey
   ): Decrypt =
     (cipherText: CipherText) =>
       Try:
         val IArray(manifest, iv, keyBytes, textBytes) = cipherText.split
         val aesKeyBytes = Rsa.decrypt(keyBytes, privateKey)
         val aesKey = Aes.key(aesKeyBytes)
-        val ivSpec = aesParams.paramSpec(iv.mutable)
-        val text = Aes.decrypt(textBytes, aesKey, ivSpec, aesParams.mode)
+        val ivSpec = Aes.paramSpec(iv.mutable)
+        val text = Aes.decrypt(textBytes, aesKey, ivSpec)
         PlainText(text, manifest)

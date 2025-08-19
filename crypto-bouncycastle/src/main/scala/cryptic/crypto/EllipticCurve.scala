@@ -39,6 +39,6 @@ object EllipticCurve extends Asymmetric:
         nonce
       )
 
-    val cipher = Cipher.getInstance("ECIESwithAES-CBC/NONE/PKCS7Padding", "BC")
+    val cipher = Cipher.getInstance("ECIES", "BC")
     cipher.init(mode, key, iesParams)
     cipher

@@ -42,8 +42,8 @@ object ManifestCaesar:
       PlainText(decoded, manifest)
 
   def keygen(keyId: Int, offset: Int): Keys = Keys(keyId -> offset)
-extension (n: Int)
-  def toManifest: IArray[Byte] =
-    ByteBuffer.allocate(4).putInt(n).array().immutable
-extension (bytes: IArray[Byte])
-  def toKeyId: Int = ByteBuffer.wrap(bytes.mutable).getInt
+  extension (n: Int)
+    def toManifest: IArray[Byte] =
+      ByteBuffer.allocate(4).putInt(n).array().immutable
+  extension (bytes: IArray[Byte])
+    def toKeyId: Int = ByteBuffer.wrap(bytes.mutable).getInt

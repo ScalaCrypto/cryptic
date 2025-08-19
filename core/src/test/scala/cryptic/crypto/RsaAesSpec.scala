@@ -15,7 +15,6 @@ class RsaAesSpec extends AnyFlatSpec with Matchers:
   val keyPair: KeyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   val text: String = "secret" * 10000 // Large data
-  given aesParams: Aes.GcmParams = Aes.GcmParams()
   "RsaAes" should "support encryption and decryption" in:
     // Note no need for the private key when encrypting
     val encrypted = text.encrypted

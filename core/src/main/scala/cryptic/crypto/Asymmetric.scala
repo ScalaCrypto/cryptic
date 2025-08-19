@@ -12,10 +12,8 @@ import scala.util.Try
  * following asymmetric cryptographic principles.
  */
 trait Asymmetric:
-  // export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
-
   def newCipher(mode: Int, key: Key): Cipher
-  
+
   given encrypt(using key: PublicKey): Encrypt =
     (plainText: PlainText) =>
       val encrypted = encrypt(plainText.bytes, key)

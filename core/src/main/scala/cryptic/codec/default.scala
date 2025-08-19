@@ -9,19 +9,21 @@ object default extends Codec.Companion:
   given optionCodec: [V: Codec] => Codec[Option[V]]:
     def encode(v: Option[V], manifest: Manifest): PlainText =
       v match
-        case Some(value) => summon[Codec[V]].encode(value, manifest)
         case None        => PlainText.empty
+        case Some(value) => summon[Codec[V]].encode(value, manifest)
     def decode(pt: PlainText): Try[Option[V]] =
       if pt.bytes.isEmpty then Success(None)
       else summon[Codec[V]].decode(pt).map(Some(_))
 
   given Codec[IArray[Byte]]:
-    def encode(v: IArray[Byte], manifest: Manifest): PlainText = PlainText(v, manifest)
+    def encode(v: IArray[Byte], manifest: Manifest): PlainText =
+      PlainText(v, manifest)
     def decode(pt: PlainText): Try[IArray[Byte]] =
       Success(pt.bytes)
 
   given Codec[String]:
-    def encode(v: String, manifest: Manifest): PlainText = PlainText(v, manifest)
+    def encode(v: String, manifest: Manifest): PlainText =
+      PlainText(v, manifest)
     def decode(pt: PlainText): Try[String] =
       Success(new String(pt.bytes.mutable))
 

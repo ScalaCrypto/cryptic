@@ -2,6 +2,7 @@ package cryptic
 package crypto
 
 import java.security.{PrivateKey, PublicKey}
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 /** RsaAse object provides encryption, decryption, and key generation
@@ -18,31 +19,32 @@ import scala.util.Try
   */
 object RsaAes:
   given encrypt(using
-      publicKey: PublicKey
+      publicKey: PublicKey,
+      ec: ExecutionContext
   ): Encrypt =
     (plainText: PlainText) =>
       val aesKey = Aes.keygen()
       val iv = Aes.newIv()
       val ivSpec = Aes.paramSpec(iv)
-      val encryptedText =
-        Aes.encrypt(plainText.bytes, aesKey, ivSpec)
-      val encryptedAesKey =
-        Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
-      CipherText(
+      for
+        encryptedText <- Aes.encrypt(plainText.bytes, aesKey, ivSpec)
+        encryptedKey <- Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
+      yield CipherText(
         plainText.manifest,
         iv.immutable,
-        encryptedAesKey,
+        encryptedKey,
         encryptedText
       )
 
   given decrypt(using
-      privateKey: PrivateKey
+      privateKey: PrivateKey,
+      ec: ExecutionContext
   ): Decrypt =
     (cipherText: CipherText) =>
-      Try:
-        val IArray(manifest, iv, keyBytes, textBytes) = cipherText.split
-        val aesKeyBytes = Rsa.decrypt(keyBytes, privateKey)
-        val aesKey = Aes.key(aesKeyBytes)
-        val ivSpec = Aes.paramSpec(iv.mutable)
-        val text = Aes.decrypt(textBytes, aesKey, ivSpec)
-        PlainText(text, manifest)
+      val IArray(manifest, iv, keyBytes, textBytes) = cipherText.split
+      for
+        aesKeyBytes <- Rsa.decrypt(keyBytes, privateKey)
+        aesKey = Aes.key(aesKeyBytes)
+        ivSpec = Aes.paramSpec(iv.mutable)
+        text <- Aes.decrypt(textBytes, aesKey, ivSpec)
+      yield PlainText(text, manifest)

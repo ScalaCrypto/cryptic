@@ -3,13 +3,9 @@ package crypto
 
 import java.security.SecureRandom
 import java.security.spec.AlgorithmParameterSpec
-import javax.crypto.spec.{
-  GCMParameterSpec,
-  IvParameterSpec,
-  PBEKeySpec,
-  SecretKeySpec
-}
+import javax.crypto.spec.{GCMParameterSpec, IvParameterSpec, PBEKeySpec, SecretKeySpec}
 import javax.crypto.{Cipher, KeyGenerator, SecretKey, SecretKeyFactory}
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 /** Object AES provides encryption and decryption utilities using the AES
@@ -46,26 +42,28 @@ object Aes extends Symmetric:
     new GCMParameterSpec(gcmTagLength, iv)
 
   given encrypt(using
-      passphrase: Passphrase
+      passphrase: Passphrase,
+      ec:ExecutionContext
   ): Encrypt = (plainText: PlainText) =>
     val salt = Salt(saltLength)
     val key = keygen(passphrase, salt)
     val iv = newIv()
     val ivSpec = paramSpec(iv)
-    val cipherText = encrypt(plainText.bytes, key, ivSpec)
-    CipherText(
-      plainText.manifest,
-      salt.bytes,
-      iv.immutable,
-      cipherText
+    encrypt(plainText.bytes, key, ivSpec).map(ct =>
+      CipherText(
+        plainText.manifest,
+        salt.bytes,
+        iv.immutable,
+        ct
+      )
     )
 
   given decrypt(using
-      passphrase: Passphrase
+      passphrase: Passphrase,
+    ec: ExecutionContext
   ): Decrypt = (cipherText: CipherText) =>
-    Try:
-      val IArray(manifest, salt, iv, bytes) = cipherText.split
-      val key = keygen(passphrase, Salt(salt))
-      val ivSpec = paramSpec(iv.mutable)
-      val decrypted = decrypt(bytes, key, ivSpec)
-      PlainText(decrypted, manifest)
+    val IArray(manifest, salt, iv, bytes) = cipherText.split
+    val key = keygen(passphrase, Salt(salt))
+    val ivSpec = paramSpec(iv.mutable)
+    val decrypted = decrypt(bytes, key, ivSpec)
+    decrypted.map(dt => PlainText(dt, manifest))

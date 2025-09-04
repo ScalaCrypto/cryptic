@@ -1,6 +1,9 @@
 package cryptic
 
+import cryptic.Cryptic.Operation
+
 import java.nio.ByteBuffer
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
 
@@ -53,13 +56,13 @@ object CipherText:
   def unapplySeq(cipherText: CipherText): Option[Seq[IArray[Byte]]] =
     Option(cipherText.split)
 
-type Encrypt = PlainText => CipherText
+type Encrypt = PlainText => Future[CipherText]
 object Encrypt:
-  val Empty: Encrypt = _ ⇒ CipherText.Empty
+  val Empty: Encrypt = _ ⇒ Future.successful(CipherText.Empty)
 
-type Decrypt = CipherText => Try[PlainText]
+type Decrypt = CipherText => Future[PlainText]
 object Decrypt:
-  val Empty: Decrypt = _ ⇒ Success(PlainText.empty)
+  val Empty: Decrypt = _ ⇒ Future.successful(PlainText.empty)
 
 type Sign = PlainText => Array[Byte]
 type Verify = Array[Byte] => Boolean
@@ -86,10 +89,68 @@ given Codec[Nothing]:
     )
 
 extension [V: Codec](value: V)
-  def encrypted(using encrypt: Encrypt): Encrypted[V] =
+  def encrypted(using
+      encrypt: Encrypt,
+      ec: ExecutionContext
+  ): Future[Encrypted[V]] =
     Encrypted(value, Manifest.empty)
-  def encrypted(manifest: Manifest)(using encrypt: Encrypt): Encrypted[V] =
+  def encrypted(
+      manifest: Manifest
+  )(using encrypt: Encrypt, ec: ExecutionContext): Future[Encrypted[V]] =
     Encrypted(value, manifest)
+  def encrypted[U](
+      f: Encrypted[V] => U
+  )(using encrypt: Encrypt, ec: ExecutionContext): Future[U] =
+    value.encrypted.map(f)
+  def encrypted[U](manifest: Manifest)(
+      f: Encrypted[V] => U
+  )(using encrypt: Encrypt, ec: ExecutionContext): Future[U] =
+    value.encrypted.map(f)
+
+extension [V: Codec](futureEnc: Future[Encrypted[V]])
+  def exists(
+      p: V => Boolean
+  )(using decrypt: Decrypt, ec: ExecutionContext): Future[Boolean] =
+    futureEnc.flatMap(_.exists(p))
+
+  def forall(
+      p: V => Boolean
+  )(using decrypt: Decrypt, ec: ExecutionContext): Future[Boolean] =
+    futureEnc.flatMap(_.forall(p))
+
+  def foreach(
+      f: V => Unit
+  )(using decrypt: Decrypt, ec: ExecutionContext): Unit =
+    futureEnc.foreach(_.foreach(f))
+
+  def map[U: Codec](
+      f: V => U
+  )(using ec: ExecutionContext): Future[Operation[U]] =
+    futureEnc.map(_.map(f))
+
+  def flatMap[U: Codec](f: V => Cryptic[U])(using
+      ec: ExecutionContext
+  ): Future[Operation[U]] =
+    futureEnc.map(_.flatMap(f))
+    
+  def flatMapF[U: Codec](f: V => Future[Cryptic[U]])(using
+      ec: ExecutionContext
+  ): Future[Operation[U]] =
+    futureEnc.map(_.flatMapF(f))
+
+  def filter(p: V => Boolean)(using
+      ec: ExecutionContext
+  ): Future[Operation[V]] = futureEnc.map(_.filter(p))
+
+  def collect[U: Codec](
+      pf: PartialFunction[V, U]
+  )(using ec: ExecutionContext): Future[Operation[U]] =
+    futureEnc.map(_.collect(pf))
+
+  def orElse[U >: V: Codec](other: => Cryptic[U])(using
+      ec: ExecutionContext
+  ): Future[Operation[U]] =
+    futureEnc.map(_.orElse(other))
 
 extension (array: Array[Byte])
   def immutable: IArray[Byte] = IArray.unsafeFromArray(array)
@@ -138,7 +199,21 @@ sealed abstract class Cryptic[V: Codec]:
     *   Returns a Try instance containing the decrypted value of type V if
     *   successful, or a Failure if the decryption fails.
     */
-  def decrypted(using decrypt: Decrypt): Try[V]
+  def decrypted(using decrypt: Decrypt, ec: ExecutionContext): Future[V]
+
+  /** Applies a transformation to the decrypted value produced by this
+    * operation.
+    *
+    * @param f
+    *   The function to transform the decrypted value of type `V` into a new
+    *   value of type `U`.
+    * @return
+    *   A `Future[U]` representing the result of applying the function `f` to
+    *   the decrypted value.
+    */
+  def decrypted[U](
+      f: V => U
+  )(using decrypt: Decrypt, ec: ExecutionContext): Future[U] = decrypted.map(f)
 
   /** Attempts to retrieve the decrypted value. If decryption fails or if the
     * value is not present, it returns the provided default value.
@@ -151,8 +226,9 @@ sealed abstract class Cryptic[V: Codec]:
     *   the decrypted value if successful, otherwise the default value
     */
   @inline final def decryptedOrElse[W >: V](default: => W)(using
-      decrypt: Decrypt
-  ): W = decrypted.getOrElse(default)
+      decrypt: Decrypt,
+      executionContext: ExecutionContext
+  ): Future[W] = decrypted.recover(_ => default)
 
   /** Transforms the current operation by applying a function to its result.
     *
@@ -181,6 +257,10 @@ sealed abstract class Cryptic[V: Codec]:
     */
   @inline final def flatMap[W: Codec](f: V => Cryptic[W]): Operation[W] =
     FlatMapped(this, f)
+
+  @inline final def flatMapF[W: Codec](
+      f: V => Future[Cryptic[W]]
+  ): Operation[W] = FlatMappedF(this, f)
 
   /*
   /** Returns a $cryptic which will unwrap one level of cryptic nesting once run.
@@ -247,26 +327,46 @@ object Cryptic:
   }
   import Encrypted.*
   sealed abstract class Operation[V: Codec] extends Cryptic[V]:
-    def run(using encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[V]]
+    def run(using
+        encrypt: Encrypt,
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[Encrypted[V]]
   sealed abstract class BinaryOperation[V: Codec, W: Codec]
       extends Operation[W]:
     override def run(using
         encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Try[Encrypted[W]] =
-      decrypted.map(w => Encrypted(encrypt(summon[Codec[W]].encode(w))))
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[Encrypted[W]] =
+      decrypted.flatMap(_.encrypted)
   final case class Mapped[V: Codec, W: Codec](
       src: Cryptic[V],
       f: V => W
   ) extends BinaryOperation[V, W]:
-    override def decrypted(using decrypt: Decrypt): Try[W] =
+    override def decrypted(using
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[W] =
       src.decrypted.map(f)
   final case class FlatMapped[V: Codec, W: Codec](
       src: Cryptic[V],
       f: V => Cryptic[W]
   ) extends BinaryOperation[V, W]:
-    override def decrypted(using decrypt: Decrypt): Try[W] =
+    override def decrypted(using
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[W] =
       src.decrypted.flatMap[W](v => f(v).decrypted)
+  final case class FlatMappedF[V: Codec, W: Codec](
+      src: Cryptic[V],
+      f: V => Future[Cryptic[W]]
+  ) extends BinaryOperation[V, W]:
+    override def decrypted(using
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[W] =
+      src.decrypted.flatMap[W](v => f(v).flatMap(_.decrypted))
   /*
   final case class Flattened[V : Codec, W : Codec](src: Cryptic[V])(using ev: V <:< Cryptic[W])
       extends Operation[V]:
@@ -279,14 +379,18 @@ object Cryptic:
       extends Operation[V]:
     override def run(using
         encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Try[Encrypted[V]] = src.decrypted.map[Encrypted[V]]: v =>
-      if pred(v) then v.encrypted else empty[V]
-    override def decrypted(using decrypt: Decrypt): Try[V] =
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[Encrypted[V]] = src.decrypted.flatMap[Encrypted[V]]: v =>
+      if pred(v) then v.encrypted else Future.successful(empty[V])
+    override def decrypted(using
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[V] =
       src.decrypted.flatMap: v =>
-        if pred(v) then Success(v)
+        if pred(v) then Future.successful(v)
         else
-          Failure(
+          Future.failed(
             new UnsupportedOperationException(
               "decrypted called on filtered empty"
             )
@@ -297,30 +401,33 @@ object Cryptic:
   ) extends BinaryOperation[V, W]:
     override def run(using
         encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Try[Encrypted[W]] =
-      src.decrypted match
-        case Success(v) if pf.isDefinedAt(v) => Success(pf(v).encrypted)
-        case Success(_)                      => Success(empty[W])
-        case Failure(s)                      => Failure(s)
-    override def decrypted(using decrypt: Decrypt): Try[W] =
-      src.decrypted match
-        case Success(v) if pf.isDefinedAt(v) => Success(pf(v))
-        case Success(_) =>
-          Failure(
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[Encrypted[W]] =
+      src.decrypted.flatMap:
+        case v if pf.isDefinedAt(v) => pf(v).encrypted
+        case _                      => Future.successful(empty[W])
+    override def decrypted(using
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[W] =
+      src.decrypted.flatMap:
+        case v if pf.isDefinedAt(v) => Future.successful(pf(v))
+        case _ =>
+          Future.failed(
             new UnsupportedOperationException(
               s"decrypted called on collected empty"
             )
           )
-        case Failure(e) => Failure(e)
   final class OrElsed[V: Codec, W >: V: Codec](
       src: Cryptic[V],
       alternative: => Cryptic[W]
   ) extends BinaryOperation[V, W]:
-    override def decrypted(using decrypt: Decrypt): Try[W] =
-      src.decrypted match
-        case r @ Success(_) => r
-        case Failure(_)     => alternative.decrypted
+    override def decrypted(using
+        decrypt: Decrypt,
+        ec: ExecutionContext
+    ): Future[W] =
+      src.decrypted.recoverWith(_ => alternative.decrypted)
 
 /** Represents an encrypted value of type `V`.
   *
@@ -352,50 +459,67 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     */
   @inline final def isDefined: Boolean = !isEmpty
 
-  /** Checks if the given value is contained within the object.
-    *
-    * @param value
-    *   The value to be checked.
-    * @param decrypt
-    *   given parameter to handle decryption.
-    * @return
-    *   True if the value is contained, false otherwise.
-    */
-  @inline final def contains(value: V)(using decrypt: Decrypt): Boolean =
-    !isEmpty && decrypted == Try(value)
+  /**
+   * Checks if the decrypted value is equivalent to the given value.
+   * If the encrypted value is empty, it returns `true`.
+   *
+   * @param value
+   * The value of type `V` to compare with the decrypted value.
+   * @param decrypt
+   * An implicit `Decrypt` instance used for decryption.
+   * @param executionContext
+   * An implicit `ExecutionContext` for asynchronous processing.
+   * @return
+   * A `Future[Boolean]` indicating whether the decrypted value equals the given value
+   * (`true`), or if the collection is empty (`true`), or if it does not match (`false`).
+   */
+  @inline final def contains(value: V)(using
+      decrypt: Decrypt,
+      executionContext: ExecutionContext
+  ): Future[Boolean] =
+    if isEmpty then Future.successful(true)
+    else decrypted.map(_ == value)
 
-  /** Checks if there exists an element in the value that satisfies the
-    * predicate `p`.
-    *
-    * @param p
-    *   A predicate function that takes an element of type `V` and returns a
-    *   Boolean.
-    * @param decrypt
-    *   A given parameter of type `Decrypt`, used to decrypt the value before
-    *   applying the predicate.
-    * @return
-    *   A Boolean value that is true if the predicate holds for at least one
-    *   element, false otherwise.
-    */
+  /**
+   * Checks if there exists an element within the decrypted collection that satisfies the given predicate.
+   * If the collection is empty, the result is `false`.
+   *
+   * @param p
+   * A predicate function to test each element of type `V`.
+   * @param decrypt
+   * An implicit `Decrypt` instance used for decryption.
+   * @param ec
+   * An implicit `ExecutionContext` used for asynchronous operations.
+   * @return
+   * A `Future[Boolean]` containing `true` if at least one element satisfies the predicate, or `false` otherwise.
+   */
   @inline final def exists(p: V => Boolean)(using
-      decrypt: Decrypt
-  ): Boolean =
-    !isEmpty && decrypted.map(p).getOrElse(false)
+      decrypt: Decrypt,
+      ec: ExecutionContext
+  ): Future[Boolean] =
+    if isEmpty then Future.successful(false)
+    else decrypted.map(p)
 
-  /** Tests whether a predicate holds for all elements after decryption.
-    *
-    * @param p
-    *   the predicate to test elements against after decryption
-    * @param decrypt
-    *   a given decryption context
-    * @return
-    *   true if the container is empty or if the predicate holds for all
-    *   decrypted elements, otherwise false
-    */
+  /**
+   * Checks if all elements of the decrypted collection satisfy the given predicate.
+   * If the collection is empty, the result is `true`.
+   *
+   * @param p
+   * A predicate function that evaluates elements of type `V` and returns a Boolean.
+   * @param decrypt
+   * An implicit `Decrypt` instance used to decrypt the collection.
+   * @param ec
+   * An implicit `ExecutionContext` used for asynchronous operations.
+   * @return
+   * A `Future` containing `true` if all elements satisfy the predicate or the collection is empty,
+   * and `false` otherwise.
+   */
   @inline final def forall(p: V => Boolean)(using
-      decrypt: Decrypt
-  ): Boolean =
-    isEmpty || decrypted.map(p).getOrElse(true)
+      decrypt: Decrypt,
+      ec: ExecutionContext
+  ): Future[Boolean] =
+    if isEmpty then Future.successful(true)
+    else decrypted.map(p)
 
   /** Applies a function to all elements of the decrypted collection.
     *
@@ -406,51 +530,72 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @return
     *   Unit
     */
-  @inline final def foreach[U](f: V => U)(using decrypt: Decrypt): Unit =
+  @inline final def foreach[U](
+      f: V => U
+  )(using decrypt: Decrypt, ec: ExecutionContext): Unit =
     if !isEmpty then decrypted.foreach(f)
 
-  /** Applies the provided functions based on the content of the collection.
-    *
-    * @param ifEmpty
-    *   the function to apply if the collection is empty
-    * @param f
-    *   the function to apply if the collection contains a value
-    * @param decrypt
-    *   a given parameter providing decryption functionality
-    * @return
-    *   a `Try[W]` that represents the result of applying the appropriate
-    *   function
-    */
+  /**
+   * Folds the encrypted value into a single result by applying one of two provided functions:
+   * one for the empty case and one for the non-empty case. If the value is empty, the `ifEmpty` function
+   * is evaluated and returned. Otherwise, the value is decrypted and the provided function `f` is applied.
+   *
+   * @param ifEmpty
+   * The computation to be performed when the encrypted value is empty.
+   * @param f
+   * The function to be applied to the decrypted value when it is non-empty.
+   * @param decrypt
+   * An implicit decryption instance used to decrypt the value.
+   * @param ec
+   * An implicit execution context for asynchronous processing.
+   * @tparam W
+   * The type of the result produced by folding the value.
+   * @return
+   * A `Future` containing the result of applying either `ifEmpty` or `f` on the decrypted value,
+   * depending on whether the value is empty or not.
+   */
   @inline final def fold[W: Codec](ifEmpty: => W)(f: V => W)(using
-      decrypt: Decrypt
-  ): Try[W] =
-    if isEmpty then Try(ifEmpty) else decrypted.map(f)
+      decrypt: Decrypt,
+      ec: ExecutionContext
+  ): Future[W] =
+    if isEmpty then Future.successful(ifEmpty) else decrypted.map(f)
 
-  /** Provides an iterator over the elements of the collection. The iterator
-    * will traverse the elements after decrypting them.
-    *
-    * @param decrypt
-    *   a given parameter that handles the decryption of the elements
-    * @return
-    *   a `Try` that contains an `Iterator` of decrypted elements if successful,
-    *   or a failure if decryption fails
-    */
-  @inline final def iterator(using decrypt: Decrypt): Try[Iterator[V]] =
-    if isEmpty then Try(collection.Iterator.empty)
+  /**
+   * Returns an asynchronous iterator over the decrypted collection.
+   *
+   * @param decrypt
+   * The implicit `Decrypt` instance used to decrypt the collection.
+   * @param ec
+   * The implicit `ExecutionContext` used to run asynchronous operations.
+   * @return
+   * A `Future` containing an `Iterator` of type `V`. If the collection is empty,
+   * it returns an empty iterator. Otherwise, it returns an iterator with the
+   * decrypted value.
+   */
+  @inline final def iterator(using
+      decrypt: Decrypt,
+      ec: ExecutionContext
+  ): Future[Iterator[V]] =
+    if isEmpty then Future.successful(collection.Iterator.empty)
     else decrypted.map(collection.Iterator.single)
 
-  /** Decrypts the cipher text using the provided `Decrypt` instance and decodes
-    * it to type `V` using the given `Codec[V]`.
-    *
-    * @param decrypt
-    *   a given parameter of type `Decrypt` to handle the decryption of the
-    *   cipher text
-    * @return
-    *   a `Try[V]` containing the decoded value if successful, or a failure if
-    *   either the decryption or decoding steps fail
-    */
-  override def decrypted(using decrypt: Decrypt): Try[V] =
-    decrypt(cipherText).flatMap(summon[Codec[V]].decode)
+  /**
+   * Decrypts the encrypted data (cipherText) and decodes it into a value of type `V`.
+   *
+   * @param decrypt an implicitly provided Decrypt instance used to decrypt the cipherText
+   * @param ec      an implicitly provided ExecutionContext to run asynchronous operations
+   * @return a Future containing the decoded value of type `V` if successful, or a failure if decryption or decoding fails
+   */
+  override def decrypted(using
+      decrypt: Decrypt,
+      ec: ExecutionContext
+  ): Future[V] =
+    decrypt(cipherText)
+      .flatMap(ct =>
+        summon[Codec[V]]
+          .decode(ct)
+          .fold[Future[V]](Future.failed, Future.successful)
+      )
 
   /** Checks if the collection is empty.
     *
@@ -466,8 +611,11 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @return
     *   A `Try` containing a `List` of type `V`.
     */
-  @inline final def toList(using decrypt: Decrypt): Try[List[V]] =
-    if isEmpty then Try(List()) else decrypted.map(_ :: Nil)
+  @inline final def toList(using
+      decrypt: Decrypt,
+      ec: ExecutionContext
+  ): Future[List[V]] =
+    if isEmpty then Future.successful(List()) else decrypted.map(_ :: Nil)
 object Encrypted:
 
   /** Applies encryption to the given value using the provided codec and
@@ -488,9 +636,11 @@ object Encrypted:
   def apply[V: Codec](
       value: V,
       manifest: Manifest
-  )(using encrypt: Encrypt): Encrypted[V] =
-    if value == null then empty
-    else Encrypted[V](encrypt(summon[Codec[V]].encode(value, manifest)))
+  )(using encrypt: Encrypt, ec: ExecutionContext): Future[Encrypted[V]] =
+    if value == null then Future.successful(empty)
+    else
+      val plainText = summon[Codec[V]].encode(value, manifest)
+      encrypt(plainText).map(t => Encrypted[V](t))
 
   /** Constructs an empty Encrypted instance.
     *
@@ -498,8 +648,12 @@ object Encrypted:
     *   An instance of Encrypted representing an empty value.
     */
   def empty[V: Codec]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]
+  def emptyF[V: Codec]: Future[Encrypted[V]] = Future.successful(empty)
   object Empty extends Encrypted[Nothing](CipherText.Empty):
-    override def decrypted(using decrypt: Decrypt): Try[Nothing] = Failure(
+    override def decrypted(using
+        decrypt: Decrypt,
+        executionContext: ExecutionContext
+    ): Future[Nothing] = Future.failed(
       new UnsupportedOperationException("decrypted called on empty")
     )
     override def isEmpty: Boolean = true

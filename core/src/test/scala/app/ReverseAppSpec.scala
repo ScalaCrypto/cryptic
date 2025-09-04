@@ -1,37 +1,38 @@
 package app
 
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.TryValues
 
+import scala.concurrent.Future
 import scala.util.{Success, Try}
 
-class ReverseAppSpec extends AnyFlatSpec with Matchers with TryValues:
+class ReverseAppSpec extends AsyncFlatSpec with Matchers:
   import cryptic.{*, given}
   import cryptic.codec.default.given
   import cryptic.crypto.Reverse.given
 
   val clear = "secret"
-  val encrypted: Encrypted[String] = clear.encrypted
-  val decrypted: Try[String] = encrypted.decrypted
+  val encrypted: Future[Encrypted[String]] = clear.encrypted
+  val decrypted: Future[String] = encrypted.flatMap(_.decrypted)
 
   "Cryptic" should "encrypt" in:
-    encrypted.bytes should not equal clear.getBytes
+    encrypted.map(_.bytes should not equal clear.getBytes)
 
   "Cryptic" should "decrypt" in:
-    decrypted.success shouldEqual Success(clear)
+    decrypted.map(_ shouldEqual Success(clear))
 
   case class Person(id: Long, email: Encrypted[String])
 
   "Person" should "handle encryption" in:
     val id = 17
     val email = "martin@scalacrypto.org"
-    val person = Person(id, email.encrypted)
-    person.email.bytes should not equal email.getBytes()
-    person.email.contains(email) shouldBe true
-    person.toString shouldBe "Person(17,Encrypted(CipherText(0x67726f2e6f7470797263616c616373406e697472616d)))"
+    val person = email.encrypted(Person(id, _))
+    person.map(_.email.bytes should not equal email.getBytes())
+    person.flatMap(_.email.contains(email).map(_ shouldBe true))
+    person.map(_.toString shouldBe "Person(17,Encrypted(CipherText(0x67726f2e6f7470797263616c616373406e697472616d)))")
 
   "PlainText" should "be easy" in:
     PlainText(clear).bytes shouldBe clear.getBytes()
     val enc = clear.encrypted
-    enc.bytes shouldBe clear.getBytes.reverse
+    enc.map(_.bytes shouldBe clear.getBytes.reverse)

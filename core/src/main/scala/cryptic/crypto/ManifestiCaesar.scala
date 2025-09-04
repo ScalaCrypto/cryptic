@@ -2,6 +2,7 @@ package cryptic
 package crypto
 
 import java.nio.ByteBuffer
+import scala.concurrent.Future
 import scala.util.Try
 
 /** NOTE This crypto is only for testing, use a proper algorithm for production!
@@ -32,14 +33,13 @@ object ManifestCaesar:
       val bytes = plainText.bytes.mutable
         .map(b => (b + offset).toByte)
         .immutable
-      CipherText(plainText.manifest, bytes)
+      Future.successful(CipherText(plainText.manifest, bytes))
   given decrypt(using keys: Keys): Decrypt = (cipherText: CipherText) =>
-    Try:
-      val IArray(manifest, bytes) = cipherText.split
-      val keyId = manifest.toKeyId
-      val offset = keys.get(keyId)
-      val decoded = bytes.map(b => (b - offset).toByte)
-      PlainText(decoded, manifest)
+    val IArray(manifest, bytes) = cipherText.split
+    val keyId = manifest.toKeyId
+    val offset = keys.get(keyId)
+    val decoded = bytes.map(b => (b - offset).toByte)
+    Future.successful(PlainText(decoded, manifest))
 
   def keygen(keyId: Int, offset: Int): Keys = Keys(keyId -> offset)
 extension (n: Int)

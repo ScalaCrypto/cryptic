@@ -1,6 +1,7 @@
 package cryptic
 package crypto
 
+import scala.concurrent.Future
 import scala.util.Try
 
 /** NOTE This crypto is only for testing, use a proper algorithm for production!
@@ -21,9 +22,10 @@ object Caesar:
   given encrypt(using key: Key): Encrypt = (plainText: PlainText) =>
     val bytes =
       plainText.bytes.mutable.map(b ⇒ (b + key.offset).toByte).immutable
-    CipherText(bytes)
+    Future.successful(CipherText(bytes))
   given decrypt(using key: Key): Decrypt = (cipherText: CipherText) =>
-    Try:
+    Future.successful(
       PlainText(cipherText.bytes.map(b => (b - key.offset).toByte))
+    )
 
   def keygen(offset: Int): Key = Key(offset)

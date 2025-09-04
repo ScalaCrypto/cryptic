@@ -3,13 +3,9 @@ package crypto
 
 import java.security.SecureRandom
 import java.security.spec.AlgorithmParameterSpec
-import javax.crypto.spec.{
-  GCMParameterSpec,
-  IvParameterSpec,
-  PBEKeySpec,
-  SecretKeySpec
-}
+import javax.crypto.spec.{GCMParameterSpec, IvParameterSpec, PBEKeySpec, SecretKeySpec}
 import javax.crypto.{Cipher, KeyGenerator, SecretKey, SecretKeyFactory}
+import scala.concurrent.Future
 import scala.util.Try
 
 trait Symmetric:
@@ -31,17 +27,17 @@ trait Symmetric:
       bytes: IArray[Byte],
       key: SecretKey,
       spec: AlgorithmParameterSpec
-  ): IArray[Byte] =
+  ): Future[IArray[Byte]] =
     val cipher = newCipher(Cipher.ENCRYPT_MODE, key, spec)
-    cipher.doFinal(bytes.mutable).immutable
+    Future.successful(cipher.doFinal(bytes.mutable).immutable)
 
   def decrypt(
       bytes: IArray[Byte],
       key: SecretKey,
       spec: AlgorithmParameterSpec
-  ): IArray[Byte] =
+  ): Future[IArray[Byte]] =
     val cipher = newCipher(Cipher.DECRYPT_MODE, key, spec)
-    cipher.doFinal(bytes.mutable).immutable
+    Future.successful(cipher.doFinal(bytes.mutable).immutable)
 
   /** Case class Passphrase for handling cryptographic passphrases.
     *

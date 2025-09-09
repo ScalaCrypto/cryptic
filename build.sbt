@@ -22,6 +22,11 @@ lazy val javaBaseOpens = Seq(
   "--add-opens=java.sql/java.sql=ALL-UNNAMED"
 )
 
+lazy val commonScalacOptions = Seq(
+  "-Xno-enrich-error-messages",
+  "-deprecation"
+)
+
 lazy val commonSettings =
   Seq(
     organization := "scalacrypto",
@@ -31,6 +36,7 @@ lazy val commonSettings =
     Compile / packageSrc / publishArtifact := true,
     Compile / packageBin / publishArtifact := true,
     Test / publishArtifact := false,
+    scalacOptions ++= commonScalacOptions,
     javaOptions ++= javaBaseOpens
   ) ++ testSettings
 
@@ -102,15 +108,17 @@ lazy val cryptoTestSettings =
 
 lazy val core = (project in file("core")).settings(coreSettings)
 
-lazy val `codec-chill` =
-  (project in file("codec-chill")).settings(codecChillSettings).dependsOn(core)
+lazy val `codec-chill` = (project in file("codec-chill"))
+  .settings(codecChillSettings)
+  .dependsOn(core % "test->test;compile->compile")
 
-lazy val `codec-fst` =
-  (project in file("codec-fst")).settings(codecFstSettings).dependsOn(core)
+lazy val `codec-fst` = (project in file("codec-fst"))
+  .settings(codecFstSettings)
+  .dependsOn(core % "test->test;compile->compile")
 
 lazy val `codec-upickle` = (project in file("codec-upickle"))
   .settings(codecUpickleSettings)
-  .dependsOn(core)
+  .dependsOn(core % "test->test;compile->compile")
 
 lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle"))
   .settings(
@@ -118,12 +126,12 @@ lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle"))
       libraryDependencies ++= Seq(bc, scalaTest % Test)
     )
   )
-  .dependsOn(core)
+  .dependsOn(core % "test->test;compile->compile")
 
 lazy val `crypto-test` = (project in file("crypto-test"))
   .settings(cryptoTestSettings)
   .dependsOn(
-    core,
+    core % "compile->compile;test->test",
     `codec-chill`,
     `codec-fst`,
     `codec-upickle`,

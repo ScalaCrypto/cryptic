@@ -31,7 +31,7 @@ class DefaultAppSpec extends AsyncFlatSpec with Matchers:
 
   val id = 17
   val email = "martin@scalacrypto.org"
-  val person = email.encrypted(Person(id, _))
+  val person: Future[Person] = email.encrypted(Person(id, _))
 
   "Email" should "be encrypted" in:
     person.map(p => p.email.bytes.unsafeArray should not equal email.getBytes())
@@ -39,4 +39,4 @@ class DefaultAppSpec extends AsyncFlatSpec with Matchers:
     person.map(_.toString should startWith("Person(17,Encrypted(CipherText(0x"))
 
   "Email" should "be decrypted" in:
-    person.flatMap(_.email.decrypted.map(_ shouldEqual Success(email)))
+    person.flatMap(_.email.decrypted.map(_ shouldEqual email))

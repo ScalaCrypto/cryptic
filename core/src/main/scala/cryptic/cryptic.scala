@@ -533,7 +533,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
   @inline final def foreach[U](
       f: V => U
   )(using decrypt: Decrypt, ec: ExecutionContext): Unit =
-    if !isEmpty then decrypted.foreach(f)
+    if !isEmpty then decrypted.foreach(f(_))
 
   /**
    * Folds the encrypted value into a single result by applying one of two provided functions:

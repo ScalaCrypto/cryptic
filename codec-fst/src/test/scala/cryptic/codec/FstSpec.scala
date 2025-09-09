@@ -11,7 +11,7 @@ case class PersonName(first: Name, middle: Option[Name] = None, last: Name)
 case class EmailAddress(literal: String)
 case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
-class FstSpec extends AnyFlatSpec with Matchers:
+class FstSpec extends support.TestBase:
   import Fst.{*, given}
 
   "Fst codec" should "encode string and then decode back to original string" in:

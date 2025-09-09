@@ -9,11 +9,10 @@ import org.scalatest.matchers.should.Matchers
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.concurrent.ExecutionContext
 
-class EllipticCurveSpec extends AnyFlatSpec with Matchers with ScalaFutures:
+class EllipticCurveSpec extends support.AsyncTestBase:
   import cryptic.codec.default.given
   import EllipticCurve.{*, given}
 
-  given ec: ExecutionContext = ExecutionContext.global
   private val keyPair: KeyPair = EllipticCurve.newKeyPair()
   given publicKey: PublicKey = keyPair.getPublic
   private val text = "secret"

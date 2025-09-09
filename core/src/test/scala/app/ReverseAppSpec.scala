@@ -20,7 +20,7 @@ class ReverseAppSpec extends AsyncFlatSpec with Matchers:
     encrypted.map(_.bytes should not equal clear.getBytes)
 
   "Cryptic" should "decrypt" in:
-    decrypted.map(_ shouldEqual Success(clear))
+    decrypted.map(_ shouldEqual clear)
 
   case class Person(id: Long, email: Encrypted[String])
 

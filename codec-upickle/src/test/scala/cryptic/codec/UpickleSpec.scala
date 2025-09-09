@@ -25,7 +25,7 @@ case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
 object User:
   given rw: ReadWriter[User] = macroRW[User]
-class UpickleSpec extends AnyFlatSpec with Matchers:
+class UpickleSpec extends support.AsyncTestBase:
   import cryptic.codec.Upickle.{*, given}
   val user: User = User(
     id = 1,
@@ -46,7 +46,7 @@ class UpickleSpec extends AnyFlatSpec with Matchers:
   "Upickle codec" should "be usable by the encoder/decoder" in:
     import cryptic.crypto.Reverse.*
     import cryptic.crypto.Reverse.given
-    val encrypted = user.encrypted
+    val encrypted = user.encrypted.futureValue
     encrypted.bytes shouldBe write(user).getBytes.reverse // Reverse...
-    val decrypted = encrypted.decrypted
-    decrypted shouldBe Success(user)
+    val decrypted = encrypted.decrypted.futureValue
+    decrypted shouldBe user

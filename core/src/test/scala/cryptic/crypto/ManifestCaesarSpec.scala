@@ -1,22 +1,21 @@
 package cryptic
 package crypto
 
+import cryptic.support.AsyncTestBase
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.util.Success
 
-class ManifestCaesarSpec extends AnyFlatSpec with Matchers:
+class ManifestCaesarSpec extends AsyncTestBase:
   import ManifestCaesar.{*, given}
   import cryptic.codec.default.given
   given keys: Keys = ManifestCaesar.Keys(100 -> 1, 400 -> 2)
 
   private val text = "secret"
-  private val encrypted = text.encrypted(100.toManifest)
+  private val encrypted = text.encrypted(100.toManifest).futureValue
   "ManifestCaesar Encrypted" should "support encryption and decryption" in:
-    encrypted.decrypted match
-      case Success(decrypted) => decrypted shouldEqual text
-      case x                  => fail(s"does not decrypt: $x")
+    encrypted.decrypted.futureValue shouldEqual text
 
   "ManifestCaesar Encrypted" should "hide plaintext" in:
     new String(encrypted.bytes.mutable)

@@ -1,23 +1,22 @@
 package cryptic
 package crypto
 
+import cryptic.support.{AsyncTestBase, TestBase}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.util.Success
 
-class CaesarSpec extends AnyFlatSpec with Matchers:
+class CaesarSpec extends AsyncTestBase:
   import cryptic.codec.default.given
   import Caesar.*
   import Caesar.given
   given key1: Key = Caesar.Key(1)
 
   private val text = "nisse"
-  private val encrypted = text.encrypted
+  private val encrypted = text.encrypted.futureValue
   "Caesar Encrypted" should "support encryption and decryption" in:
-    encrypted.decrypted match
-      case Success(decrypted) ⇒ decrypted shouldEqual text
-      case x ⇒ fail(s"does not decrypt: $x")
+    encrypted.decrypted.futureValue shouldEqual text
 
   "Caesar Encrypted" should "hide plaintext" in:
     new String(encrypted.bytes.mutable)

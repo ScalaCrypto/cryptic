@@ -7,7 +7,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import upickle.default.*
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Success
 
@@ -18,7 +17,7 @@ object Foo:
 
 case class FooBar(secret: Encrypted[String])
 
-trait EncryptedSpecBase extends AnyFlatSpec with Matchers with EitherValues with ScalaFutures:
+trait EncryptedSpecBase extends support.AsyncTestBase:
   import cryptic.codec.default.{*, given}
   import cryptic.crypto.Reverse.{*, given}
   given codec[V: ReadWriter]: Codec[V] = scala.compiletime.deferred
@@ -28,22 +27,21 @@ trait EncryptedSpecBase extends AnyFlatSpec with Matchers with EitherValues with
   "Case class with encrypted members" should "encrypt and decrypt" in:
     val foo = FooBar(enc)
     foo.secret.bytes shouldEqual "secret".encoded.bytes.reverse
-    foo.secret.decrypted shouldEqual Success("secret")
+    foo.secret.decrypted.futureValue shouldEqual "secret"
   "Encrypted case class with" should "encrypt and decrypt" in:
     val foo = Foo("clear")
     val encryptedFoo = foo.encrypted.futureValue
     val plainText = foo.encoded
     encryptedFoo.bytes shouldBe plainText.bytes.reverse // Reveres crypto
-    encryptedFoo.decrypted shouldEqual Success(foo)
+    encryptedFoo.decrypted.futureValue shouldEqual foo
   "Pending operations " should "run when decrypting" in:
-    val encrypted: Encrypted[String] = encrypted
-    val pending: Cryptic[String] = encrypted.map(_.toUpperCase)
-    pending.decrypted shouldEqual Success("SECRET")
+    val pending: Cryptic[String] = enc.map(_.toUpperCase)
+    pending.decrypted.futureValue shouldEqual "SECRET"
   "Encrypted without a decryption key" should "have the same value in encrypted space" in:
-    val enc1 = "nisse".encrypted
-    val enc2 = "nisse".encrypted
+    val enc1 = "nisse".encrypted.futureValue
+    val enc2 = "nisse".encrypted.futureValue
     enc1 shouldEqual enc2
   "Encrypted values" should "not be equal" in:
-    val enc1 = "nisse".encrypted
-    val enc2 = "kalle".encrypted
+    val enc1 = "nisse".encrypted.futureValue
+    val enc2 = "kalle".encrypted.futureValue
     (enc1 == enc2) shouldBe false

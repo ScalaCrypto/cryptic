@@ -1,12 +1,13 @@
 package cryptic
 package codec
 
+import cryptic.support.TestBase
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.util.{Success, Try}
 
-class CodecSpec extends AnyFlatSpec with Matchers:
+class CodecSpec extends TestBase:
   import cryptic.codec.default.{*, given}
   val bytes: IArray[Byte] = IArray[Byte](0, 1, 2, 3, 4, 5, 6)
   val text = "kalle"

@@ -4,6 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import java.security.{PrivateKey, PublicKey}
+import scala.concurrent.Future
 import scala.util.{Success, Try}
 
 // #data-types
@@ -12,7 +13,7 @@ case class EmailAddress(literal: String)
 case class User(id: Long, email: Encrypted[EmailAddress])
 // #data-types
 
-class GettingStartedSpec extends AnyFlatSpec with Matchers:
+class GettingStartedSpec extends support.AsyncTestBase:
 
   "Getting started guide" should "work" in:
     for i <- 0 to 0 do {
@@ -37,7 +38,7 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
       import cryptic.crypto.Rsa.{*, given}
       given pubKey: PublicKey = publicKey
       // #encrypt
-      val user = User(123, EmailAddress("Odd@Example.com").encrypted)
+      val user = User(123, EmailAddress("Odd@Example.com").encrypted.futureValue)
       // #encrypt
       user
 
@@ -53,12 +54,12 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
         user.email.map(email => email.copy(literal = email.literal.toLowerCase))
       // # transform
       loweredEmailOp
-    val userWithLoweredEmail: Try[User] =
+    val userWithLoweredEmail: Future[User] =
       // #run
       import cryptic.crypto.Rsa.{*, given}
       given publicKey: PublicKey = key.getPublic
       given privateKey: PrivateKey = key.getPrivate
-      val userWithLoweredEmail: Try[User] =
+      val userWithLoweredEmail: Future[User] =
         loweredEmailOp.run.map(email => user.copy(email = email))
       // #run
       userWithLoweredEmail
@@ -66,9 +67,9 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
       // #decrypt
       import cryptic.crypto.Rsa.{*, given}
       given privateKey: PrivateKey = key.getPrivate
-      val loweredEmail: Try[EmailAddress] =
+      val loweredEmail: Future[EmailAddress] =
         userWithLoweredEmail.flatMap(_.email.decrypted)
       // #decrypt
       loweredEmail
 
-    loweredEmail shouldEqual Success(EmailAddress("odd@example.com"))
+    loweredEmail.futureValue shouldEqual EmailAddress("odd@example.com")

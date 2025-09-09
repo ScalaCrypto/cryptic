@@ -4,15 +4,15 @@ import org.scalatest.TryValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.{Success, Try}
 
-class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
-  import cryptic.default.{given, *}
+class AesAppSpec extends AnyFlatSpec with Matchers with TryValues:
 
-  val keyPair: KeyPair = newKeyPair(2048)
-  given publicKey: PublicKey = keyPair.getPublic
-  given privateKey: PrivateKey = keyPair.getPrivate
+  import cryptic.{*, given}
+  import cryptic.codec.default.given
+  import cryptic.crypto.Aes.{*, given}
+
+  given passphrase: Passphrase = Passphrase("correct horse")
   val clear = "secret"
   val encrypted: Encrypted[String] = clear.encrypted
   val decrypted: Try[String] = encrypted.decrypted

@@ -6,13 +6,14 @@ import cryptic.{Codec, Decrypt, Encrypt}
 import upickle.default.*
 
 import java.security.{PrivateKey, PublicKey}
+import scala.util.Try
 
 trait RsaSpecBase extends CryptoSpecBase:
   private val keyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
-  override given encrypt: Encrypt = Rsa.encrypt
-  override given decrypt: Decrypt = Rsa.decrypt
+  override given encrypt: Encrypt[Id] = Rsa.encrypt
+  override given decrypt: Decrypt[Try] = Rsa.decrypt
   override def toString: String = "RSAChill"
 
 class RsaChillSpec extends RsaSpecBase:

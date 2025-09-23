@@ -53,13 +53,15 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
         user.email.map(email => email.copy(literal = email.literal.toLowerCase))
       // # transform
       loweredEmailOp
-    val userWithLoweredEmail: Try[User] =
+    val userWithLoweredEmail: User =
       // #run
       import cryptic.crypto.Rsa.{*, given}
       given publicKey: PublicKey = key.getPublic
       given privateKey: PrivateKey = key.getPrivate
-      val userWithLoweredEmail: Try[User] =
-        loweredEmailOp.run.map(email => user.copy(email = email))
+      val runResult: Encrypted[EmailAddress] =
+        loweredEmailOp.run[Id, Try]
+      val userWithLoweredEmail: User =
+        user.copy(email = runResult)
       // #run
       userWithLoweredEmail
     val loweredEmail =
@@ -67,7 +69,7 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
       import cryptic.crypto.Rsa.{*, given}
       given privateKey: PrivateKey = key.getPrivate
       val loweredEmail: Try[EmailAddress] =
-        userWithLoweredEmail.flatMap(_.email.decrypted)
+        userWithLoweredEmail.email.decrypted
       // #decrypt
       loweredEmail
 

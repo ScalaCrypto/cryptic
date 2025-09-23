@@ -9,12 +9,13 @@ import org.bouncycastle.util.encoders.Hex
 import java.security.*
 import java.security.spec.ECGenParameterSpec
 import javax.crypto.Cipher
+import scala.util.Try
 
 /** Elliptic Curve Integrated Encryption Scheme depends on private and public
   * keys. The public key should be given for encryption and the private key for
   * decryption
   */
-object EllipticCurve extends Asymmetric:
+object EllipticCurve extends Asymmetric[Id, Try]:
   Security.addProvider(new BouncyCastleProvider())
   private val secureRandom = new SecureRandom()
   private val generator: KeyPairGenerator = KeyPairGenerator.getInstance("EC")

@@ -4,7 +4,7 @@ import org.scalatest.TryValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-import scala.util.Success
+import scala.util.{Success, Try}
 
 case class Name(literal: String)
 
@@ -20,7 +20,7 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
 
   private val clear = "nisse"
   private val enc1: Encrypted[String] = clear.encrypted
-  private val emptyString: Encrypted[String] = Encrypted.empty[String]
+  private val emptyString: Encrypted[String] = Encrypted.empty[String, Id]
 
   "Case class with encrypted members" should "encrypt and decrypt" in:
     case class Foo(clear: String, secret: Encrypted[String])
@@ -37,11 +37,11 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
     val enc2 = "kalle".encrypted
     (enc1 == enc2) shouldBe false
   "Encrypted" should "have exists" in:
-    enc1.exists(_ == clear) shouldBe true
-    enc1.exists(_ == "kalle") shouldBe false
+    enc1.exists(_ == clear) shouldBe Success(true)
+    enc1.exists(_ == "kalle") shouldBe Success(false)
   "Encrypted" should "have forall" in:
-    enc1.forall(_ == clear) shouldBe true
-    enc1.forall(_ == "kalle") shouldBe false
+    enc1.forall(_ == clear) shouldBe Success(true)
+    enc1.forall(_ == "kalle") shouldBe Success(false)
   "Encrypted" should "have foreach" in:
     var a = ""
     enc1.foreach(a = _)
@@ -49,7 +49,13 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
   "Encrypted" should "be mappable" in:
     enc1.map(_.toUpperCase).decrypted shouldBe Success("NISSE")
   "Encrypted" should "be flat-mappable" in:
-    enc1.flatMap(_.take(2).encrypted).decrypted shouldBe Success("ni")
+    enc1
+      .flatMap(v =>
+        val str: String = v.take(2)
+        val enc2 = str.encrypted
+        enc2
+      )
+      .decrypted shouldBe Success("ni")
   "Encrypted" should "be collectable" in:
     enc1
       .collect:
@@ -58,7 +64,7 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
     enc1
       .collect:
         case "kalle" => "nice!"
-      .run shouldBe Success(emptyString)
+      .run[Id, Try] shouldBe emptyString
     enc1
       .collect:
         case "kalle" => "nice!"
@@ -68,20 +74,20 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
       .getMessage shouldBe "decrypted called on collected empty"
   "Encrypted" should "be filterable" in:
     enc1.filter(_.length > 2).decrypted shouldBe Success(clear)
-    enc1.filter(_.length < 2).run shouldBe Success(emptyString)
+    enc1.filter(_.length < 2).run shouldBe emptyString
   "Encrypted" should "be foldable" in:
     enc1.fold("kalle")(_.toUpperCase) shouldBe Success("NISSE")
     enc1
       .filter(_.length > 10)
       .run
-      .flatMap(_.fold("kalle")(_.toUpperCase)) shouldBe Success("kalle")
+      .fold("kalle")(_.toUpperCase) shouldBe Success("kalle")
     enc1
       .filter(_.length < 10)
       .run
-      .flatMap(_.fold("kalle")(_.toUpperCase)) shouldBe Success("NISSE")
+      .fold("kalle")(_.toUpperCase) shouldBe Success("NISSE")
   "Encrypted" should "be decryptable with alternative" in:
-    enc1.filter(_.length > 2).decryptedOrElse("kalle") shouldBe clear
-    enc1.filter(_.length < 2).decryptedOrElse("kalle") shouldBe "kalle"
+    enc1.filter(_.length > 2).decryptedOrElse("kalle") shouldBe Success(clear)
+    enc1.filter(_.length < 2).decryptedOrElse("kalle") shouldBe Success("kalle")
   "Encrypted" should "be or-elsable" in:
     enc1
       .filter(_.length > 2)

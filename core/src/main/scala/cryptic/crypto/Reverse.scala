@@ -1,7 +1,7 @@
 package cryptic
 package crypto
 
-import scala.util.Success
+import scala.util.{Success, Try}
 
 /** The Reverse object provides given values for encryption and decryption by
   * reversing the bytes.
@@ -16,7 +16,8 @@ import scala.util.Success
   * sequence.
   */
 object Reverse:
-  given encrypt: Encrypt = (plainText: PlainText) =>
+  given encrypt: Encrypt[Id] = Encrypt.fromFunction((plainText: PlainText) =>
     CipherText(plainText.bytes.reverse)
-  given decrypt: Decrypt = (cipherText: CipherText) =>
+  )
+  given decrypt: Decrypt[Try] = (cipherText: CipherText) =>
     Success(PlainText(cipherText.bytes.reverse))

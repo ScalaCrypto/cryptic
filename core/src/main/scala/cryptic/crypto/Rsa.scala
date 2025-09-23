@@ -4,6 +4,7 @@ package crypto
 import java.security.{Key, KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
+import scala.util.Try
 import javax.crypto.spec.{OAEPParameterSpec, PSource}
 
 /** The Rsa object provides encryption, decryption, and key generation
@@ -21,7 +22,7 @@ import javax.crypto.spec.{OAEPParameterSpec, PSource}
  *     specified mode (encrypt or decrypt) and key.
  *   - newKeyPair: Generates a new RSA key pair with the specified key size.
  */
-object Rsa extends Asymmetric:
+object Rsa extends Asymmetric[Id, Try]:
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 
   def newCipher(mode: Int, key: Key): Cipher =

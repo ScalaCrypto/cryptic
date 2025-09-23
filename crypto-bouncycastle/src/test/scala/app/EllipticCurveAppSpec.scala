@@ -33,5 +33,5 @@ class EllipticCurveAppSpec extends AnyFlatSpec with Matchers with TryValues:
     val email = "martin@scalacrypto.org"
     val person = Person(id, email.encrypted)
     person.email.bytes should not equal email.getBytes()
-    person.email.contains(email) shouldBe true
+    person.email.contains(email) shouldBe Success(true)
     person.toString should startWith("Person(17,Encrypted(CipherText(0x")

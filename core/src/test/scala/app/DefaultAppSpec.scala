@@ -32,7 +32,7 @@ class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
 
   "Email" should "be encrypted" in:
     person.email.bytes.unsafeArray should not equal email.getBytes()
-    person.email.contains(email) shouldBe true
+    person.email.contains(email) shouldBe Success(true)
     person.toString should startWith("Person(17,Encrypted(CipherText(0x")
 
   "Email" should "be decrypted" in:

@@ -47,7 +47,7 @@ object Aes extends Symmetric:
 
   given encrypt(using
       passphrase: Passphrase
-  ): Encrypt = (plainText: PlainText) =>
+  ): Encrypt[Id] = Encrypt.fromFunction((plainText: PlainText) =>
     val salt = Salt(saltLength)
     val key = keygen(passphrase, salt)
     val iv = newIv()
@@ -59,10 +59,11 @@ object Aes extends Symmetric:
       iv.immutable,
       cipherText
     )
+  )
 
   given decrypt(using
       passphrase: Passphrase
-  ): Decrypt = (cipherText: CipherText) =>
+  ): Decrypt[Try] = (cipherText: CipherText) =>
     Try:
       val IArray(manifest, salt, iv, bytes) = cipherText.split
       val key = keygen(passphrase, Salt(salt))

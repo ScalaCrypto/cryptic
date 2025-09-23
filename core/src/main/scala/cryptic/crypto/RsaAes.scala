@@ -19,8 +19,8 @@ import scala.util.Try
 object RsaAes:
   given encrypt(using
       publicKey: PublicKey
-  ): Encrypt =
-    (plainText: PlainText) =>
+  ): Encrypt[Id] =
+    Encrypt.fromFunction((plainText: PlainText) =>
       val aesKey = Aes.keygen()
       val iv = Aes.newIv()
       val ivSpec = Aes.paramSpec(iv)
@@ -34,10 +34,11 @@ object RsaAes:
         encryptedAesKey,
         encryptedText
       )
+    )
 
   given decrypt(using
       privateKey: PrivateKey
-  ): Decrypt =
+  ): Decrypt[Try] =
     (cipherText: CipherText) =>
       Try:
         val IArray(manifest, iv, keyBytes, textBytes) = cipherText.split

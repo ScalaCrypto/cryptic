@@ -1,7 +1,7 @@
 package cryptic
 package crypto
 
-import scala.util.Try
+import scala.concurrent.Future
 
 /** NOTE This crypto is only for testing, use a proper algorithm for production!
   *
@@ -15,16 +15,17 @@ import scala.util.Try
   *
   * The `Key` case class ensures that the offset is non-zero.
   */
-object Caesar:
+object FutureCaesar:
   case class Key(offset: Int):
     require(offset != 0)
-  given encrypt(using key: Key): Encrypt[Id] = Encrypt.fromFunction((plainText: PlainText) =>
-    val bytes =
-      plainText.bytes.mutable.map(b ⇒ (b + key.offset).toByte).immutable
-    CipherText(bytes)
-  )
-  given decrypt(using key: Key): Decrypt[Try] = (cipherText: CipherText) =>
-    Try:
+  given encrypt(using key: Key): Encrypt[Future] =
+    Encrypt.lift((plainText: PlainText) =>
+      val bytes =
+        plainText.bytes.mutable.map(b ⇒ (b + key.offset).toByte).immutable
+      Future.successful(CipherText(bytes)))
+  given decrypt(using key: Key): Decrypt[Future] = (cipherText: CipherText) =>
+    Future.successful(
       PlainText(cipherText.bytes.map(b => (b - key.offset).toByte))
+    )
 
   def keygen(offset: Int): Key = Key(offset)

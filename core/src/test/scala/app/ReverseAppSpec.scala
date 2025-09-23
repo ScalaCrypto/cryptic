@@ -28,7 +28,7 @@ class ReverseAppSpec extends AnyFlatSpec with Matchers with TryValues:
     val email = "martin@scalacrypto.org"
     val person = Person(id, email.encrypted)
     person.email.bytes should not equal email.getBytes()
-    person.email.contains(email) shouldBe true
+    person.email.contains(email) shouldBe Success(true)
     person.toString shouldBe "Person(17,Encrypted(CipherText(0x67726f2e6f7470797263616c616373406e697472616d)))"
 
   "PlainText" should "be easy" in:

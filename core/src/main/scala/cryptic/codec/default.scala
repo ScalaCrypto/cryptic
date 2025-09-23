@@ -27,6 +27,13 @@ object default extends Codec.Companion:
     def decode(pt: PlainText): Try[String] =
       Success(new String(pt.bytes.mutable))
 
+  given Codec[Boolean]:
+    def encode(v: Boolean, manifest: Manifest): PlainText =
+      val b: Byte = if v then 1.toByte else 0.toByte
+      PlainText(IArray.unsafeFromArray(Array(b)), manifest)
+    def decode(pt: PlainText): Try[Boolean] =
+      Success(pt.bytes.nonEmpty && pt.bytes(0) != 0)
+
   given Codec[Int]:
     def encode(v: Int, manifest: Manifest): PlainText =
       val buffer = ByteBuffer.allocate(4)

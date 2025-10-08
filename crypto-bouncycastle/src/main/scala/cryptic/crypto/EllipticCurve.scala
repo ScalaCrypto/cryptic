@@ -15,7 +15,7 @@ import scala.util.Try
   * keys. The public key should be given for encryption and the private key for
   * decryption
   */
-object EllipticCurve extends Asymmetric[Id, Try]:
+object EllipticCurve extends Asymmetric[Try]:
   Security.addProvider(new BouncyCastleProvider())
   private val secureRandom = new SecureRandom()
   private val generator: KeyPairGenerator = KeyPairGenerator.getInstance("EC")

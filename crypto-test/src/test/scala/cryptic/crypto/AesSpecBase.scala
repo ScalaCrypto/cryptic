@@ -12,7 +12,7 @@ trait AesSpecBase extends CryptoSpecBase:
   given aesPassword: Passphrase =
     Passphrase("correct horse battery staple")
   override given decrypt: Decrypt[Try] = Aes.decrypt
-  override given encrypt: Encrypt[Id] = Aes.encrypt
+  override given encrypt: Encrypt[Try] = Aes.encrypt
 
 class AesChillSpec extends AesSpecBase:
   override given stringCodec: Codec[String] = Chill.codec

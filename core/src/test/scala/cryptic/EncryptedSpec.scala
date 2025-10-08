@@ -16,84 +16,104 @@ case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
 class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.codec.default.given
-  import cryptic.crypto.Reverse.given
+  import cryptic.crypto.demo.Reverse.given
+  import cryptic.Functor.tryFunctor
 
   private val clear = "nisse"
-  private val enc1: Encrypted[String] = clear.encrypted
-  private val emptyString: Encrypted[String] = Encrypted.empty[String, Id]
+  private val encNisse: Encrypted[Try, String] = clear.encrypted
+  private val encEmpty: Encrypted[Try, String] = Encrypted.empty[Try, String]
 
+  "Encrypted empty" should "have isEmpty" in:
+    encEmpty.isEmpty.success shouldBe Success(true)
+    encEmpty.nonEmpty.success shouldBe Success(false)
+  "Encrypted empty" should "not decrypt" in:
+      encEmpty.decrypted.failure
   "Case class with encrypted members" should "encrypt and decrypt" in:
-    case class Foo(clear: String, secret: Encrypted[String])
+    case class Foo(clear: String, secret: Encrypted[Try, String])
     val foo = Foo("clear", "secret".encrypted)
-    foo.secret.bytes shouldEqual Array(116, 101, 114, 99, 101, 115)
+    foo.secret.bytes.success.value.toSeq shouldEqual Seq(116, 101, 114, 99, 101, 115)
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted bytes" should "be callable without decrypt in scope" in:
     val e = "secret".encrypted
-    e.bytes shouldEqual Array(116, 101, 114, 99, 101, 115)
+    e.bytes.success.value.toSeq shouldEqual Seq(116, 101, 114, 99, 101, 115)
   "Encrypted" should "have same value in encrypted space" in:
     val enc2 = clear.encrypted
-    enc1 shouldEqual enc2
+    encNisse shouldEqual enc2
   "Encrypted" should "not equal different values" in:
     val enc2 = "kalle".encrypted
-    (enc1 == enc2) shouldBe false
+    (encNisse == enc2) shouldBe false
   "Encrypted" should "have exists" in:
-    enc1.exists(_ == clear) shouldBe Success(true)
-    enc1.exists(_ == "kalle") shouldBe Success(false)
+    encNisse.exists(_ == clear).success shouldBe Success(true)
+    encNisse.exists(_ == "kalle").success shouldBe Success(false)
   "Encrypted" should "have forall" in:
-    enc1.forall(_ == clear) shouldBe Success(true)
-    enc1.forall(_ == "kalle") shouldBe Success(false)
+    encNisse.forall(_ == clear).success shouldBe Success(true)
+    encNisse.forall(_ == "kalle").success shouldBe Success(false)
   "Encrypted" should "have foreach" in:
     var a = ""
-    enc1.foreach(a = _)
+    encNisse.foreach(a = _)
     a shouldBe clear
   "Encrypted" should "be mappable" in:
-    enc1.map(_.toUpperCase).decrypted shouldBe Success("NISSE")
+    encNisse.map(_.toUpperCase).decrypted.success shouldBe Success("NISSE")
   "Encrypted" should "be flat-mappable" in:
-    enc1
+    encNisse
       .flatMap(v =>
         val str: String = v.take(2)
         val enc2 = str.encrypted
         enc2
       )
-      .decrypted shouldBe Success("ni")
+      .decrypted
+      .success shouldBe Success("ni")
   "Encrypted" should "be collectable" in:
-    enc1
+    encNisse
       .collect:
         case `clear` => "nice!"
-      .decrypted shouldBe Success("nice!")
-    enc1
+      .decrypted
+      .success shouldBe Success("nice!")
+    encNisse
       .collect:
         case "kalle" => "nice!"
-      .run[Id, Try] shouldBe emptyString
-    enc1
+      .run shouldBe encEmpty
+    val dec = encNisse
       .collect:
         case "kalle" => "nice!"
       .decrypted
-      .failure
-      .exception
-      .getMessage shouldBe "decrypted called on collected empty"
+    dec.failure
+    dec.failed.get.getMessage shouldBe "decrypted called on collected empty"
   "Encrypted" should "be filterable" in:
-    enc1.filter(_.length > 2).decrypted shouldBe Success(clear)
-    enc1.filter(_.length < 2).run shouldBe emptyString
+    encNisse.filter(_.length > 2).decrypted.success shouldBe Success(clear)
+    val empty = encNisse.filter(_.length < 2).run
+    empty shouldBe encEmpty
+    empty.isEmpty.success shouldBe Success(true)
+    empty.nonEmpty.success shouldBe Success(false)
   "Encrypted" should "be foldable" in:
-    enc1.fold("kalle")(_.toUpperCase) shouldBe Success("NISSE")
-    enc1
-      .filter(_.length > 10)
+    encNisse.fold("kalle")(_.toUpperCase).success shouldBe Success("NISSE")
+    encNisse
+      .filter(_.length > 2)
       .run
-      .fold("kalle")(_.toUpperCase) shouldBe Success("kalle")
-    enc1
-      .filter(_.length < 10)
+      .fold("kalle")(_.toUpperCase)
+    encEmpty.fold("kalle")(_.toUpperCase).success shouldBe Success("kalle")
+    encNisse
+      .filter(_.length < 2)
       .run
-      .fold("kalle")(_.toUpperCase) shouldBe Success("NISSE")
+      .fold("kalle")(_.toUpperCase)
+      .success shouldBe Success("kalle")
   "Encrypted" should "be decryptable with alternative" in:
-    enc1.filter(_.length > 2).decryptedOrElse("kalle") shouldBe Success(clear)
-    enc1.filter(_.length < 2).decryptedOrElse("kalle") shouldBe Success("kalle")
+    encNisse
+      .filter(_.length > 2)
+      .decryptedOrElse("kalle")
+      .success shouldBe Success(clear)
+    encNisse
+      .filter(_.length < 2)
+      .decryptedOrElse("kalle")
+      .success shouldBe Success("kalle")
   "Encrypted" should "be or-elsable" in:
-    enc1
+    encNisse
       .filter(_.length > 2)
       .orElse("kalle".encrypted)
-      .decrypted shouldBe Success(clear)
-    enc1
+      .decrypted
+      .success shouldBe Success(clear)
+    encNisse
       .filter(_.length < 2)
       .orElse("kalle".encrypted)
-      .decrypted shouldBe Success("kalle")
+      .decrypted
+      .success shouldBe Success("kalle")

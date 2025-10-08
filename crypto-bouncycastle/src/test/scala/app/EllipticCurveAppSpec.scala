@@ -17,21 +17,21 @@ class EllipticCurveAppSpec extends AnyFlatSpec with Matchers with TryValues:
   given privateKey: PrivateKey = keyPair.getPrivate
 
   val clear = "secret"
-  val encrypted: Encrypted[String] = clear.encrypted
+  val encrypted: Encrypted[Try, String] = clear.encrypted
   val decrypted: Try[String] = encrypted.decrypted
 
   "Cryptic" should "encrypt" in:
-    encrypted.bytes should not equal clear.getBytes
+    encrypted.bytes.get should not equal clear.getBytes
 
   "Cryptic" should "decrypt" in:
     decrypted.success shouldEqual Success(clear)
 
-  case class Person(id: Long, email: Encrypted[String])
+  case class Person(id: Long, email: Encrypted[Try, String])
 
   "Person" should "handle encryption" in:
     val id = 17
     val email = "martin@scalacrypto.org"
     val person = Person(id, email.encrypted)
-    person.email.bytes should not equal email.getBytes()
+    person.email.bytes.success should not equal Success(email.getBytes())
     person.email.contains(email) shouldBe Success(true)
-    person.toString should startWith("Person(17,Encrypted(CipherText(0x")
+    person.toString should startWith("Person(17,Encrypted(Success(CipherText(0x")

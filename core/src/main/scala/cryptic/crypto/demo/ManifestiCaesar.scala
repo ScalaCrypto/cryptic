@@ -1,5 +1,6 @@
 package cryptic
 package crypto
+package demo
 
 import java.nio.ByteBuffer
 import scala.util.Try
@@ -26,14 +27,14 @@ object ManifestCaesar:
   object Keys:
     def apply(offsets: (Int, Int)*): Keys =
       Keys(offsets.toMap)
-  given encrypt(using keys: Keys): Encrypt[Id] =
-    Encrypt.fromFunction((plainText: PlainText) =>
+  given encrypt(using keys: Keys): Encrypt[Try] = (plainText: PlainText) =>
+    Try:
       val offset = keys.get(plainText.manifest.toKeyId)
       val bytes = plainText.bytes.mutable
         .map(b => (b + offset).toByte)
         .immutable
       CipherText(plainText.manifest, bytes)
-    )
+
   given decrypt(using keys: Keys): Decrypt[Try] = (cipherText: CipherText) =>
     Try:
       val IArray(manifest, bytes) = cipherText.split

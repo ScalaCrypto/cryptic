@@ -1,6 +1,6 @@
 package cryptic
 
-sealed abstract class Cryptic[V: Codec]:
+sealed abstract class Cryptic[F[_]: Functor, V: Codec]:
   import Cryptic.*
 
   /** Attempts to retrieve the decrypted value using the provided decryption
@@ -11,7 +11,7 @@ sealed abstract class Cryptic[V: Codec]:
     * @return
     *   the decrypted value wrapped in the effect type `F`
     */
-  def decrypted[F[_]](using decrypt: Decrypt[F], functor: Functor[F]): F[V]
+  def decrypted(using decrypt: Decrypt[F]): F[V]
 
   /** Attempts to retrieve the decrypted value. If decryption fails or if the
     * value is not present, it returns the provided default value.
@@ -23,9 +23,8 @@ sealed abstract class Cryptic[V: Codec]:
     * @return
     *   the decrypted value if successful, otherwise the default value
     */
-  @inline final def decryptedOrElse[F[_], W >: V](default: => W)(using
-      decrypt: Decrypt[F],
-      functor: Functor[F]
+  @inline final def decryptedOrElse[W >: V](default: => W)(using
+      decrypt: Decrypt[F]
   ): F[W] = decrypted.recoverWith:
     case _: Throwable => default.pure
 
@@ -40,7 +39,7 @@ sealed abstract class Cryptic[V: Codec]:
     *   A new operation representing the transformation of the original
     *   operation.
     */
-  @inline final def map[W: Codec](f: V => W): Operation[W] =
+  @inline final def map[W: Codec](f: V => W): Operation[F, W] =
     Mapped(this, f)
 
   /** Transforms this `Operation[V]` into an `Operation[W]` by applying the
@@ -54,7 +53,9 @@ sealed abstract class Cryptic[V: Codec]:
     *   an `Operation[W]` resulting from applying the function `f` to each value
     *   of type `V` produced by this `Operation`
     */
-  @inline final def flatMap[W: Codec](f: V => Cryptic[W]): Operation[W] =
+  @inline final def flatMap[W: Codec](
+      f: V => Cryptic[F, W]
+  ): Operation[F, W] =
     FlatMapped(this, f)
 
   /*
@@ -72,7 +73,7 @@ sealed abstract class Cryptic[V: Codec]:
     * @return
     *   a new Operation containing elements that satisfy the predicate.
     */
-  @inline final def filter(p: V => Boolean): Operation[V] = Filtered(this, p)
+  @inline final def filter(p: V => Boolean): Operation[F, V] = Filtered(this, p)
 
   /** Filters out elements of a collection that satisfy a given predicate.
     *
@@ -82,7 +83,7 @@ sealed abstract class Cryptic[V: Codec]:
     * @return
     *   a new collection without the elements that satisfy the predicate
     */
-  @inline final def filterNot(p: V => Boolean): Filtered[V] =
+  @inline final def filterNot(p: V => Boolean): Filtered[F, V] =
     Filtered(this, v => !p(v))
 
   /** Applies a partial function to the elements of the collection and returns a
@@ -95,7 +96,7 @@ sealed abstract class Cryptic[V: Codec]:
     */
   @inline final def collect[W: Codec](
       pf: PartialFunction[V, W]
-  ): Operation[W] = Collected(this, pf)
+  ): Operation[F, W] = Collected(this, pf)
 
   /** Provides an alternative operation to perform if the current operation
     * fails.
@@ -107,8 +108,8 @@ sealed abstract class Cryptic[V: Codec]:
     *   operation.
     */
   @inline final def orElse[W >: V: Codec](
-      alternative: => Cryptic[W]
-  ): Operation[W] = new OrElsed(this, alternative)
+      alternative: => Cryptic[F, W]
+  ): Operation[F, W] = new OrElsed(this, alternative)
 
 object Cryptic:
   export cryptic.{
@@ -122,40 +123,35 @@ object Cryptic:
   }
   import Encrypted.*
 
-  sealed abstract class Operation[V: Codec] extends Cryptic[V]:
-    def run[E[_], D[_]](using
-        encrypt: Encrypt[E],
-        decrypt: Decrypt[D],
-        functorE: Functor[E],
-        functorD: Functor[D]
-    ): E[Encrypted[V]]
+  sealed abstract class Operation[F[_]: Functor, V: Codec]
+      extends Cryptic[F, V]:
+    def run(using
+        encrypt: Encrypt[F],
+        decrypt: Decrypt[F]
+    ): Encrypted[F, V]
 
-  sealed abstract class BinaryOperation[V: Codec, W: Codec]
-      extends Operation[W]:
-    override def run[E[_], D[_]](using
-        encrypt: Encrypt[E],
-        decrypt: Decrypt[D],
-        functorE: Functor[E],
-        functorD: Functor[D]
-    ): E[Encrypted[W]] = decrypted.transform[E].flatMap(_.encrypted)
+  sealed abstract class BinaryOperation[F[_]: Functor, V: Codec, W: Codec]
+      extends Operation[F, W]:
+    override def run(using
+        encrypt: Encrypt[F],
+        decrypt: Decrypt[F]
+    ): Encrypted[F, W] =
+      val t = decrypted
+      Encrypted(t, Manifest.empty.pure)
 
-  final case class Mapped[V: Codec, W: Codec](
-      src: Cryptic[V],
+  final case class Mapped[F[_]: Functor, V: Codec, W: Codec](
+      src: Cryptic[F, V],
       f: V => W
-  ) extends BinaryOperation[V, W]:
-    override def decrypted[F[_]](using
-        decrypt: Decrypt[F],
-        functor: Functor[F]
-    ): F[W] = src.decrypted.map(f)
+  ) extends BinaryOperation[F, V, W]:
+    override def decrypted(using decrypt: Decrypt[F]): F[W] =
+      src.decrypted.map(f)
 
-  final case class FlatMapped[V: Codec, W: Codec](
-      src: Cryptic[V],
-      f: V => Cryptic[W]
-  ) extends BinaryOperation[V, W]:
-    override def decrypted[F[_]](using
-        decrypt: Decrypt[F],
-        functor: Functor[F]
-    ): F[W] = src.decrypted.flatMap(v => f(v).decrypted)
+  final case class FlatMapped[F[_]: Functor, V: Codec, W: Codec](
+      src: Cryptic[F, V],
+      f: V => Cryptic[F, W]
+  ) extends BinaryOperation[F, V, W]:
+    override def decrypted(using decrypt: Decrypt[F]): F[W] =
+      src.decrypted.map(v => f(v)).flatMap(w => w.decrypted)
   /*
   final case class Flattened[V : Codec, W : Codec](src: Cryptic[V])(using ev: V <:< Cryptic[W])
       extends Operation[V]:
@@ -165,21 +161,21 @@ object Cryptic:
       src.decrypted.flatMap(v => ev(v).decrypted)
    */
 
-  final case class Filtered[V: Codec](src: Cryptic[V], pred: V => Boolean)
-      extends Operation[V]:
-    override def run[E[_], D[_]](using
-        encrypt: Encrypt[E],
-        decrypt: Decrypt[D],
-        functorE: Functor[E],
-        functorD: Functor[D]
-    ): E[Encrypted[V]] = src.decrypted
-      .transform[E]
-      .flatMap: v =>
-        if pred(v) then v.encrypted else empty[V, E]
+  final case class Filtered[F[_]: Functor, V: Codec](
+      src: Cryptic[F, V],
+      pred: V => Boolean
+  ) extends Operation[F, V]:
+    override def run(using
+        encrypt: Encrypt[F],
+        decrypt: Decrypt[F]
+    ): Encrypted[F, V] =
+      val filtered: F[CipherText] = src.decrypted.flatMap: v =>
+        if pred(v) then encrypt(PlainText.encode(v, Manifest.empty))
+        else CipherText.empty.pure
+      new Encrypted(filtered)
 
-    override def decrypted[F[_]](using
-        decrypt: Decrypt[F],
-        functor: Functor[F]
+    override def decrypted(using
+        decrypt: Decrypt[F]
     ): F[V] =
       src.decrypted.flatMap: v =>
         if pred(v) then v.pure
@@ -188,40 +184,35 @@ object Cryptic:
             "decrypted called on filtered empty"
           ).failed
 
-  final case class Collected[V: Codec, W: Codec](
-      src: Cryptic[V],
+  final case class Collected[F[_]: Functor, V: Codec, W: Codec](
+      src: Cryptic[F, V],
       pf: PartialFunction[V, W]
-  ) extends BinaryOperation[V, W]:
-    override def run[E[_], D[_]](using
-        encrypt: Encrypt[E],
-        decrypt: Decrypt[D],
-        functorE: Functor[E],
-        functorD: Functor[D]
-    ): E[Encrypted[W]] =
-      src.decrypted
-        .transform[E]
-        .flatMap:
-          case v: V if pf.isDefinedAt(v) => pf(v).encrypted
-          case _                         => empty[W, E]
+  ) extends BinaryOperation[F, V, W]:
+    override def run(using
+        encrypt: Encrypt[F],
+        decrypt: Decrypt[F]
+    ): Encrypted[F, W] =
+      val collected = src.decrypted.flatMap: v =>
+        if pf.isDefinedAt(v) then encrypt(PlainText.encode(v, Manifest.empty))
+        else CipherText.empty.pure
+      new Encrypted(collected)
 
-    override def decrypted[F[_]](using
-        decrypt: Decrypt[F],
-        functor: Functor[F]
+    override def decrypted(using
+        decrypt: Decrypt[F]
     ): F[W] =
-      src.decrypted.flatMap:
-        case v: V if pf.isDefinedAt(v) => pf(v).pure
-        case _ =>
+      src.decrypted.flatMap: v =>
+        if pf.isDefinedAt(v) then pf(v).pure
+        else
           new UnsupportedOperationException(
             s"decrypted called on collected empty"
           ).failed
 
-  final class OrElsed[V: Codec, W >: V: Codec](
-      src: Cryptic[V],
-      alternative: => Cryptic[W]
-  ) extends BinaryOperation[V, W]:
-    override def decrypted[F[_]](using
-        decrypt: Decrypt[F],
-        functor: Functor[F]
+  final class OrElsed[F[_]: Functor, V: Codec, W >: V: Codec](
+      src: Cryptic[F, V],
+      alternative: => Cryptic[F, W]
+  ) extends BinaryOperation[F, V, W]:
+    override def decrypted(using
+        decrypt: Decrypt[F]
     ): F[W] =
       src.decrypted.recoverWith:
         case _ => alternative.decrypted
@@ -233,28 +224,29 @@ object Cryptic:
   * @tparam V
   *   The type of the value being encrypted, requiring a given `Codec` instance.
   */
-case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
+case class Encrypted[F[_]: Functor, V: Codec](cipherText: F[CipherText])
+    extends Cryptic[F, V]:
 
   /** Returns the byte array representation of the cipher text.
     *
     * @return
     *   the byte array of the cipher text
     */
-  def bytes: IArray[Byte] = cipherText.bytes
+  def bytes: F[IArray[Byte]] = cipherText.map(_.bytes)
 
   /** Checks if the option is non-empty (defined).
     *
     * @return
     *   true if the option is defined, false otherwise.
     */
-  @inline final def nonEmpty: Boolean = isDefined
+  @inline final def nonEmpty: F[Boolean] = isDefined
 
   /** Checks if the value is defined.
     *
     * @return
     *   true if the value is defined, false otherwise
     */
-  @inline final def isDefined: Boolean = !isEmpty
+  @inline final def isDefined: F[Boolean] = isEmpty.map(!_)
 
   /** Checks if the given value is contained within the object.
     *
@@ -265,10 +257,8 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @return
     *   True if the value is contained, false otherwise.
     */
-  @inline final def contains[F[_]](
-      value: V
-  )(using decrypt: Decrypt[F], functor: Functor[F]): F[Boolean] =
-    if isEmpty then false.pure else decrypted.map(_ == value)
+  @inline final def contains(value: V)(using decrypt: Decrypt[F]): F[Boolean] =
+    ifEmpty(false.pure)(decrypted.map(_ == value))
 
   /** Checks if there exists an element in the value that satisfies the
     * predicate `p`.
@@ -283,11 +273,9 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   A Boolean value that is true if the predicate holds for at least one
     *   element, false otherwise.
     */
-  @inline final def exists[F[_]](p: V => Boolean)(using
-      decrypt: Decrypt[F],
-      functor: Functor[F]
-  ): F[Boolean] =
-    if isEmpty then false.pure else decrypted.map(p)
+  @inline final def exists(p: V => Boolean)(using
+      decrypt: Decrypt[F]
+  ): F[Boolean] = ifEmpty(false.pure)(decrypted.map(p))
 
   /** Tests whether a predicate holds for all elements after decryption.
     *
@@ -299,11 +287,9 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   true if the container is empty or if the predicate holds for all
     *   decrypted elements, otherwise false
     */
-  @inline final def forall[F[_]](p: V => Boolean)(using
-      decrypt: Decrypt[F],
-      functor: Functor[F]
-  ): F[Boolean] =
-    if isEmpty then true.pure else decrypted.map(p)
+  @inline final def forall(p: V => Boolean)(using
+      decrypt: Decrypt[F]
+  ): F[Boolean] = ifEmpty(true.pure)(decrypted.map(p))
 
   /** Applies a function to all elements of the decrypted collection.
     *
@@ -314,140 +300,137 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @return
     *   Unit
     */
-  @inline final def foreach[F[_], U](f: V => U)(using
-      decrypt: Decrypt[F],
-      functor: Functor[F]
-  ): Unit =
-    if !isEmpty then decrypted.map(f)
+  @inline final def foreach(f: V => Unit)(using decrypt: Decrypt[F]): Unit =
+    isEmpty.foreach(_ => decrypted.foreach(f))
+//    ifEmpty(_=>Unit)(decrypted.foreach(f))
 
-  /** Folds the encrypted value into a result of type `W`. If the value is
-    * empty, returns a default value provided by `ifEmpty`. Otherwise, decrypts
-    * the value and applies the function `f` to produce the result.
-    *
-    * @param ifEmpty
-    *   The default value to use if the encrypted value is empty.
-    * @param f
-    *   A function to transform the decrypted value of type `V` into a result of
-    *   type `W`.
-    * @param decrypt
-    *   The decryption context used to decrypt the encrypted value.
-    * @param functor
-    *   The functor type class providing the necessary effect operations.
-    * @return
-    *   An effectful computation containing the folded result of type `W`.
-    */
-  @inline final def fold[F[_], W: Codec](ifEmpty: => W)(f: V => W)(using
-      decrypt: Decrypt[F],
-      functor: Functor[F]
-  ): F[W] =
-    if isEmpty then ifEmpty.pure else decrypted.map(f)
+  /**
+   * Folds the encrypted value into a result of type `W` by applying one of two provided
+   * functions depending on whether the encrypted value is empty or non-empty.
+   *
+   * If the value is empty, the `empty` computation is returned wrapped in the effect type `F`.
+   * If the value is non-empty, it is first decrypted and then transformed using the function `f`.
+   *
+   * @param empty
+   * A computation yielding a default value of type `W` to be used when the encrypted value is empty.
+   * @param f
+   * A function that transforms the decrypted value of type `V` into a result of type `W`.
+   * @param decrypt
+   * The decryption context used to decrypt the encrypted value.
+   * @return
+   * An effectful computation of type `F[W]` representing the folded result.
+   */
+  @inline final def fold[W: Codec](empty: => W)(f: V => W)(using
+      decrypt: Decrypt[F]
+  ): F[W] = ifEmpty(empty.pure)(decrypted.map(f))
 
-  /** Provides an iterator over the decrypted values of type `V`. If the
-    * collection is empty, returns an empty iterator. Otherwise, decrypts the
-    * value and wraps it into a singleton iterator.
-    *
-    * @param decrypt
-    *   The decryption context used for decrypting the value.
-    * @param functor
-    *   The functor instance providing the necessary effect operations.
-    * @return
-    *   An effectful computation containing an iterator over the decrypted
-    *   value(s).
-    */
-  @inline final def iterator[F[_]](using
-      decrypt: Decrypt[F],
-      functor: Functor[F]
-  ): F[Iterator[V]] =
-    if isEmpty then collection.Iterator.empty.pure
-    else decrypted.map(collection.Iterator.single)
+  /**
+   * Retrieves an iterator over the decrypted collection.
+   *
+   * If the collection is empty, the iterator will also be empty.
+   * Otherwise, the collection is decrypted, and the result is
+   * provided as a single-element iterator.
+   *
+   * @param decrypt
+   * A given instance of the `Decrypt` type class, responsible
+   * for decrypting the encrypted data.
+   * @return
+   * An effectful computation of type `F[Iterator[V]]` containing
+   * an iterator over the decrypted values.
+   */
+  @inline final def iterator(using decrypt: Decrypt[F]): F[Iterator[V]] =
+    ifEmpty(collection.Iterator.empty.pure):
+      decrypted.map(collection.Iterator.single)
 
-  /** Decrypts the cipher text and decodes it into the value of type `V`.
-    *
-    * @param decrypt
-    *   A given instance of the `Decrypt` type class, used to perform decryption
-    *   operations.
-    * @param functor
-    *   A given functor instance providing the necessary effect operations for
-    *   the effect type `F[_]`.
-    * @return
-    *   An effectful computation containing the decrypted and decoded value of
-    *   type `V`.
-    */
-  override def decrypted[F[_]](using
-      decrypt: Decrypt[F],
-      functor: Functor[F]
-  ): F[V] =
-    decrypt(cipherText).flatMap(pt => summon[Codec[V]].decode(pt).lift)
+  /**
+   * Decrypts the encrypted data to retrieve the original value of type `V`.
+   *
+   * This method checks if the container is empty. If empty, it raises an
+   * `UnsupportedOperationException`. Otherwise, it decrypts the ciphertext,
+   * decodes the decrypted content using a `Codec` instance, and lifts the
+   * result into the effect type `F`.
+   *
+   * @param decrypt
+   * An implicit parameter for the `Decrypt` type class, which specifies
+   * the decryption logic for the effect type `F`.
+   * @return
+   * The decrypted value of type `V`, wrapped in the effect type `F`.
+   * If the container is empty, it raises an exception wrapped in `F`.
+   */
+  override def decrypted(using decrypt: Decrypt[F]): F[V] =
+    ifEmpty(
+      new UnsupportedOperationException("decrypted called on empty").failed
+    )(
+      cipherText
+        .flatMap(ct => decrypt(ct))
+        .flatMap(pt => summon[Codec[V]].decode(pt).lift)
+    )
 
   /** Checks if the collection is empty.
     *
     * @return
     *   true if the collection contains no elements, false otherwise.
     */
-  def isEmpty: Boolean = false
+  def isEmpty: F[Boolean] = cipherText.map(_.isEmpty)
 
-  /** Converts the encrypted content into a list of decrypted values.
-    *
-    * If the collection is empty, this method returns an effectful computation
-    * wrapping an empty list. Otherwise, it decrypts the value and wraps it into
-    * a singleton list.
-    *
-    * @param decrypt
-    *   An instance of the `Decrypt` type class, used to perform decryption
-    *   operations.
-    * @param functor
-    *   The functor instance enabling effectful transformations for the effect
-    *   type `F[_]`.
-    * @return
-    *   An effectful computation wrapping a list of values of type `V`.
-    */
-  @inline final def toList[F[_]](using
-      decrypt: Decrypt[F],
-      functor: Functor[F]
-  ): F[List[V]] =
-    if isEmpty then Nil.pure else decrypted.map(_ :: Nil)
+  /**
+   * Converts the encrypted value into a list containing the decrypted value.
+   *
+   * If the container is empty, it returns a list with no elements.
+   * If the container is non-empty, it decrypts the contained value and wraps it
+   * in a single-element list.
+   *
+   * @param decrypt
+   * An implicit parameter providing the decryption logic for the effect type `F`.
+   * @return
+   * An effectful computation of type `F[List[V]]` containing the decrypted value
+   * wrapped in a list, or an empty list if the container is empty.
+   */
+  @inline final def toList(using decrypt: Decrypt[F]): F[List[V]] =
+    ifEmpty(Nil.pure):
+      decrypted.map(_ :: Nil)
+
+  def ifEmpty[A](whenEmpty: => F[A])(whenNonEmpty: => F[A]): F[A] =
+    isEmpty.flatMap(empty => if empty then whenEmpty else whenNonEmpty)
 
 object Encrypted:
 
-  /** Encrypts the given value into an instance of `Encrypted[V]` within the
-    * effect type `F`.
-    *
-    * @param value
-    *   The value of type `V` to be encrypted. A `Codec` instance for type `V`
-    *   must be provided.
-    * @param manifest
-    *   The `Manifest` representing type metadata for encoding the value.
-    * @param encrypt
-    *   A given type class instance providing encryption logic within the effect
-    *   type `F`.
-    * @param functor
-    *   A given `Functor` instance for handling effectful computations.
-    * @return
-    *   An effect encapsulating the encrypted value as an instance of
-    *   `Encrypted[V]`, or an empty instance if the value is `null`.
-    */
-  def apply[V: Codec, F[_]](value: V, manifest: Manifest)(using
-      encrypt: Encrypt[F],
-      functor: Functor[F]
-  ): F[Encrypted[V]] =
-    if value == null then empty[V, F]
-    else
-      val plainText = summon[Codec[V]].encode(value, manifest)
-      encrypt(plainText).map(ct => Encrypted[V](ct))
+  /**
+   * Applies encryption to the provided value using a given manifest and returns an encrypted representation.
+   *
+   * @param value
+   * The value to be encrypted.
+   * @param manifest
+   * The manifest describing additional properties required to encode the value.
+   * @param encrypt
+   * The encryption implementation that handles encoding the plain text into cipher text.
+   * @tparam F
+   * The effect type representing how the operations are to be executed.
+   * @tparam V
+   * The type of the value to be encrypted.
+   * @return
+   * An instance of `Encrypted[F, V]` containing the encrypted representation of the input value within the given effect type.
+   */
+  def apply[F[_]: Functor, V: Codec](value: V, manifest: Manifest)(using
+      encrypt: Encrypt[F]
+  ): Encrypted[F, V] =
+    val ct =
+      if value == null then CipherText.empty.pure
+      else encrypt(PlainText.encode(value, manifest))
+    new Encrypted(ct)
 
-  /** Constructs an empty Encrypted instance.
-    *
-    * @return
-    *   An instance of Encrypted representing an empty value.
-    */
-  def empty[V: Codec, F[_]](using functor: Functor[F]): F[Encrypted[V]] =
-    Empty.asInstanceOf[Encrypted[V]].pure
+  def apply[F[_]: Functor, V: Codec](value: F[V], manifest: F[Manifest])(using
+      encrypt: Encrypt[F]
+  ): Encrypted[F, V] =
+    val cipherText = for
+      v <- value
+      mf <- manifest
+      encrypted <- encrypt(PlainText.encode(v, mf))
+    yield encrypted
+    new Encrypted(cipherText)
 
-  object Empty extends Encrypted[Nothing](CipherText.Empty):
-    override def decrypted[F[_]](using
-        decrypt: Decrypt[F],
-        functor: Functor[F]
-    ): F[Nothing] =
-      new UnsupportedOperationException("decrypted called on empty").failed
+  def apply[F[_]: Functor, V: Codec](f: => F[CipherText]): Encrypted[F, V] =
+    new Encrypted(f)
 
-    override def isEmpty: Boolean = true
+  def empty[F[_]: Functor, V: Codec]: Encrypted[F, V] =
+    new Encrypted(CipherText.empty.pure)

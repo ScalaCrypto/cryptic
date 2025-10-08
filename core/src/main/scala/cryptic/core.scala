@@ -13,18 +13,7 @@ type Manifest = IArray[Byte]
 object Manifest:
   val empty: Manifest = IArray.emptyByteIArray
 
-case class PlainText(bytes: IArray[Byte], manifest: Manifest):
-  // override def toString: String = "\uD83D\uDD12"
-  override def equals(obj: Any): Boolean = obj match
-    case other: PlainText =>
-      manifest.sameElements(other.manifest) && bytes.sameElements(other.bytes)
-    case _ => false
-  override def hashCode: Int =
-    java.util.Arrays.hashCode(
-      bytes.mutable
-    ) * 31 + java.util.Arrays.hashCode(
-      manifest.mutable
-    )
+case class PlainText(bytes: IArray[Byte], manifest: Manifest)
 
 object PlainText:
   val empty: PlainText = PlainText(IArray.emptyByteIArray)
@@ -34,6 +23,8 @@ object PlainText:
   def apply(x: String): PlainText = apply(x, Manifest.empty)
   def apply(x: String, manifest: Manifest): PlainText =
     apply(x.getBytes().immutable, manifest)
+  def encode[V: Codec](v: V, manifest: Manifest): PlainText =
+    summon[Codec[V]].encode(v, manifest)
   def hash(plainText: PlainText): Hash =
     import java.security.MessageDigest
     val digest = MessageDigest.getInstance("SHA-256")
@@ -47,9 +38,12 @@ case class CipherText(bytes: IArray[Byte]):
     case _ ⇒ false
   override def toString: String =
     s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
+  def isEmpty: Boolean = bytes.isEmpty
+  def nonEmpty: Boolean = bytes.nonEmpty
+  def length: Int = bytes.length
 
 object CipherText:
-  val Empty: CipherText = CipherText(IArray.emptyByteIArray)
+  val empty: CipherText = CipherText(IArray.emptyByteIArray)
   def apply(array: IArray[Byte], arrays: IArray[Byte]*): CipherText =
     new CipherText(IArray.join(array, arrays*))
   def unapplySeq(cipherText: CipherText): Option[Seq[IArray[Byte]]] =
@@ -65,45 +59,38 @@ object CipherText:
 trait Encrypt[F[_]]:
   def apply(plainText: PlainText): F[CipherText]
 object Encrypt:
-  /** Creates an `Encrypt[F]` instance representing an encryption operation that
-    * always produces an empty `CipherText` wrapped in the provided effect type
-    * `F`.
-    *
-    * @param functor
-    *   Implicit evidence for the existence of a `Functor[F]`, which provides
-    *   operations for working within the effect type `F`.
-    * @return
-    *   An instance of `Encrypt[F]` that encrypts any input `PlainText` into an
-    *   empty `CipherText` wrapped in the effect type `F`.
-    */
-  def empty[F[_]](using functor: Functor[F]): Encrypt[F] =
-    _ => CipherText.Empty.pure
-
-  /** Convenience constructor for synchronous encryption */
-  def fromFunction(f: PlainText => CipherText): Encrypt[Id] =
-    (plainText: PlainText) => f(plainText)
+  /**
+   * Creates an instance of `Encrypt` for a given effect type, where encryption
+   * produces an empty `CipherText` wrapped in the effect.
+   *
+   * @tparam F The effect type wrapper that determines how the encryption result
+   *           is represented and executed.
+   * @return An instance of `Encrypt` that always produces an empty `CipherText`
+   *         wrapped in the given effect type `F`.
+   */
+  def empty[F[_]: Functor]: Encrypt[F] =
+    _ => CipherText.empty.pure
 
   /** Convenience constructor for effectful encryption in any F */
   def lift[F[_]](encrypt: PlainText => F[CipherText]): Encrypt[F] =
     (plainText: PlainText) => encrypt(plainText)
 
-  /** Lifts a function that transforms `PlainText` to a `Try[CipherText]` into
-    * an `Encrypt` instance wrapped in the effect type `F`. The lifting process
-    * embeds the computation into the provided functor for handling effects.
-    *
-    * @param encrypt
-    *   The function that performs the transformation from `PlainText` to
-    *   `Try[CipherText]`.
-    * @param functor
-    *   Implicit evidence for the existence of a `Functor[F]`, which provides
-    *   operations for working within the effect type `F`.
-    * @return
-    *   An instance of `Encrypt[F]` that encapsulates the lifted encryption
-    *   operation.
-    */
-  def lift[F[_]](encrypt: PlainText => Try[CipherText])(using
-      functor: Functor[F]
-  ): Encrypt[F] = (plainText: PlainText) => encrypt(plainText).lift
+//  /** Lifts a function that transforms `PlainText` to a `Try[CipherText]` into
+//    * an `Encrypt` instance wrapped in the effect type `F`. The lifting process
+//    * embeds the computation into the provided functor for handling effects.
+//    *
+//    * @param encrypt
+//    *   The function that performs the transformation from `PlainText` to
+//    *   `Try[CipherText]`.
+//    * @param functor
+//    *   Implicit evidence for the existence of a `Functor[F]`, which provides
+//    *   operations for working within the effect type `F`.
+//    * @return
+//    *   An instance of `Encrypt[F]` that encapsulates the lifted encryption
+//    *   operation.
+//    */
+//  def lift[F[_]: Functor](encrypt: PlainText => Try[CipherText]): Encrypt[F] =
+//    (plainText: PlainText) => encrypt(plainText).lift
 
 /** Trait that provides decryption functionality for a given effect type `F[_]`.
   *
@@ -124,9 +111,7 @@ object Decrypt:
   )
   def lift[F[_]](decrypt: CipherText => F[PlainText]): Decrypt[F] =
     (cipherText: CipherText) => decrypt(cipherText)
-  def lift[F[_]](decrypt: CipherText => Try[PlainText])(using
-      functor: Functor[F]
-  ): Decrypt[F] =
+  def lift[F[_]: Functor](decrypt: CipherText => Try[PlainText]): Decrypt[F] =
     (cipherText: CipherText) => decrypt(cipherText).lift
 
 // Sign/Verify function types
@@ -156,17 +141,10 @@ given Codec[Nothing]:
     )
 
 // Syntax extensions
-extension [V: Codec, F[_]](value: V)
-  def encrypted(using
-      encrypt: Encrypt[F],
-      functor: Functor[F]
-  ): F[Encrypted[V]] =
+extension [F[_]: {Functor, Encrypt}, V: Codec](value: V)
+  def encrypted: Encrypted[F, V] =
     Encrypted.apply(value, Manifest.empty)
-
-  def encrypted(manifest: Manifest)(using
-      encrypt: Encrypt[F],
-      functor: Functor[F]
-  ): F[Encrypted[V]] =
+  def encrypted(manifest: Manifest): Encrypted[F, V] =
     Encrypted(value, manifest)
 
 extension (array: Array[Byte])

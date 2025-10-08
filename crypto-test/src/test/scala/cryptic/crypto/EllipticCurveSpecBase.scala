@@ -13,7 +13,7 @@ trait EllipticCurveSpecBase extends CryptoSpecBase:
   private val keyPair: KeyPair = EllipticCurve.newKeyPair()
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
-  override given encrypt: Encrypt[Id] = EllipticCurve.encrypt
+  override given encrypt: Encrypt[Try] = EllipticCurve.encrypt
   override given decrypt: Decrypt[Try] = EllipticCurve.decrypt
 
 class EllipticCurveChillSpec extends EllipticCurveSpecBase:

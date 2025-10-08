@@ -12,7 +12,7 @@ trait RsaSpecBase extends CryptoSpecBase:
   private val keyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
-  override given encrypt: Encrypt[Id] = Rsa.encrypt
+  override given encrypt: Encrypt[Try] = Rsa.encrypt
   override given decrypt: Decrypt[Try] = Rsa.decrypt
   override def toString: String = "RSAChill"
 

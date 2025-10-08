@@ -10,20 +10,22 @@ import scala.util.Try
   * Provides a mechanism to encrypt and decrypt data using public and private
   * keys following asymmetric cryptographic principles.
   */
-trait Asymmetric[E[_], D[_]]:
+trait Asymmetric[F[_]]:
+  
   def newCipher(mode: Int, key: Key): Cipher
 
-  given encrypt(using key: PublicKey, functor: Functor[E]): Encrypt[E] =
+  given encrypt(using key: PublicKey, functor: Functor[F]): Encrypt[F] =
     (plainText: PlainText) =>
-      Try(encrypt(plainText.bytes, key))
-        .map(e => CipherText(plainText.manifest, e))
+      Try:
+        val bytes = encrypt(plainText.bytes, key)
+        CipherText(plainText.manifest, bytes)
       .lift
 
   def encrypt(bytes: IArray[Byte], key: PublicKey): IArray[Byte] =
     val cipher: Cipher = newCipher(Cipher.ENCRYPT_MODE, key)
     cipher.doFinal(bytes.mutable).immutable
 
-  given decrypt(using key: PrivateKey, functor:Functor[D]): Decrypt[D] =
+  given decrypt(using key: PrivateKey, functor:Functor[F]): Decrypt[F] =
     (cipherText: CipherText) => {
       Try:
         val IArray(manifest, bytes) = cipherText.split

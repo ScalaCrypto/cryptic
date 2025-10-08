@@ -47,19 +47,20 @@ object Aes extends Symmetric:
 
   given encrypt(using
       passphrase: Passphrase
-  ): Encrypt[Id] = Encrypt.fromFunction((plainText: PlainText) =>
-    val salt = Salt(saltLength)
-    val key = keygen(passphrase, salt)
-    val iv = newIv()
-    val ivSpec = paramSpec(iv)
-    val cipherText = encrypt(plainText.bytes, key, ivSpec)
-    CipherText(
-      plainText.manifest,
-      salt.bytes,
-      iv.immutable,
-      cipherText
-    )
-  )
+  ): Encrypt[Try] =
+    (plainText: PlainText) =>
+      Try:
+        val salt = Salt(saltLength)
+        val key = keygen(passphrase, salt)
+        val iv = newIv()
+        val ivSpec = paramSpec(iv)
+        val cipherText = encrypt(plainText.bytes, key, ivSpec)
+        CipherText(
+          plainText.manifest,
+          salt.bytes,
+          iv.immutable,
+          cipherText
+        )
 
   given decrypt(using
       passphrase: Passphrase

@@ -2,3 +2,4 @@
 addSbtPlugin("com.lightbend.paradox" % "sbt-paradox" % "0.10.7")
 //addSbtPlugin("ch.epfl.scala" % "sbt-scala3-migrate" % "0.7.2")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.5")
+addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.11.2")

@@ -21,12 +21,28 @@ lazy val javaBaseOpens = Seq(
   "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
   "--add-opens=java.sql/java.sql=ALL-UNNAMED"
 )
-
+inThisBuild(
+  List(
+    organization := "io.scalacrypto",
+    homepage := Some(url("https://github.com/scalacrypto/cryptic")),
+    // Alternatively License.Apache2 see https://github.com/sbt/librarymanagement/blob/develop/core/src/main/scala/sbt/librarymanagement/License.scala
+    licenses := List(
+      "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
+    ),
+    developers := List(
+      Developer(
+        "cyberzac",
+        "Martin Zachrison",
+        "zac@cyberzac.se",
+        url("https://github.com/cyberzac")
+      )
+    )
+  )
+)
 lazy val commonSettings =
   Seq(
     organization := "scalacrypto",
     scalaVersion := "3.7.2",
-    version := "0.8.0-SNAPSHOT",
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := true,
     Compile / packageBin / publishArtifact := true,

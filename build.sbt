@@ -21,6 +21,30 @@ lazy val javaBaseOpens = Seq(
   "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
   "--add-opens=java.sql/java.sql=ALL-UNNAMED"
 )
+
+// Github Actions
+// sbt-github-actions defaults to using JDK 8 for testing and publishing.
+// The following adds JDK 17 for testing.
+ThisBuild / githubWorkflowJavaVersions += JavaSpec.temurin("17")
+ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
+ThisBuild / githubWorkflowPublishTargetBranches :=
+  Seq(
+    RefPredicate.StartsWith(Ref.Tag("v")),
+    RefPredicate.Equals(Ref.Branch("master"))
+  )
+ThisBuild / githubWorkflowPublish := Seq(
+  WorkflowStep.Sbt(
+    commands = List("ci-release"),
+    name = Some("Publish project"),
+    env = Map(
+      "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
+      "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
+      "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
+      "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
+    )
+  )
+)
+
 inThisBuild(
   List(
     organization := "io.scalacrypto.cryptic",

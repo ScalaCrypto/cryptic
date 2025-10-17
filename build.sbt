@@ -41,7 +41,7 @@ inThisBuild(
 lazy val commonSettings =
   Seq(
     scalaVersion := "3.7.2",
-    Compile / packageDoc / publishArtifact := false,
+    Compile / packageDoc / publishArtifact := true,
     Compile / packageSrc / publishArtifact := true,
     Compile / packageBin / publishArtifact := true,
     Test / publishArtifact := false,

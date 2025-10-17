@@ -25,7 +25,6 @@ inThisBuild(
   List(
     organization := "io.scalacrypto",
     homepage := Some(url("https://github.com/scalacrypto/cryptic")),
-    // Alternatively License.Apache2 see https://github.com/sbt/librarymanagement/blob/develop/core/src/main/scala/sbt/librarymanagement/License.scala
     licenses := List(
       "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")
     ),
@@ -41,7 +40,6 @@ inThisBuild(
 )
 lazy val commonSettings =
   Seq(
-    organization := "scalacrypto",
     scalaVersion := "3.7.2",
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := true,

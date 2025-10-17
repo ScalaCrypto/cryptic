@@ -11,14 +11,14 @@ import scala.util.Try
   * keys following asymmetric cryptographic principles.
   */
 trait Asymmetric[F[_]]:
-  
+
   def newCipher(mode: Int, key: Key): Cipher
 
   given encrypt(using key: PublicKey, functor: Functor[F]): Encrypt[F] =
     (plainText: PlainText) =>
       Try:
         val bytes = encrypt(plainText.bytes, key)
-        CipherText(plainText.manifest, bytes)
+        CipherText(plainText.aad, bytes)
       .lift
 
   def encrypt(bytes: IArray[Byte], key: PublicKey): IArray[Byte] =
@@ -28,9 +28,9 @@ trait Asymmetric[F[_]]:
   given decrypt(using key: PrivateKey, functor:Functor[F]): Decrypt[F] =
     (cipherText: CipherText) => {
       Try:
-        val IArray(manifest, bytes) = cipherText.split
+        val IArray(aad, bytes) = cipherText.split
         val text = decrypt(bytes, key)
-        PlainText(text, manifest)
+        PlainText(text, aad)
       .lift
     }
 

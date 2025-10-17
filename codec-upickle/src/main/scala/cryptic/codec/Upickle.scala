@@ -19,7 +19,7 @@ import scala.util.Try
   */
 object Upickle extends Codec.Companion:
   given codec: [V: {Writer, Reader}] => Codec[V]:
-    def encode(v: V, manifest: Manifest): PlainText = PlainText(write(v), manifest)
+    def encode(v: V, aad: AAD): PlainText = PlainText(write(v), aad)
     def decode(pt: PlainText): Try[V] = Try(
       read[V](pt.bytes.mutable)
     )

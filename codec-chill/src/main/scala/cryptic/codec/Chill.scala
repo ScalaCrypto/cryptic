@@ -23,8 +23,8 @@ object Chill extends Codec.Companion:
     KryoPool.withByteArrayOutputStream(10, new ScalaKryoInstantiator())
 
   given codec: [V] => Codec[V]:
-    def encode(v: V, manifest: Manifest): PlainText = PlainText(
-      kryoPool.toBytesWithClass(v).immutable, manifest
+    def encode(v: V, aad: AAD): PlainText = PlainText(
+      kryoPool.toBytesWithClass(v).immutable, aad
     )
     def decode(pt: PlainText): Try[V] = Try(
       kryoPool.fromBytes(pt.bytes.mutable).asInstanceOf[V]

@@ -24,11 +24,11 @@ object RsaAes:
         val iv = Aes.newIv()
         val ivSpec = Aes.paramSpec(iv)
         val encryptedText =
-          Aes.encrypt(plainText.bytes, aesKey, ivSpec)
+          Aes.encrypt(plainText.bytes, plainText.aad, aesKey, ivSpec)
         val encryptedAesKey =
           Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
         CipherText(
-          plainText.manifest,
+          plainText.aad,
           iv.immutable,
           encryptedAesKey,
           encryptedText
@@ -37,9 +37,9 @@ object RsaAes:
   given decrypt(using privateKey: PrivateKey): Decrypt[Try] =
     (cipherText: CipherText) =>
       Try:
-        val IArray(manifest, iv, keyBytes, textBytes) = cipherText.split
+        val IArray(aad, iv, keyBytes, textBytes) = cipherText.split
         val aesKeyBytes = Rsa.decrypt(keyBytes, privateKey)
         val aesKey = Aes.key(aesKeyBytes)
         val ivSpec = Aes.paramSpec(iv.mutable)
-        val text = Aes.decrypt(textBytes, aesKey, ivSpec)
-        PlainText(text, manifest)
+        val text = Aes.decrypt(textBytes, aad, aesKey, ivSpec)
+        PlainText(text, aad)

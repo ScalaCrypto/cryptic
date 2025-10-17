@@ -23,7 +23,7 @@ lazy val javaBaseOpens = Seq(
 )
 inThisBuild(
   List(
-    organization := "io.scalacrypto",
+    organization := "io.scalacrypto.cryptic",
     homepage := Some(url("https://github.com/scalacrypto/cryptic")),
     licenses := List(
       "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")

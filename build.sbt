@@ -25,7 +25,7 @@ lazy val javaBaseOpens = Seq(
 // Github Actions
 // sbt-github-actions defaults to using JDK 8 for testing and publishing.
 // The following adds JDK 17 for testing.
-ThisBuild / githubWorkflowJavaVersions += JavaSpec.temurin("25")
+ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("25"))
 ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches :=
   Seq(

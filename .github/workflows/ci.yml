@@ -24,21 +24,13 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         scala: [3.7.2]
-        java: [zulu@8, temurin@25]
+        java: [temurin@25]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Setup Java (zulu@8)
-        if: matrix.java == 'zulu@8'
-        uses: actions/setup-java@v5
-        with:
-          distribution: zulu
-          java-version: 8
-          cache: sbt
 
       - name: Setup Java (temurin@25)
         if: matrix.java == 'temurin@25'
@@ -74,21 +66,13 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         scala: [3.7.2]
-        java: [zulu@8]
+        java: [temurin@25]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Setup Java (zulu@8)
-        if: matrix.java == 'zulu@8'
-        uses: actions/setup-java@v5
-        with:
-          distribution: zulu
-          java-version: 8
-          cache: sbt
 
       - name: Setup Java (temurin@25)
         if: matrix.java == 'temurin@25'

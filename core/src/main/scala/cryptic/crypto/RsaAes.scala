@@ -17,27 +17,24 @@ import scala.util.Try
   *   Generates an RSA key pair with the specified size.
   */
 object RsaAes:
-  given encrypt(using
-      publicKey: PublicKey
-  ): Encrypt =
+  given encrypt(using publicKey: PublicKey): Encrypt[Try] =
     (plainText: PlainText) =>
-      val aesKey = Aes.keygen()
-      val iv = Aes.newIv()
-      val ivSpec = Aes.paramSpec(iv)
-      val encryptedText =
-        Aes.encrypt(plainText.bytes, aesKey, ivSpec)
-      val encryptedAesKey =
-        Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
-      CipherText(
-        plainText.manifest,
-        iv.immutable,
-        encryptedAesKey,
-        encryptedText
-      )
+      Try:
+        val aesKey = Aes.keygen()
+        val iv = Aes.newIv()
+        val ivSpec = Aes.paramSpec(iv)
+        val encryptedText =
+          Aes.encrypt(plainText.bytes, aesKey, ivSpec)
+        val encryptedAesKey =
+          Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
+        CipherText(
+          plainText.manifest,
+          iv.immutable,
+          encryptedAesKey,
+          encryptedText
+        )
 
-  given decrypt(using
-      privateKey: PrivateKey
-  ): Decrypt =
+  given decrypt(using privateKey: PrivateKey): Decrypt[Try] =
     (cipherText: CipherText) =>
       Try:
         val IArray(manifest, iv, keyBytes, textBytes) = cipherText.split

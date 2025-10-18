@@ -5,12 +5,13 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
-import scala.util.Success
+import scala.util.{Success, Try}
 
 class RsaAesSpec extends AnyFlatSpec with Matchers:
   import cryptic.codec.default.given
 
   import RsaAes.{*, given}
+  given f:Functor[Try] = Functor.tryFunctor
 
   val keyPair: KeyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
@@ -25,5 +26,5 @@ class RsaAesSpec extends AnyFlatSpec with Matchers:
       case x ⇒ fail(s"does not decrypt: $x")
 
   "RsaAes" should "hide plaintext" in:
-    new String(text.encrypted.bytes.mutable)
+    new String(text.encrypted.bytes.get.mutable)
       .contains(text.getBytes()) shouldBe false

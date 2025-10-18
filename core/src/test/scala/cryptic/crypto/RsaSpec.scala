@@ -3,12 +3,13 @@ package crypto
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.TryValues
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import javax.crypto.IllegalBlockSizeException
-import scala.util.Success
+import scala.util.{Failure, Success, Try}
 
-class RsaSpec extends AnyFlatSpec with Matchers:
+class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.codec.default.given
   import Rsa.{*, given}
   val keyPair: KeyPair = Rsa.newKeyPair(2048)
@@ -25,9 +26,10 @@ class RsaSpec extends AnyFlatSpec with Matchers:
       case x ⇒ fail(s"does not decrypt: $x")
 
   "RSA" should "fail on large data" in:
-    intercept[IllegalBlockSizeException]:
-      ("secret" * 1000).encrypted
+    ("secret" * 1000).encrypted.cipherText.failure.exception shouldBe a[
+      IllegalBlockSizeException
+    ]
 
   "RSA" should "hide plaintext" in:
-    new String(text.encrypted.bytes.mutable)
+    new String(text.encrypted.bytes.get.mutable)
       .contains(text.getBytes()) shouldBe false

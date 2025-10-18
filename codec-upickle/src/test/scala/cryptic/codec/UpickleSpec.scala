@@ -3,6 +3,7 @@ package codec
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.TryValues
 import upickle.default.{*, given}
 
 import scala.util.{Success, Try}
@@ -25,7 +26,7 @@ case class User(id: Long, alias: String, name: PersonName, email: EmailAddress)
 
 object User:
   given rw: ReadWriter[User] = macroRW[User]
-class UpickleSpec extends AnyFlatSpec with Matchers:
+class UpickleSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.codec.Upickle.{*, given}
   val user: User = User(
     id = 1,
@@ -44,9 +45,10 @@ class UpickleSpec extends AnyFlatSpec with Matchers:
     val actual: Try[User] = plainText.decoded
     actual shouldEqual Success(user)
   "Upickle codec" should "be usable by the encoder/decoder" in:
-    import cryptic.crypto.Reverse.*
-    import cryptic.crypto.Reverse.given
+    import cryptic.crypto.demo.Reverse.*
+    import cryptic.crypto.demo.Reverse.given
+    import cryptic.Functor.tryFunctor
     val encrypted = user.encrypted
-    encrypted.bytes shouldBe write(user).getBytes.reverse // Reverse...
+    encrypted.bytes.success.value shouldBe write(user).getBytes.reverse // Reverse...
     val decrypted = encrypted.decrypted
-    decrypted shouldBe Success(user)
+    decrypted.success.value shouldBe user

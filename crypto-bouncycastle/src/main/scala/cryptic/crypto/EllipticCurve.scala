@@ -9,12 +9,21 @@ import org.bouncycastle.util.encoders.Hex
 import java.security.*
 import java.security.spec.ECGenParameterSpec
 import javax.crypto.Cipher
+import scala.util.Try
 
-/** Elliptic Curve Integrated Encryption Scheme depends on private and public
-  * keys. The public key should be given for encryption and the private key for
-  * decryption
+/** Elliptic Curve (ECIES) asymmetric crypto built on Bouncy Castle.
+  *
+  * Provides `Encrypt[Try]`/`Decrypt[Try]` via the shared `Asymmetric` utilities, using
+  * the BC provider and a pre-configured `IESParameterSpec` for ECIES.
+  *
+  * Notes:
+  * - Requires a public key for encryption and a private key for decryption to be in scope.
+  * - Uses the Bouncy Castle provider (added at static initialization) and `ECIES` cipher.
+  * - The current setup initializes the key pair generator for `secp256r1`.
+  * - The `Manifest` is carried alongside the payload bytes inside `CipherText` and restored
+  *   into `PlainText` during decryption; ECIES itself does not interpret the manifest.
   */
-object EllipticCurve extends Asymmetric:
+object EllipticCurve extends Asymmetric[Try]:
   Security.addProvider(new BouncyCastleProvider())
   private val secureRandom = new SecureRandom()
   private val generator: KeyPairGenerator = KeyPairGenerator.getInstance("EC")

@@ -1,6 +1,5 @@
 package app
 
-import cryptic.crypto.Aes.{*, given}
 import org.scalatest.TryValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -15,25 +14,25 @@ class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
   given publicKey: PublicKey = keyPair.getPublic
   given privateKey: PrivateKey = keyPair.getPrivate
   val clear = "secret"
-  val encrypted: Encrypted[String] = clear.encrypted
+  val encrypted: Encrypted[Try, String] = clear.encrypted
   val decrypted: Try[String] = encrypted.decrypted
 
   "Cryptic" should "encrypt" in:
-    encrypted.bytes should not equal clear.getBytes
+    encrypted.bytes.success should not equal Success(clear.getBytes)
 
   "Cryptic" should "decrypt" in:
     decrypted.success shouldEqual Success(clear)
 
-  case class Person(id: Long, email: Encrypted[String])
+  case class Person(id: Long, email: Encrypted[Try, String])
 
   val id = 17
   val email = "martin@scalacrypto.org"
   val person: Person = Person(id, email.encrypted)
 
   "Email" should "be encrypted" in:
-    person.email.bytes.unsafeArray should not equal email.getBytes()
-    person.email.contains(email) shouldBe true
-    person.toString should startWith("Person(17,Encrypted(CipherText(0x")
+    person.email.bytes.success should not equal Success(email.getBytes())
+    person.email.contains(email) shouldBe Success(true)
+    person.toString should startWith("Person(17,Encrypted(Success(CipherText(0x")
 
   "Email" should "be decrypted" in:
     person.email.decrypted.success shouldEqual Success(email)

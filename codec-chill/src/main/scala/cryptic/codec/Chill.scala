@@ -5,17 +5,18 @@ import com.twitter.chill.{KryoPool, ScalaKryoInstantiator}
 
 import scala.util.Try
 
-/** Object Chill provides encoding and decoding functionality using Kryo
-  * serialization. It contains a Kryo pool and given methods for encoding and
-  * decoding.
+/** Kryo-based Codec instances for arbitrary Scala values.
   *
-  * The codec method creates a new instance of Codec[V].
+  * Provides a small Kryo pool and a generic `given Codec[V]` that serializes values
+  * using Twitter Chill/Kryo.
   *
-  * The encode method converts a value of type V to a PlainText using Kryo
-  * serialization.
-  *
-  * The decode method converts a PlainText back to a value of type V using Kryo
-  * serialization.
+  * Notes:
+  * - Encoding writes the Kryo bytes directly into `PlainText.bytes` and preserves the
+  *   provided `Manifest` unchanged; the manifest is not interpreted by the codec.
+  * - Decoding reads the `PlainText.bytes` back using the same Kryo configuration and
+  *   ignores the manifest.
+  * - This codec is binary and not human-readable. It requires consistent classpath
+  *   across encryption/decryption boundaries.
   */
 object Chill extends Codec.Companion:
   private val kryoPool =

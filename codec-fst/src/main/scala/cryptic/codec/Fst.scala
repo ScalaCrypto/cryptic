@@ -5,24 +5,16 @@ import org.nustaq.serialization.FSTConfiguration
 
 import scala.util.Try
 
-/** The `Fst` object provides a mechanism for encoding and decoding using the
-  * FST (Fast Serialization) library.
+/** FST (Fast Serialization) based Codec for arbitrary values.
   *
-  * It contains a default FST configuration and a given `Codec` for generic
-  * types.
+  * Uses a shared `FSTConfiguration` to encode values to bytes and decode them back.
   *
-  * Members:
-  *   - `fst`: A default FST configuration instance created using
-  *     `FSTConfiguration.createDefaultConfiguration()`.
-  *
-  * Methods:
-  *   - `codec[V]`: A given that provides a `Codec` implementation for type `V`.
-  *     This implementation includes `encode` and `decode` methods.
-  *     - The `encode` method converts a value of type `V` into `PlainText` by
-  *       encoding it to a byte array using the FST configuration instance.
-  *     - The `decode` method attempts to convert a `PlainText` instance back
-  *       into a value of type `V` by decoding the byte array using the FST
-  *       configuration instance, wrapped in a `Try`.
+  * Notes:
+  * - Encoding stores FST-produced bytes into `PlainText.bytes` and passes the given
+  *   `Manifest` through without interpretation.
+  * - Decoding reads from `PlainText.bytes`; the manifest is ignored by this codec.
+  * - Binary wire format; not human-readable. Ensure compatible classpaths and FST
+  *   configuration on both ends.
   */
 object Fst extends Codec.Companion:
   private val fst: FSTConfiguration =

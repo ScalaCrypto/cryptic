@@ -5,8 +5,8 @@ lazy val chill = ("com.twitter" % "chill" % "0.10.0")
   .cross(CrossVersion.for3Use2_13)
   .withSources()
 lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
-lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.2.1").withSources()
-lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.81").withSources()
+lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.3.2").withSources()
+lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.82").withSources()
 
 lazy val javaBaseOpens = Seq(
   "--add-opens=java.base/java.lang=ALL-UNNAMED",
@@ -64,7 +64,12 @@ inThisBuild(
 )
 lazy val commonSettings =
   Seq(
-    scalaVersion := "3.7.2",
+    scalaVersion := "3.7.3",
+    scalacOptions ++= Seq(
+      "-Xmax-inlines", "64",
+      "-Yexplicit-nulls",
+      "-Wsafe-init"
+    ),
     Compile / packageDoc / publishArtifact := true,
     Compile / packageSrc / publishArtifact := true,
     Compile / packageBin / publishArtifact := true,

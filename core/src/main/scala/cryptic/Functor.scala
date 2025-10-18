@@ -22,6 +22,7 @@ trait Functor[F[_]]:
     def recoverWith(pf: PartialFunction[Throwable, F[W]]): F[W]
   extension [V](t: Try[V]) def lift: F[V] = t.fold(failed, v => v.pure)
 
+/** Standard Functor instances for common Scala effect types (Id, Try, Future, Option, Either). */
 object Functor:
 
   given idFunctor: Functor[Id] with

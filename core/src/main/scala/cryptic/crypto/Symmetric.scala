@@ -12,13 +12,22 @@ import javax.crypto.spec.{
 import javax.crypto.{Cipher, KeyGenerator, SecretKey, SecretKeyFactory}
 import scala.util.Try
 
+/** Abstraction for symmetric cryptography (single shared secret key).
+  *
+  * Provides key derivation utilities, encryption/decryption helpers, and common
+  * parameters used by concrete algorithms (e.g., AES-GCM).
+  */
 trait Symmetric:
   import Symmetric.*
   export Symmetric.*
 
+  /** SecretKeyFactory algorithm used for PBKDF2 or similar derivation. */
   def factoryAlgorithm: String
+  /** JCA key algorithm name (e.g., "AES"). */
   def keyAlgorithm: String
+  /** Iteration count used when deriving keys from passphrases. */
   def keyspecIterationCount: Int
+  /** Derived key length in bits. */
   def keyspecLength: Int
 
   def newCipher(

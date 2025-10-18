@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import scala.util.Try
 import scala.util.Success
 
+/** Built-in Codec instances for common Scala types. */
 object default extends Codec.Companion:
   given optionCodec: [V: Codec] => Codec[Option[V]]:
     def encode(v: Option[V], manifest: Manifest): PlainText =

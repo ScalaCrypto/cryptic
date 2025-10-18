@@ -5,47 +5,72 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
 
+/** Identity type alias used to represent pure (non-effectful) values. */
 type Id[A] = A
+/** 32-byte SHA-256 hash represented as an immutable byte array. */
 type Hash = IArray[Byte]
+/** Digital signature bytes represented as an immutable byte array. */
 type Signature = IArray[Byte]
+/** Arbitrary metadata associated with PlainText encoding. */
 type Manifest = IArray[Byte]
 
+/** Utilities for working with Manifest metadata used during encoding. */
 object Manifest:
+  /** An empty manifest indicating no additional metadata. */
   val empty: Manifest = IArray.emptyByteIArray
 
+/** A UTF-8 agnostic container for unencrypted payload bytes and their encoding manifest. */
 case class PlainText(bytes: IArray[Byte], manifest: Manifest)
 
+/** Helpers and constructors for PlainText. */
 object PlainText:
+  /** A PlainText containing no bytes and no manifest. */
   val empty: PlainText = PlainText(IArray.emptyByteIArray)
+  /** Builds a PlainText with an empty manifest. */
   def apply(x: IArray[Byte]): PlainText = apply(x, Manifest.empty)
+  /** Builds a PlainText with explicit payload bytes and manifest. */
   def apply(x: IArray[Byte], manifest: Manifest): PlainText =
     new PlainText(x, manifest)
+  /** UTF-8 encodes a string into PlainText with an empty manifest. */
   def apply(x: String): PlainText = apply(x, Manifest.empty)
+  /** UTF-8 encodes a string into PlainText with a manifest. */
   def apply(x: String, manifest: Manifest): PlainText =
     apply(x.getBytes().immutable, manifest)
+  /** Encodes a value using its Codec and the provided manifest. */
   def encode[V: Codec](v: V, manifest: Manifest): PlainText =
     summon[Codec[V]].encode(v, manifest)
+  /** Computes the SHA-256 hash of the PlainText bytes. */
   def hash(plainText: PlainText): Hash =
     import java.security.MessageDigest
     val digest = MessageDigest.getInstance("SHA-256")
     digest.digest(plainText.bytes.mutable).immutable // Todo handle manifest?
 
+/** Encrypted payload bytes. The internal format may contain multiple concatenated segments. */
 case class CipherText(bytes: IArray[Byte]):
+  /** A mutable ByteBuffer view over the cipher bytes. */
   def buffer: ByteBuffer = ByteBuffer.wrap(bytes.mutable)
+  /** Splits the bytes into the concatenated segments written via IArray.join. */
   def split: IArray[IArray[Byte]] = buffer.split
   override def equals(obj: scala.Any): Boolean = obj match
     case CipherText(other) ⇒ bytes.sameElements(other)
     case _ ⇒ false
   override def toString: String =
     s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
+  /** True if there are no bytes. */
   def isEmpty: Boolean = bytes.isEmpty
+  /** True if there is at least one byte. */
   def nonEmpty: Boolean = bytes.nonEmpty
+  /** Length of the underlying byte array. */
   def length: Int = bytes.length
 
+/** Helpers and constructors for CipherText. */
 object CipherText:
+  /** A zero-length ciphertext. */
   val empty: CipherText = CipherText(IArray.emptyByteIArray)
+  /** Concatenates one or more segments into a single CipherText using IArray.join. */
   def apply(array: IArray[Byte], arrays: IArray[Byte]*): CipherText =
     new CipherText(IArray.join(array, arrays*))
+  /** Extractor that yields all concatenated segments written into this CipherText. */
   def unapplySeq(cipherText: CipherText): Option[Seq[IArray[Byte]]] =
     Option(cipherText.split)
 
@@ -141,36 +166,48 @@ given Codec[Nothing]:
     )
 
 // Syntax extensions
+/** Enriches any value with .encrypted given Encrypt and Functor instances. */
 extension [F[_]: {Functor, Encrypt}, V: Codec](value: V)
+  /** Encrypts this value using the empty manifest. */
   def encrypted: Encrypted[F, V] =
     Encrypted.apply(value, Manifest.empty)
+  /** Encrypts this value using the provided manifest. */
   def encrypted(manifest: Manifest): Encrypted[F, V] =
     Encrypted(value, manifest)
 
+/** Unsafe conversions between mutable and immutable byte/char arrays. */
 extension (array: Array[Byte])
+  /** Immutable IArray view over a Byte array. */
   def immutable: IArray[Byte] = IArray.unsafeFromArray(array)
 
 extension (array: IArray[Byte])
+  /** Mutable Array view over an IArray[Byte]. */
   def mutable: Array[Byte] = IArray.wrapByteIArray(array).unsafeArray
 extension (array: IArray[Char])
+  /** Mutable Array view over an IArray[Char]. */
   def mutable: Array[Char] = IArray.wrapCharIArray(array).unsafeArray
 
+/** Binary encoding helpers for length-prefixed concatenation of byte arrays. */
 extension (buffer: ByteBuffer)
+  /** Reads a length-prefixed byte array from this buffer. */
   def nextBytes(): Array[Byte] =
     val length = buffer.getInt()
     val bytes =
       if length == 0 then Array.emptyByteArray else new Array[Byte](length)
     buffer.get(bytes)
     bytes
+  /** Writes a length-prefixed byte array into this buffer. */
   def nextBytes(bytes: Array[Byte]): ByteBuffer =
     buffer.putInt(bytes.length)
     buffer.put(bytes)
+  /** Reads N length-prefixed arrays written by IArray.join. */
   def split: IArray[IArray[Byte]] =
     val count = buffer.getInt()
     val arrays = Array.ofDim[IArray[Byte]](count)
     for i <- 0 until count do arrays(i) = buffer.nextBytes().immutable
     IArray.unsafeFromArray(arrays)
 
+/** Concatenates one or more byte arrays with a simple length-prefixed format. */
 extension (iarrayObject: IArray.type)
   def join(array: IArray[Byte], arrays: IArray[Byte]*): IArray[Byte] =
     val count = 1 + arrays.length

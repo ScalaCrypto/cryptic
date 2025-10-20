@@ -53,28 +53,48 @@ object CipherText:
   def unapplySeq(cipherText: CipherText): Option[Seq[IArray[Byte]]] =
     Option(cipherText.split)
 
+/*
 type Encrypt = PlainText => CipherText
 object Encrypt:
   val Empty: Encrypt = _ ⇒ CipherText.Empty
 
-type Decrypt = CipherText => Try[PlainText]
+type Decrypt = (Crypto[?]) ?=> CipherText => Try[PlainText]
 object Decrypt:
   val Empty: Decrypt = _ ⇒ Success(PlainText.empty)
 
 type Sign = PlainText => Array[Byte]
 type Verify = Array[Byte] => Boolean
+ */
+trait Encrypt[K]:
+  def encrypt(plainText: PlainText)(using K): CipherText
+trait Decrypt[K]:
+  def decrypt(cipherText: CipherText)(using K): Try[PlainText]
+trait Sign[K]:
+  def sign(plainText: PlainText)(using K): Signature
+trait Verify[K]:
+  def verify(signature: Signature, plainText: PlainText)(using K): Boolean
 
-trait Codec[V]:
+sealed trait Crypto[EK, DK] extends Encrypt[EK] with Decrypt[DK]
+object Crypto:
+  trait Symmetric[Key] extends Crypto[Key, Key]
+  trait Asymmetric[PublicKey, PrivateKey]
+      extends Crypto[PublicKey, PrivateKey]
+      with Sign[PrivateKey]
+      with Verify[PublicKey]
+
+sealed trait Encode[V]:
   def encode(v: V, manifest: Manifest = Manifest.empty): PlainText
+sealed trait Decode[V]:
   def decode(plainText: PlainText): Try[V]
-
+trait Codec[V] extends Encode[V] with Decode[V]
+/*
 object Codec:
   trait Companion:
     extension [V: Codec](v: V)
       def encoded: PlainText = summon[Codec[V]].encode(v)
     extension [V: Codec](plainText: PlainText)
       def decoded: Try[V] = summon[Codec[V]].decode(plainText)
-
+ */
 given Codec[Nothing]:
   def encode(v: Nothing, manifest: Manifest): PlainText =
     PlainText(IArray.emptyByteIArray, manifest)
@@ -85,10 +105,11 @@ given Codec[Nothing]:
       )
     )
 
-extension [V: Codec](value: V)
-  def encrypted(using encrypt: Encrypt): Encrypted[V] =
+extension [K: Encrypt, V: Encode](value: V)
+  def encrypted: K ?=> Encrypted[V] = {
     Encrypted(value, Manifest.empty)
-  def encrypted(manifest: Manifest)(using encrypt: Encrypt): Encrypted[V] =
+  }
+  def encrypted(manifest: Manifest): K ?=> Encrypted[V] =
     Encrypted(value, manifest)
 
 extension (array: Array[Byte])
@@ -127,7 +148,7 @@ extension (iarrayObject: IArray.type)
       case (buffer, bytes) => buffer.nextBytes(bytes.mutable)
     buffer.array().immutable
 
-sealed abstract class Cryptic[V: Codec]:
+sealed abstract class Cryptic[V]:
   import Cryptic.*
 
   /** Decrypts the data using the provided given decryption mechanism.
@@ -138,7 +159,7 @@ sealed abstract class Cryptic[V: Codec]:
     *   Returns a Try instance containing the decrypted value of type V if
     *   successful, or a Failure if the decryption fails.
     */
-  def decrypted(using decrypt: Decrypt): Try[V]
+  def decrypted[K]: Decrypt[K] ?=> Try[V]
 
   /** Attempts to retrieve the decrypted value. If decryption fails or if the
     * value is not present, it returns the provided default value.
@@ -150,9 +171,9 @@ sealed abstract class Cryptic[V: Codec]:
     * @return
     *   the decrypted value if successful, otherwise the default value
     */
-  @inline final def decryptedOrElse[W >: V](default: => W)(using
-      decrypt: Decrypt
-  ): W = decrypted.getOrElse(default)
+  @inline final def decryptedOrElse[K, W >: V](
+      default: => W
+  ): Decrypt[K] ?=> W = decrypted.getOrElse(default)
 
   /** Transforms the current operation by applying a function to its result.
     *
@@ -165,7 +186,7 @@ sealed abstract class Cryptic[V: Codec]:
     *   A new operation representing the transformation of the original
     *   operation.
     */
-  @inline final def map[W: Codec](f: V => W): Operation[W] =
+  @inline final def map[W: Encode](f: V => W): Decode[V] ?=> Operation[W] =
     Mapped(this, f)
 
   /** Transforms this `Operation[V]` into an `Operation[W]` by applying the
@@ -179,7 +200,9 @@ sealed abstract class Cryptic[V: Codec]:
     *   an `Operation[W]` resulting from applying the function `f` to each value
     *   of type `V` produced by this `Operation`
     */
-  @inline final def flatMap[W: Codec](f: V => Cryptic[W]): Operation[W] =
+  @inline final def flatMap[W: Encode](
+      f: V => Cryptic[W]
+  ): Decode[V] ?=> Operation[W] =
     FlatMapped(this, f)
 
   /*
@@ -231,8 +254,8 @@ sealed abstract class Cryptic[V: Codec]:
     *   A new Operation instance representing the original or the alternative
     *   operation.
     */
-  @inline final def orElse[W >: V: Codec](
-      alternative: => Cryptic[W]
+  @inline final def orElse[W >: V: Encode](
+      alternative: Cryptic[W]
   ): Operation[W] =
     new OrElsed(this, alternative)
 object Cryptic:
@@ -246,26 +269,25 @@ object Cryptic:
     CipherText
   }
   import Encrypted.*
-  sealed abstract class Operation[V: Codec] extends Cryptic[V]:
-    def run(using encrypt: Encrypt, decrypt: Decrypt): Try[Encrypted[V]]
-  sealed abstract class BinaryOperation[V: Codec, W: Codec]
-      extends Operation[W]:
-    override def run(using
-        encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Try[Encrypted[W]] =
-      decrypted.map(w => Encrypted(encrypt(summon[Codec[W]].encode(w))))
-  final case class Mapped[V: Codec, W: Codec](
+  sealed abstract class Operation[V] extends Cryptic[V]:
+    def run[DK: Decrypt, EK: Encrypt]: Try[Encrypted[V]]
+  sealed abstract class BinaryOperation[V, W] extends Operation[W]:
+    override def run[EK: Encrypt, DK: Decrypt]
+        : (EK, DK, Encode[W]) ?=> Try[Encrypted[W]] =
+      decrypted.map(w =>
+        Encrypted(summon[Encrypt[EK]].encrypt(summon[Encode[W]].encode(w)))
+      )
+  final case class Mapped[V: Decode, W: Encode](
       src: Cryptic[V],
       f: V => W
   ) extends BinaryOperation[V, W]:
-    override def decrypted(using decrypt: Decrypt): Try[W] =
+    override def decrypted[DK: Decrypt]: Decrypt[DK] ?=> Try[W] =
       src.decrypted.map(f)
-  final case class FlatMapped[V: Codec, W: Codec](
+  final case class FlatMapped[V: Decode, W: Encode](
       src: Cryptic[V],
       f: V => Cryptic[W]
   ) extends BinaryOperation[V, W]:
-    override def decrypted(using decrypt: Decrypt): Try[W] =
+    override def decrypted[DK: Decrypt]: Decrypt[DK] ?=> Try[W] =
       src.decrypted.flatMap[W](v => f(v).decrypted)
   /*
   final case class Flattened[V : Codec, W : Codec](src: Cryptic[V])(using ev: V <:< Cryptic[W])
@@ -275,14 +297,13 @@ object Cryptic:
     override def decrypted(using decrypt: Decrypt): Try[W] =
       src.decrypted.flatMap(v => ev(v).decrypted)
    */
-  final case class Filtered[V: Codec](src: Cryptic[V], pred: V => Boolean)
+  final case class Filtered[V](src: Cryptic[V], pred: V => Boolean)
       extends Operation[V]:
-    override def run(using
-        encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Try[Encrypted[V]] = src.decrypted.map[Encrypted[V]]: v =>
-      if pred(v) then v.encrypted else empty[V]
-    override def decrypted(using decrypt: Decrypt): Try[V] =
+    override def run[EK: Encrypt, DK: Decrypt]
+        : (EK, DK, Encode[V]) ?=> Try[Encrypted[V]] =
+      src.decrypted.map: v =>
+        if pred(v) then v.encrypted else empty[V]
+    override def decrypted[DK: Decrypt]: Decrypt[DK] ?=> Try[V] =
       src.decrypted.flatMap: v =>
         if pred(v) then Success(v)
         else
@@ -291,19 +312,17 @@ object Cryptic:
               "decrypted called on filtered empty"
             )
           )
-  final case class Collected[V: Codec, W: Codec](
+  final case class Collected[V, W](
       src: Cryptic[V],
       pf: PartialFunction[V, W]
   ) extends BinaryOperation[V, W]:
-    override def run(using
-        encrypt: Encrypt,
-        decrypt: Decrypt
-    ): Try[Encrypted[W]] =
+    override def run[EK: Encrypt, DK: Decrypt]
+        : (EK, DK, Encode[W]) ?=> Try[Encrypted[W]] =
       src.decrypted match
         case Success(v) if pf.isDefinedAt(v) => Success(pf(v).encrypted)
         case Success(_)                      => Success(empty[W])
         case Failure(s)                      => Failure(s)
-    override def decrypted(using decrypt: Decrypt): Try[W] =
+    override def decrypted[DK: Decrypt]: Decrypt[DK] ?=> Try[W] =
       src.decrypted match
         case Success(v) if pf.isDefinedAt(v) => Success(pf(v))
         case Success(_) =>
@@ -313,11 +332,11 @@ object Cryptic:
             )
           )
         case Failure(e) => Failure(e)
-  final class OrElsed[V: Codec, W >: V: Codec](
+  final class OrElsed[V, W >: V: Encode](
       src: Cryptic[V],
       alternative: => Cryptic[W]
   ) extends BinaryOperation[V, W]:
-    override def decrypted(using decrypt: Decrypt): Try[W] =
+    override def decrypted[DK: Decrypt]: Decrypt[DK] ?=> Try[W] =
       src.decrypted match
         case r @ Success(_) => r
         case Failure(_)     => alternative.decrypted
@@ -329,7 +348,7 @@ object Cryptic:
   * @tparam V
   *   The type of the value being encrypted, requiring a given `Codec` instance.
   */
-case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
+case class Encrypted[V](cipherText: CipherText) extends Cryptic[V]:
 
   /** Returns the byte array representation of the cipher text.
     *
@@ -361,7 +380,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @return
     *   True if the value is contained, false otherwise.
     */
-  @inline final def contains(value: V)(using decrypt: Decrypt): Boolean =
+  @inline final def contains[K: Decrypt](value: V): (K, Decode[V]) ?=> Boolean =
     !isEmpty && decrypted == Try(value)
 
   /** Checks if there exists an element in the value that satisfies the
@@ -377,9 +396,9 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   A Boolean value that is true if the predicate holds for at least one
     *   element, false otherwise.
     */
-  @inline final def exists(p: V => Boolean)(using
-      decrypt: Decrypt
-  ): Boolean =
+  @inline final def exists[K: Decrypt](
+      p: V => Boolean
+  ): (K, Decode[V]) ?=> Boolean =
     !isEmpty && decrypted.map(p).getOrElse(false)
 
   /** Tests whether a predicate holds for all elements after decryption.
@@ -392,9 +411,9 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   true if the container is empty or if the predicate holds for all
     *   decrypted elements, otherwise false
     */
-  @inline final def forall(p: V => Boolean)(using
-      decrypt: Decrypt
-  ): Boolean =
+  @inline final def forall[K: Decrypt](
+      p: V => Boolean
+  ): (K, Decode[V]) ?=> Boolean =
     isEmpty || decrypted.map(p).getOrElse(true)
 
   /** Applies a function to all elements of the decrypted collection.
@@ -406,7 +425,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @return
     *   Unit
     */
-  @inline final def foreach[U](f: V => U)(using decrypt: Decrypt): Unit =
+  @inline final def foreach[K: Decrypt, U](f: V => U): (K, Decode[V]) ?=> Unit =
     if !isEmpty then decrypted.foreach(f)
 
   /** Applies the provided functions based on the content of the collection.
@@ -421,9 +440,9 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   a `Try[W]` that represents the result of applying the appropriate
     *   function
     */
-  @inline final def fold[W: Codec](ifEmpty: => W)(f: V => W)(using
-      decrypt: Decrypt
-  ): Try[W] =
+  @inline final def fold[K: Decrypt, W: Decode](ifEmpty: => W)(
+      f: V => W
+  ): (K, Decode[V]) ?=> Try[W] =
     if isEmpty then Try(ifEmpty) else decrypted.map(f)
 
   /** Provides an iterator over the elements of the collection. The iterator
@@ -435,7 +454,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   a `Try` that contains an `Iterator` of decrypted elements if successful,
     *   or a failure if decryption fails
     */
-  @inline final def iterator(using decrypt: Decrypt): Try[Iterator[V]] =
+  @inline final def iterator[K: Decrypt]: (K, Decode[V]) ?=> Try[Iterator[V]] =
     if isEmpty then Try(collection.Iterator.empty)
     else decrypted.map(collection.Iterator.single)
 
@@ -449,8 +468,8 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     *   a `Try[V]` containing the decoded value if successful, or a failure if
     *   either the decryption or decoding steps fail
     */
-  override def decrypted(using decrypt: Decrypt): Try[V] =
-    decrypt(cipherText).flatMap(summon[Codec[V]].decode)
+  override def decrypted[K: Decrypt]: (K, Decode[V]) ?=> Try[V] =
+    summon[Decrypt[K]].decrypt(cipherText).flatMap(summon[Decode[V]].decode)
 
   /** Checks if the collection is empty.
     *
@@ -466,7 +485,7 @@ case class Encrypted[V: Codec](cipherText: CipherText) extends Cryptic[V]:
     * @return
     *   A `Try` containing a `List` of type `V`.
     */
-  @inline final def toList(using decrypt: Decrypt): Try[List[V]] =
+  @inline final def toList[K: Decrypt]: (K, Decode[V]) ?=> Try[List[V]] =
     if isEmpty then Try(List()) else decrypted.map(_ :: Nil)
 object Encrypted:
 
@@ -485,21 +504,24 @@ object Encrypted:
     *   An instance of Encrypted[V] containing the encrypted value. Returns an
     *   empty Encrypted instance if the input value is null.
     */
-  def apply[V: Codec](
+  def apply[V, K](
       value: V,
       manifest: Manifest
-  )(using encrypt: Encrypt): Encrypted[V] =
+  ): (K, Encrypt[K], Encode[V]) ?=> Encrypted[V] =
     if value == null then empty
-    else Encrypted[V](encrypt(summon[Codec[V]].encode(value, manifest)))
+    else
+      Encrypted[V](
+        summon[Encrypt[K]].encrypt(summon[Encode[V]].encode(value, manifest))
+      )
 
   /** Constructs an empty Encrypted instance.
     *
     * @return
     *   An instance of Encrypted representing an empty value.
     */
-  def empty[V: Codec]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]
+  def empty[V]: Encrypted[V] = Empty.asInstanceOf[Encrypted[V]]
   object Empty extends Encrypted[Nothing](CipherText.Empty):
-    override def decrypted(using decrypt: Decrypt): Try[Nothing] = Failure(
+    override def decrypted[K]: Decrypt[K] ?=> Try[Nothing] = Failure(
       new UnsupportedOperationException("decrypted called on empty")
     )
     override def isEmpty: Boolean = true

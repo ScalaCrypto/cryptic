@@ -23,11 +23,25 @@ class AesSpec extends AnyFlatSpec with Matchers:
     new String(enc.bytes.get.mutable)
       .contains(text.getBytes()) shouldBe false
 
+  "Aes" should "encode AAD" in:
+    import cryptic.Functor.tryFunctor
+    val expected = "AAD".getBytes.aad
+    text
+      .encrypted(expected)
+      .cipherText
+      .map: cipherText =>
+        val IArray(actual, salt, iv, bytes) = cipherText.split
+        actual shouldBe expected
+
   "Aes" should "detect if AAD is altered" in:
-    val aad = "AAD".getBytes.aad
-    val IArray(aad2, salt, iv, bytes) = text.encrypted(aad).cipherText.split
-    aad2 shouldBe aad
-    val tampered = CipherText("tampered".getBytes.aad, salt, iv, bytes)
-    Encrypted[String](tampered).decrypted match
+    import cryptic.Functor.tryFunctor
+    val aad = "AAD".aad
+    val tampered = text
+      .encrypted(aad)
+      .cipherText
+      .map: cipherText =>
+        val IArray(aad2, salt, iv, bytes) = cipherText.split
+        CipherText("tampered".getBytes.aad, salt, iv, bytes)
+    Encrypted[Try, String](tampered).decrypted match
       case Failure(e) => e.getMessage should include("Tag mismatch")
       case _ => fail("Expected decryption to fail due to AAD tampering")

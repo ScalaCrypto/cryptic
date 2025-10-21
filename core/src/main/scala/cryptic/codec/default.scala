@@ -29,9 +29,9 @@ object default extends Codec.Companion:
       Success(new String(pt.bytes.mutable))
 
   given Codec[Boolean]:
-    def encode(v: Boolean, manifest: Manifest): PlainText =
+    def encode(v: Boolean, aad: AAD): PlainText =
       val b: Byte = if v then 1.toByte else 0.toByte
-      PlainText(IArray.unsafeFromArray(Array(b)), manifest)
+      PlainText(IArray.unsafeFromArray(Array(b)), aad)
     def decode(pt: PlainText): Try[Boolean] =
       Success(pt.bytes.nonEmpty && pt.bytes(0) != 0)
 

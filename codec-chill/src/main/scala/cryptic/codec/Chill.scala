@@ -12,9 +12,9 @@ import scala.util.Try
   *
   * Notes:
   * - Encoding writes the Kryo bytes directly into `PlainText.bytes` and preserves the
-  *   provided `Manifest` unchanged; the manifest is not interpreted by the codec.
+  *   provided `AAD` unchanged; the AAD is not interpreted by the codec.
   * - Decoding reads the `PlainText.bytes` back using the same Kryo configuration and
-  *   ignores the manifest.
+  *   ignores the AAD.
   * - This codec is binary and not human-readable. It requires consistent classpath
   *   across encryption/decryption boundaries.
   */

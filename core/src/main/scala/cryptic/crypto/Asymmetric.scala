@@ -3,7 +3,7 @@ package crypto
 
 import java.security.*
 import javax.crypto.Cipher
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 /** Trait representing asymmetric encryption and decryption functionality.
   *
@@ -16,23 +16,29 @@ trait Asymmetric[F[_]]:
 
   given encrypt(using key: PublicKey, functor: Functor[F]): Encrypt[F] =
     (plainText: PlainText) =>
-      Try:
-        val bytes = encrypt(plainText.bytes, key)
-        CipherText(plainText.aad, bytes)
-      .lift
+      // Todo move aad out of PlainText and make Encrypt trait check with types
+      if plainText.aad.nonEmpty then
+        functor.failed[CipherText](
+          new UnsupportedOperationException(
+            "Asymmetric ciphers do not support AAD"
+          )
+        )
+      else
+        Try:
+          val bytes = encrypt(plainText.bytes, key)
+          CipherText(bytes)
+        .lift
 
   def encrypt(bytes: IArray[Byte], key: PublicKey): IArray[Byte] =
     val cipher: Cipher = newCipher(Cipher.ENCRYPT_MODE, key)
     cipher.doFinal(bytes.mutable).immutable
 
-  given decrypt(using key: PrivateKey, functor:Functor[F]): Decrypt[F] =
-    (cipherText: CipherText) => {
+  given decrypt(using key: PrivateKey, functor: Functor[F]): Decrypt[F] =
+    (cipherText: CipherText) =>
       Try:
-        val IArray(aad, bytes) = cipherText.split
-        val text = decrypt(bytes, key)
-        PlainText(text, aad)
+        val text = decrypt(cipherText.bytes, key)
+        PlainText(text)
       .lift
-    }
 
   def decrypt(bytes: IArray[Byte], privateKey: PrivateKey): IArray[Byte] =
     val cipher: Cipher = newCipher(Cipher.DECRYPT_MODE, privateKey)

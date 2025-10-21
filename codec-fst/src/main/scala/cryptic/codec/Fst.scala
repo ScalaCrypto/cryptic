@@ -11,8 +11,8 @@ import scala.util.Try
   *
   * Notes:
   * - Encoding stores FST-produced bytes into `PlainText.bytes` and passes the given
-  *   `Manifest` through without interpretation.
-  * - Decoding reads from `PlainText.bytes`; the manifest is ignored by this codec.
+  *   `AAD` through without interpretation.
+  * - Decoding reads from `PlainText.bytes`; the AAD is ignored by this codec.
   * - Binary wire format; not human-readable. Ensure compatible classpaths and FST
   *   configuration on both ends.
   */

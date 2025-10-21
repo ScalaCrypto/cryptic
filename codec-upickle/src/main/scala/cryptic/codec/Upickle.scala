@@ -11,8 +11,8 @@ import scala.util.Try
   *
   * Notes:
   * - Encoding uses `upickle.default.write` to produce UTF-8 bytes and preserves the
-  *   supplied `Manifest` unchanged.
-  * - Decoding uses `upickle.default.read` from `PlainText.bytes`; the manifest is ignored
+  *   supplied `AAD` unchanged.
+  * - Decoding uses `upickle.default.read` from `PlainText.bytes`; the AAD is ignored
   *   by this codec.
   * - Unlike the binary codecs, this produces a human-readable format but still treats
   *   the payload as bytes inside `PlainText`.

@@ -38,18 +38,22 @@ trait Symmetric:
 
   def encrypt(
       bytes: IArray[Byte],
+      aad: AAD,
       key: SecretKey,
       spec: AlgorithmParameterSpec
   ): IArray[Byte] =
     val cipher = newCipher(Cipher.ENCRYPT_MODE, key, spec)
+    if aad.nonEmpty then cipher.updateAAD(aad.mutable)
     cipher.doFinal(bytes.mutable).immutable
 
   def decrypt(
       bytes: IArray[Byte],
+      aad: AAD,
       key: SecretKey,
       spec: AlgorithmParameterSpec
   ): IArray[Byte] =
     val cipher = newCipher(Cipher.DECRYPT_MODE, key, spec)
+    if aad.nonEmpty then cipher.updateAAD(aad.mutable)
     cipher.doFinal(bytes.mutable).immutable
 
   /** Case class Passphrase for handling cryptographic passphrases.

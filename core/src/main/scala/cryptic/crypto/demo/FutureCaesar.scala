@@ -20,11 +20,13 @@ import scala.concurrent.{ExecutionContext, Future}
 object FutureCaesar:
   case class Key(offset: Int)
 
-  given encrypt(using key: Key, ec:ExecutionContext): Encrypt[Future] = (plainText: PlainText) =>
-    plainText.bytes.addOffset(key.offset).map(CipherText.apply)
+  given encrypt(using key: Key, ec: ExecutionContext): Encrypt[Future] =
+    (plainText: PlainText) =>
+      plainText.bytes.addOffset(key.offset).map(CipherText.apply)
 
-  given decrypt(using key: Key, ec:ExecutionContext): Decrypt[Future] = (cipherText: CipherText) =>
-    cipherText.bytes.addOffset(-key.offset).map(PlainText.apply)
+  given decrypt(using key: Key, ec: ExecutionContext): Decrypt[Future] =
+    (cipherText: CipherText) =>
+      cipherText.bytes.addOffset(-key.offset).map(PlainText.apply)
 
   extension (bytes: IArray[Byte])
     def addOffset(offset: Int): Future[IArray[Byte]] =

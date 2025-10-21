@@ -11,15 +11,15 @@ import scala.util.Try
   *
   * Notes:
   * - Encoding uses `upickle.default.write` to produce UTF-8 bytes and preserves the
-  *   supplied `Manifest` unchanged.
-  * - Decoding uses `upickle.default.read` from `PlainText.bytes`; the manifest is ignored
+  *   supplied `AAD` unchanged.
+  * - Decoding uses `upickle.default.read` from `PlainText.bytes`; the AAD is ignored
   *   by this codec.
   * - Unlike the binary codecs, this produces a human-readable format but still treats
   *   the payload as bytes inside `PlainText`.
   */
 object Upickle extends Codec.Companion:
   given codec: [V: {Writer, Reader}] => Codec[V]:
-    def encode(v: V, manifest: Manifest): PlainText = PlainText(write(v), manifest)
+    def encode(v: V, aad: AAD): PlainText = PlainText(write(v), aad)
     def decode(pt: PlainText): Try[V] = Try(
       read[V](pt.bytes.mutable)
     )

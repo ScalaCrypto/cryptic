@@ -20,8 +20,8 @@ import scala.util.Try
   * - Requires a public key for encryption and a private key for decryption to be in scope.
   * - Uses the Bouncy Castle provider (added at static initialization) and `ECIES` cipher.
   * - The current setup initializes the key pair generator for `secp256r1`.
-  * - The `Manifest` is carried alongside the payload bytes inside `CipherText` and restored
-  *   into `PlainText` during decryption; ECIES itself does not interpret the manifest.
+  * - The `AAD` is carried alongside the payload bytes inside `CipherText` and restored
+  *   into `PlainText` during decryption; ECIES itself does not interpret the AAD.
   */
 object EllipticCurve extends Asymmetric[Try]:
   Security.addProvider(new BouncyCastleProvider())

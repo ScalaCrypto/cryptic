@@ -12,9 +12,9 @@ import scala.util.Try
   *
   * Notes:
   * - Encoding writes the Kryo bytes directly into `PlainText.bytes` and preserves the
-  *   provided `Manifest` unchanged; the manifest is not interpreted by the codec.
+  *   provided `AAD` unchanged; the AAD is not interpreted by the codec.
   * - Decoding reads the `PlainText.bytes` back using the same Kryo configuration and
-  *   ignores the manifest.
+  *   ignores the AAD.
   * - This codec is binary and not human-readable. It requires consistent classpath
   *   across encryption/decryption boundaries.
   */
@@ -23,8 +23,8 @@ object Chill extends Codec.Companion:
     KryoPool.withByteArrayOutputStream(10, new ScalaKryoInstantiator())
 
   given codec: [V] => Codec[V]:
-    def encode(v: V, manifest: Manifest): PlainText = PlainText(
-      kryoPool.toBytesWithClass(v).immutable, manifest
+    def encode(v: V, aad: AAD): PlainText = PlainText(
+      kryoPool.toBytesWithClass(v).immutable, aad
     )
     def decode(pt: PlainText): Try[V] = Try(
       kryoPool.fromBytes(pt.bytes.mutable).asInstanceOf[V]

@@ -22,12 +22,50 @@ lazy val javaBaseOpens = Seq(
   "--add-opens=java.sql/java.sql=ALL-UNNAMED"
 )
 
+// Github Actions
+// sbt-github-actions defaults to using JDK 8 for testing and publishing.
+// The following adds JDK 17 for testing.
+ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("25"))
+ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
+ThisBuild / githubWorkflowPublishTargetBranches :=
+  Seq(
+    RefPredicate.StartsWith(Ref.Tag("v")),
+    RefPredicate.Equals(Ref.Branch("master"))
+  )
+ThisBuild / githubWorkflowPublish := Seq(
+  WorkflowStep.Sbt(
+    commands = List("ci-release"),
+    name = Some("Publish project"),
+    env = Map(
+      "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
+      "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
+      "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
+      "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
+    )
+  )
+)
+
+inThisBuild(
+  List(
+    organization := "io.scalacrypto.cryptic",
+    homepage := Some(url("https://github.com/scalacrypto/cryptic")),
+    licenses := List(
+      "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")
+    ),
+    developers := List(
+      Developer(
+        "cyberzac",
+        "Martin Zachrison",
+        "zac@cyberzac.se",
+        url("https://github.com/cyberzac")
+      )
+    )
+  )
+)
 lazy val commonSettings =
   Seq(
-    organization := "scalacrypto",
     scalaVersion := "3.7.2",
-    version := "0.8.0-SNAPSHOT",
-    Compile / packageDoc / publishArtifact := false,
+    Compile / packageDoc / publishArtifact := true,
     Compile / packageSrc / publishArtifact := true,
     Compile / packageBin / publishArtifact := true,
     Test / publishArtifact := false,

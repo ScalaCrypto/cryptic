@@ -9,18 +9,19 @@ import scala.util.{Success, Try}
 // #data-types
 
 case class EmailAddress(literal: String)
-case class User(id: Long, email: Encrypted[EmailAddress])
+case class User(id: Long, email: Encrypted[Try, EmailAddress])
 // #data-types
 
 class GettingStartedSpec extends AnyFlatSpec with Matchers:
 
   "Getting started guide" should "work" in:
+    import cryptic.default.{*, given}
+    import cryptic.Functor.tryFunctor
     for i <- 0 to 0 do {
       // #import
     }
     val key =
       // #generate-key
-      import cryptic.crypto.Rsa.*
       val key = newKeyPair(2048)
       // #generate-key
       key
@@ -42,24 +43,25 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
       user
 
     // #access
-    val bytes: IArray[Byte] = user.email.bytes
+    val bytes: Try[IArray[Byte]] = user.email.bytes
     // #access
 
-    val loweredEmailOp: Cryptic.Operation[EmailAddress] =
+    val loweredEmailOp: Cryptic.Operation[Try, EmailAddress] =
       // # transform
       import Cryptic.*
       import cryptic.codec.Chill.{*, given}
-      val loweredEmailOp: Operation[EmailAddress] =
+      val loweredEmailOp: Operation[Try, EmailAddress] =
         user.email.map(email => email.copy(literal = email.literal.toLowerCase))
       // # transform
       loweredEmailOp
-    val userWithLoweredEmail: Try[User] =
+    val userWithLoweredEmail: User =
       // #run
       import cryptic.crypto.Rsa.{*, given}
       given publicKey: PublicKey = key.getPublic
       given privateKey: PrivateKey = key.getPrivate
-      val userWithLoweredEmail: Try[User] =
-        loweredEmailOp.run.map(email => user.copy(email = email))
+      val runResult: Encrypted[Try, EmailAddress] = loweredEmailOp.run
+      val userWithLoweredEmail: User =
+        user.copy(email = runResult)
       // #run
       userWithLoweredEmail
     val loweredEmail =
@@ -67,7 +69,7 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
       import cryptic.crypto.Rsa.{*, given}
       given privateKey: PrivateKey = key.getPrivate
       val loweredEmail: Try[EmailAddress] =
-        userWithLoweredEmail.flatMap(_.email.decrypted)
+        userWithLoweredEmail.email.decrypted
       // #decrypt
       loweredEmail
 

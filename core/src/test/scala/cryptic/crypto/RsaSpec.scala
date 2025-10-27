@@ -25,6 +25,11 @@ class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
       case Success(actual) => actual shouldEqual text
       case x ⇒ fail(s"does not decrypt: $x")
 
+  "RSA" should "not support AAD" in:
+    val encrypted = text.encrypted("AAD".aad)
+    intercept[UnsupportedOperationException]:
+      encrypted.bytes.get
+
   "RSA" should "fail on large data" in:
     ("secret" * 1000).encrypted.cipherText.failure.exception shouldBe a[
       IllegalBlockSizeException
@@ -33,3 +38,11 @@ class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
   "RSA" should "hide plaintext" in:
     new String(text.encrypted.bytes.get.mutable)
       .contains(text.getBytes()) shouldBe false
+
+  "RSA" should "encode AAD unauthenticated in the CipherText" in:
+    import cryptic.Functor.tryFunctor
+    val expected = "AAD".aad
+    text
+      .encrypted(expected)
+      .cipherText
+      .failure

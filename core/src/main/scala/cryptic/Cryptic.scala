@@ -1,17 +1,18 @@
 package cryptic
 
-/**
-  * Core abstraction representing a value of type `V` which may be encrypted and can be
-  * operated on within an effect `F`.
+/** Core abstraction representing a value of type `V` which may be encrypted and
+  * can be operated on within an effect `F`.
   *
-  * Cryptic provides a small set of combinators (map/flatMap/filter/collect/orElse) that
-  * allow building computation pipelines without forcing decryption up‑front. Actual
-  * decryption happens only when `decrypted` (or operations derived from it) is evaluated
-  * with an in‑scope `Decrypt[F]` instance.
+  * Cryptic provides a small set of combinators
+  * (map/flatMap/filter/collect/orElse) that allow building computation
+  * pipelines without forcing decryption up‑front. Actual decryption happens
+  * only when `decrypted` (or operations derived from it) is evaluated with an
+  * in‑scope `Decrypt[F]` instance.
   *
   * Type parameters and context bounds:
-  * - F: an effect type with a given `Functor[F]`
-  * - V: the value type with a given `Codec[V]` used for encoding/decoding when encrypting/decrypting
+  *   - F: an effect type with a given `Functor[F]`
+  *   - V: the value type with a given `Codec[V]` used for encoding/decoding
+  *     when encrypting/decrypting
   */
 sealed abstract class Cryptic[F[_]: Functor, V: Codec]:
   import Cryptic.*
@@ -124,8 +125,7 @@ sealed abstract class Cryptic[F[_]: Functor, V: Codec]:
       alternative: => Cryptic[F, W]
   ): Operation[F, W] = new OrElsed(this, alternative)
 
-/**
-  * Companion utilities and data types for building `Cryptic` programs.
+/** Companion utilities and data types for building `Cryptic` programs.
   *
   * Exposes constructors, operation types, and convenient exports for the
   * encryption/decryption type classes and data types.
@@ -142,13 +142,12 @@ object Cryptic:
   }
   import Encrypted.*
 
-  /**
-  * A deferred cryptic computation producing a value of type `V`.
-  *
-  * Operations are composable descriptions that can be interpreted via `run`,
-  * which performs encryption using the given instances, or via `decrypted`,
-  * which performs decryption to obtain the plain value.
-  */
+  /** A deferred cryptic computation producing a value of type `V`.
+    *
+    * Operations are composable descriptions that can be interpreted via `run`,
+    * which performs encryption using the given instances, or via `decrypted`,
+    * which performs decryption to obtain the plain value.
+    */
   sealed abstract class Operation[F[_]: Functor, V: Codec]
       extends Cryptic[F, V]:
     def run(using
@@ -156,12 +155,12 @@ object Cryptic:
         decrypt: Decrypt[F]
     ): Encrypted[F, V]
 
-  /**
-  * An `Operation` that derives from a single source `Cryptic[F, V]` and produces
-  * a result of type `W`.
-  *
-  * Implementations typically transform or branch based on the decrypted source.
-  */
+  /** An `Operation` that derives from a single source `Cryptic[F, V]` and
+    * produces a result of type `W`.
+    *
+    * Implementations typically transform or branch based on the decrypted
+    * source.
+    */
   sealed abstract class BinaryOperation[F[_]: Functor, V: Codec, W: Codec]
       extends Operation[F, W]:
     override def run(using
@@ -169,10 +168,9 @@ object Cryptic:
         decrypt: Decrypt[F]
     ): Encrypted[F, W] =
       val t = decrypted
-      Encrypted(t, Manifest.empty.pure)
+      Encrypted(t, AAD.empty.pure)
 
-  /**
-    * Result of mapping a decrypted value of type `V` to `W`.
+  /** Result of mapping a decrypted value of type `V` to `W`.
     *
     * The source is not decrypted until interpreted via `decrypted`/`run`.
     * Mapping uses the provided pure function `f`.
@@ -184,8 +182,8 @@ object Cryptic:
     override def decrypted(using decrypt: Decrypt[F]): F[W] =
       src.decrypted.map(f)
 
-  /**
-    * Result of flatMapping a decrypted value of type `V` into a new `Cryptic[F, W]`.
+  /** Result of flatMapping a decrypted value of type `V` into a new
+    * `Cryptic[F, W]`.
     *
     * This composes two cryptic computations without decrypting eagerly.
     */
@@ -204,8 +202,7 @@ object Cryptic:
       src.decrypted.flatMap(v => ev(v).decrypted)
    */
 
-  /**
-    * Filters a decrypted value using predicate `pred`.
+  /** Filters a decrypted value using predicate `pred`.
     *
     * If the predicate does not hold, the encrypted representation becomes empty
     * when interpreted with `run`, and `decrypted` will fail when forced.
@@ -219,7 +216,7 @@ object Cryptic:
         decrypt: Decrypt[F]
     ): Encrypted[F, V] =
       val filtered: F[CipherText] = src.decrypted.flatMap: v =>
-        if pred(v) then encrypt(PlainText.encode(v, Manifest.empty))
+        if pred(v) then encrypt(PlainText.encode(v, AAD.empty))
         else CipherText.empty.pure
       new Encrypted(filtered)
 
@@ -233,11 +230,11 @@ object Cryptic:
             "decrypted called on filtered empty"
           ).failed
 
-  /**
-    * Applies a partial function `pf` to a decrypted value, producing a `W` when defined.
+  /** Applies a partial function `pf` to a decrypted value, producing a `W` when
+    * defined.
     *
-    * If `pf` is not defined for the decrypted value, the operation behaves as empty
-    * when interpreted with `run` and `decrypted` will fail when forced.
+    * If `pf` is not defined for the decrypted value, the operation behaves as
+    * empty when interpreted with `run` and `decrypted` will fail when forced.
     */
   final case class Collected[F[_]: Functor, V: Codec, W: Codec](
       src: Cryptic[F, V],
@@ -248,7 +245,7 @@ object Cryptic:
         decrypt: Decrypt[F]
     ): Encrypted[F, W] =
       val collected = src.decrypted.flatMap: v =>
-        if pf.isDefinedAt(v) then encrypt(PlainText.encode(v, Manifest.empty))
+        if pf.isDefinedAt(v) then encrypt(PlainText.encode(v, AAD.empty))
         else CipherText.empty.pure
       new Encrypted(collected)
 
@@ -262,8 +259,8 @@ object Cryptic:
             s"decrypted called on collected empty"
           ).failed
 
-  /**
-    * Represents a fall-back computation: if `src` fails to decrypt, evaluate `alternative`.
+  /** Represents a fall-back computation: if `src` fails to decrypt, evaluate
+    * `alternative`.
     */
   final class OrElsed[F[_]: Functor, V: Codec, W >: V: Codec](
       src: Cryptic[F, V],
@@ -362,59 +359,60 @@ case class Encrypted[F[_]: Functor, V: Codec](cipherText: F[CipherText])
     isEmpty.foreach(_ => decrypted.foreach(f))
 //    ifEmpty(_=>Unit)(decrypted.foreach(f))
 
-  /**
-   * Folds the encrypted value into a result of type `W` by applying one of two provided
-   * functions depending on whether the encrypted value is empty or non-empty.
-   *
-   * If the value is empty, the `empty` computation is returned wrapped in the effect type `F`.
-   * If the value is non-empty, it is first decrypted and then transformed using the function `f`.
-   *
-   * @param empty
-   * A computation yielding a default value of type `W` to be used when the encrypted value is empty.
-   * @param f
-   * A function that transforms the decrypted value of type `V` into a result of type `W`.
-   * @param decrypt
-   * The decryption context used to decrypt the encrypted value.
-   * @return
-   * An effectful computation of type `F[W]` representing the folded result.
-   */
+  /** Folds the encrypted value into a result of type `W` by applying one of two
+    * provided functions depending on whether the encrypted value is empty or
+    * non-empty.
+    *
+    * If the value is empty, the `empty` computation is returned wrapped in the
+    * effect type `F`. If the value is non-empty, it is first decrypted and then
+    * transformed using the function `f`.
+    *
+    * @param empty
+    *   A computation yielding a default value of type `W` to be used when the
+    *   encrypted value is empty.
+    * @param f
+    *   A function that transforms the decrypted value of type `V` into a result
+    *   of type `W`.
+    * @param decrypt
+    *   The decryption context used to decrypt the encrypted value.
+    * @return
+    *   An effectful computation of type `F[W]` representing the folded result.
+    */
   @inline final def fold[W: Codec](empty: => W)(f: V => W)(using
       decrypt: Decrypt[F]
   ): F[W] = ifEmpty(empty.pure)(decrypted.map(f))
 
-  /**
-   * Retrieves an iterator over the decrypted collection.
-   *
-   * If the collection is empty, the iterator will also be empty.
-   * Otherwise, the collection is decrypted, and the result is
-   * provided as a single-element iterator.
-   *
-   * @param decrypt
-   * A given instance of the `Decrypt` type class, responsible
-   * for decrypting the encrypted data.
-   * @return
-   * An effectful computation of type `F[Iterator[V]]` containing
-   * an iterator over the decrypted values.
-   */
+  /** Retrieves an iterator over the decrypted collection.
+    *
+    * If the collection is empty, the iterator will also be empty. Otherwise,
+    * the collection is decrypted, and the result is provided as a
+    * single-element iterator.
+    *
+    * @param decrypt
+    *   A given instance of the `Decrypt` type class, responsible for decrypting
+    *   the encrypted data.
+    * @return
+    *   An effectful computation of type `F[Iterator[V]]` containing an iterator
+    *   over the decrypted values.
+    */
   @inline final def iterator(using decrypt: Decrypt[F]): F[Iterator[V]] =
     ifEmpty(collection.Iterator.empty.pure):
       decrypted.map(collection.Iterator.single)
 
-  /**
-   * Decrypts the encrypted data to retrieve the original value of type `V`.
-   *
-   * This method checks if the container is empty. If empty, it raises an
-   * `UnsupportedOperationException`. Otherwise, it decrypts the ciphertext,
-   * decodes the decrypted content using a `Codec` instance, and lifts the
-   * result into the effect type `F`.
-   *
-   * @param decrypt
-   * An implicit parameter for the `Decrypt` type class, which specifies
-   * the decryption logic for the effect type `F`.
-   * @return
-   * The decrypted value of type `V`, wrapped in the effect type `F`.
-   * If the container is empty, it raises an exception wrapped in `F`.
-   */
+  /** Decrypts the encrypted data to retrieve the original value of type `V`.
+    *
+    * This method checks if the container is empty. If empty, it raises an
+    * `UnsupportedOperationException`. Otherwise, it decrypts the ciphertext,
+    * decodes the decrypted content using a `Codec` instance, and lifts the
+    * result into the effect type `F`.
+    *
+    * @param decrypt
+    *   An implicit parameter for the `Decrypt` type class, which specifies the
+    *   decryption logic for the effect type `F`.
+    * @return
+    *   The decrypted value of type `V`, wrapped in the effect type `F`. If the
+    *   container is empty, it raises an exception wrapped in `F`.
+    */
   override def decrypted(using decrypt: Decrypt[F]): F[V] =
     ifEmpty(
       new UnsupportedOperationException("decrypted called on empty").failed
@@ -431,19 +429,19 @@ case class Encrypted[F[_]: Functor, V: Codec](cipherText: F[CipherText])
     */
   def isEmpty: F[Boolean] = cipherText.map(_.isEmpty)
 
-  /**
-   * Converts the encrypted value into a list containing the decrypted value.
-   *
-   * If the container is empty, it returns a list with no elements.
-   * If the container is non-empty, it decrypts the contained value and wraps it
-   * in a single-element list.
-   *
-   * @param decrypt
-   * An implicit parameter providing the decryption logic for the effect type `F`.
-   * @return
-   * An effectful computation of type `F[List[V]]` containing the decrypted value
-   * wrapped in a list, or an empty list if the container is empty.
-   */
+  /** Converts the encrypted value into a list containing the decrypted value.
+    *
+    * If the container is empty, it returns a list with no elements. If the
+    * container is non-empty, it decrypts the contained value and wraps it in a
+    * single-element list.
+    *
+    * @param decrypt
+    *   An implicit parameter providing the decryption logic for the effect type
+    *   `F`.
+    * @return
+    *   An effectful computation of type `F[List[V]]` containing the decrypted
+    *   value wrapped in a list, or an empty list if the container is empty.
+    */
   @inline final def toList(using decrypt: Decrypt[F]): F[List[V]] =
     ifEmpty(Nil.pure):
       decrypted.map(_ :: Nil)
@@ -453,57 +451,57 @@ case class Encrypted[F[_]: Functor, V: Codec](cipherText: F[CipherText])
 
 object Encrypted:
 
-  /**
-   * Applies encryption to the provided value using a given manifest and returns an encrypted representation.
-   *
-   * @param value
-   * The value to be encrypted.
-   * @param manifest
-   * The manifest describing additional properties required to encode the value.
-   * @param encrypt
-   * The encryption implementation that handles encoding the plain text into cipher text.
-   * @tparam F
-   * The effect type representing how the operations are to be executed.
-   * @tparam V
-   * The type of the value to be encrypted.
-   * @return
-   * An instance of `Encrypted[F, V]` containing the encrypted representation of the input value within the given effect type.
-   */
-  def apply[F[_]: Functor, V: Codec](value: V, manifest: Manifest)(using
+  /** Applies encryption to the provided value using a given aad and returns an
+    * encrypted representation.
+    *
+    * @param value
+    *   The value to be encrypted.
+    * @param aad
+    *   The aad describing additional properties required to encode the value.
+    * @param encrypt
+    *   The encryption implementation that handles encoding the plain text into
+    *   cipher text.
+    * @tparam F
+    *   The effect type representing how the operations are to be executed.
+    * @tparam V
+    *   The type of the value to be encrypted.
+    * @return
+    *   An instance of `Encrypted[F, V]` containing the encrypted representation
+    *   of the input value within the given effect type.
+    */
+  def apply[F[_]: Functor, V: Codec](value: V, aad: AAD)(using
       encrypt: Encrypt[F]
   ): Encrypted[F, V] =
     val ct =
       if value == null then CipherText.empty.pure
-      else encrypt(PlainText.encode(value, manifest))
+      else encrypt(PlainText.encode(value, aad))
     new Encrypted(ct)
 
-  /**
-    * Encrypts an effectful value `value: F[V]` using an effectful `Manifest`.
-    * Each pair `(v, mf)` is encoded and encrypted within the effect `F`.
+  /** Encrypts an effectful value `value: F[V]` using an effectful `AAD`. Each
+    * pair `(v, mf)` is encoded and encrypted within the effect `F`.
     */
-  def apply[F[_]: Functor, V: Codec](value: F[V], manifest: F[Manifest])(using
+  def apply[F[_]: Functor, V: Codec](value: F[V], aad: F[AAD])(using
       encrypt: Encrypt[F]
   ): Encrypted[F, V] =
     val cipherText = for
       v <- value
-      mf <- manifest
+      mf <- aad
       encrypted <- encrypt(PlainText.encode(v, mf))
     yield encrypted
     new Encrypted(cipherText)
 
-  /**
-    * Constructs an `Encrypted` value from a precomputed cipher text effect.
+  /** Constructs an `Encrypted` value from a precomputed cipher text effect.
     *
-    * Use this when you already have `F[CipherText]` and want to wrap it as `Encrypted[F, V]`.
+    * Use this when you already have `F[CipherText]` and want to wrap it as
+    * `Encrypted[F, V]`.
     */
-  def apply[F[_]: Functor, V: Codec](f: => F[CipherText]): Encrypted[F, V] =
+  def deferred[F[_]: Functor, V: Codec](f: => F[CipherText]): Encrypted[F, V] =
     new Encrypted(f)
 
-  /**
-    * Creates an empty `Encrypted` value for type `V` within effect `F`.
+  /** Creates an empty `Encrypted` value for type `V` within effect `F`.
     *
-    * The resulting value behaves as absent/empty: `isEmpty` is true, `run` yields
-    * `CipherText.empty`, and `decrypted` will fail when forced.
+    * The resulting value behaves as absent/empty: `isEmpty` is true, `run`
+    * yields `CipherText.empty`, and `decrypted` will fail when forced.
     */
   def empty[F[_]: Functor, V: Codec]: Encrypted[F, V] =
     new Encrypted(CipherText.empty.pure)

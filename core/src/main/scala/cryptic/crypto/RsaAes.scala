@@ -29,7 +29,7 @@ object RsaAes:
           Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
         CipherText(
           plainText.aad,
-          iv.immutable,
+          iv,
           encryptedAesKey,
           encryptedText
         )
@@ -40,6 +40,6 @@ object RsaAes:
         val IArray(aad, iv, keyBytes, textBytes) = cipherText.split
         val aesKeyBytes = Rsa.decrypt(keyBytes, privateKey)
         val aesKey = Aes.key(aesKeyBytes)
-        val ivSpec = Aes.paramSpec(iv.mutable)
+        val ivSpec = Aes.paramSpec(iv)
         val text = Aes.decrypt(textBytes, aad, aesKey, ivSpec)
         PlainText(text, aad)

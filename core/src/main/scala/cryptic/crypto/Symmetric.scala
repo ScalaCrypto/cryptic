@@ -23,10 +23,13 @@ trait Symmetric:
 
   /** SecretKeyFactory algorithm used for PBKDF2 or similar derivation. */
   def factoryAlgorithm: String
+
   /** JCA key algorithm name (e.g., "AES"). */
   def keyAlgorithm: String
+
   /** Iteration count used when deriving keys from passphrases. */
   def keyspecIterationCount: Int
+
   /** Derived key length in bits. */
   def keyspecLength: Int
 
@@ -71,10 +74,18 @@ trait Symmetric:
       password.getBytes.immutable
     )
 
+    /**
+     * Generates a Passphrase by creating a random array of bytes of the specified length.
+     *
+     * @param n the number of random bytes to generate for the Passphrase
+     * @return a Passphrase instance created from the generated random bytes
+     */
     def apply(n: Int): Passphrase =
-      val array = new Array[Byte](n)
-      secureRandom.nextBytes(array)
-      apply(array.immutable)
+      val bytes = secureRandom.newBytes(n).map(b => (b & 63 + 32).toByte).mutable // Map to ASCII printable chars
+      val firstLast = secureRandom.newBytes(n).map(b => (b & 63 + 33).toByte) // No space
+      bytes(0) = firstLast(0)
+      bytes(bytes.length-1) = firstLast(1)
+      apply(bytes.immutable)
 
   /** Generates a secret key using the provided password and salt.
     *
@@ -108,13 +119,28 @@ trait Symmetric:
     new SecretKeySpec(bytes.mutable, keyAlgorithm)
 
 object Symmetric:
-  val secureRandom = new SecureRandom()
+  val secureRandom: SecureRandom =
+    val preferredAlgorithms = List("NativePRNGNonBlocking", "SHA1PRNG")
+    val sr = preferredAlgorithms
+      .view
+      .map(alg => scala.util.Try(SecureRandom.getInstance(alg)))
+      .collectFirst { case scala.util.Success(sr) => sr }
+      .getOrElse(new SecureRandom())
+    
+    // Force initial seeding
+    sr.nextBytes(new Array[Byte](20))
+    sr
+
 
   case class Salt(bytes: IArray[Byte]) extends AnyVal:
     def length: Int = bytes.length
 
   object Salt:
     def apply(length: Int): Salt =
-      val salt = new Array[Byte](length)
-      secureRandom.nextBytes(salt)
-      Salt(salt.immutable)
+      Salt(secureRandom.newBytes(length))
+
+extension (secureRandom: SecureRandom)
+  def newBytes(length: Int): IArray[Byte] =
+    val arr = new Array[Byte](length)
+    secureRandom.nextBytes(arr)
+    arr.immutable

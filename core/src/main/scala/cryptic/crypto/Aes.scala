@@ -37,13 +37,10 @@ object Aes extends Symmetric:
     cipher.init(mode, key, spec)
     cipher
 
-  def newIv(): Array[Byte] =
-    val iv = new Array[Byte](ivLength)
-    secureRandom.nextBytes(iv)
-    iv
+  def newIv(): IArray[Byte] = secureRandom.newBytes(ivLength)
 
-  def paramSpec(iv: Array[Byte]): AlgorithmParameterSpec =
-    new GCMParameterSpec(gcmTagLength, iv)
+  def paramSpec(iv: IArray[Byte]): AlgorithmParameterSpec =
+    new GCMParameterSpec(gcmTagLength, iv.mutable)
 
   given encrypt(using
       passphrase: Passphrase
@@ -58,7 +55,7 @@ object Aes extends Symmetric:
         CipherText(
           plainText.aad,
           salt.bytes,
-          iv.immutable,
+          iv,
           cipherText
         )
 
@@ -68,6 +65,6 @@ object Aes extends Symmetric:
     Try:
       val IArray(aad, salt, iv, bytes) = cipherText.split
       val key = keygen(passphrase, Salt(salt))
-      val ivSpec = paramSpec(iv.mutable)
+      val ivSpec = paramSpec(iv)
       val decrypted = decrypt(bytes, aad, key, ivSpec)
       PlainText(decrypted, aad)

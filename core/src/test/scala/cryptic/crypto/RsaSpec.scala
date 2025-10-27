@@ -39,7 +39,7 @@ class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
     new String(text.encrypted.bytes.get.mutable)
       .contains(text.getBytes()) shouldBe false
 
-  "RSA" should "encode AAD unauthenticated in the CipherText" in:
+  "RSA" should "fail to encode AAD unauthenticated in the CipherText" in:
     import cryptic.Functor.tryFunctor
     val expected = "AAD".aad
     text

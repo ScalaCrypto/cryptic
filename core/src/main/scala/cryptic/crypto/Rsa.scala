@@ -4,7 +4,7 @@ package crypto
 import java.security.{Key, KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
 import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
-import scala.util.Try
+import scala.util.{Success, Try}
 import javax.crypto.spec.{OAEPParameterSpec, PSource}
 
 /** The Rsa object provides encryption, decryption, and key generation
@@ -24,6 +24,7 @@ import javax.crypto.spec.{OAEPParameterSpec, PSource}
 object Rsa extends Asymmetric[Try]:
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
   given functor: Functor[Try] = Functor.tryFunctor
+  val version: Version = FixedVersion(0, 0, 0, 1)
 
   def newCipher(mode: Int, key: Key): Cipher =
     val oaepParams: OAEPParameterSpec = new OAEPParameterSpec(
@@ -40,3 +41,13 @@ object Rsa extends Asymmetric[Try]:
     val generator = KeyPairGenerator.getInstance("RSA")
     generator.initialize(size)
     generator.generateKeyPair()
+
+  def encodeCipherText(bytes: IArray[Byte]): CipherText =
+    CipherText(version.bytes, bytes)
+
+  def decodeCipherText
+      : PartialFunction[IArray[IArray[Byte]], Try[IArray[Byte]]] =
+    case IArray(ver, encrypted) if version.supports(ver) =>
+      Success(encrypted)
+    case IArray(ver, _) =>
+      version.failed(ver)

@@ -2,7 +2,7 @@ package cryptic
 package crypto
 
 import java.security.{PrivateKey, PublicKey}
-import scala.util.Try
+import scala.util.{Success, Try}
 
 /** RsaAse object provides encryption, decryption, and key generation
   * functionalities using the RSA algorithm to create an AES key that is
@@ -17,35 +17,38 @@ import scala.util.Try
   *   Generates an RSA key pair with the specified size.
   */
 object RsaAes:
+  val version = FixedVersion(0, 0, 0, 1)
+
   given encrypt(using publicKey: PublicKey): Encrypt[Try] =
     (plainText: PlainText) =>
       Try:
         val aesKey = Aes.keygen()
         val iv = Aes.newIv()
         val ivSpec = Aes.paramSpec(iv)
+        val encryptedText = Aes.encrypt(plainText, aesKey, ivSpec)
+        val aesKeyBytes = aesKey.getEncoded.immutable
         for
-          encryptedAesKey <- Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
-          encryptedText <- Aes.encrypt(
-            plainText.bytes,
+          encryptedText <- Aes.encrypt(plainText, aesKey, ivSpec)
+          encryptedAesKey <- Rsa.encrypt(aesKeyBytes, publicKey)
+        yield
+          CipherText(
+            version.bytes,
             plainText.aad,
-            aesKey,
-            ivSpec
+            iv,
+            encryptedAesKey,
+            encryptedText
           )
-        yield CipherText(
-          plainText.aad,
-          iv,
-          encryptedAesKey,
-          encryptedText
-        )
       .flatten
 
   given decrypt(using privateKey: PrivateKey): Decrypt[Try] =
-    (cipherText: CipherText) =>
-      Try:
-        val IArray(aad, iv, encryptedKey, encryptedText) = cipherText.split
-        val ivSpec = Aes.paramSpec(iv)
+    (_: CipherText).splitWith:
+      case IArray(ver, aad, iv, encryptedKey, encryptedText) if version.supports(ver) =>
         for
-          aesKey <- Rsa.decrypt(encryptedKey, privateKey).map(Aes.key)
+          aesKeyBytes <- Rsa.decrypt(encryptedKey, privateKey)
+          aesKey = Aes.key(aesKeyBytes)
+          ivSpec = Aes.paramSpec(iv)
           text <- Aes.decrypt(encryptedText, aad, aesKey, ivSpec)
-        yield PlainText(text, aad)
-      .flatten
+        yield
+          PlainText(text, aad)
+      case IArray(ver, _,_,_,_) =>
+        version.failed(ver)

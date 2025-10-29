@@ -28,6 +28,8 @@ object Aes extends Symmetric:
   override val keyspecIterationCount: Int = 310000
   override val keyspecLength: Int = 256
 
+  given version: Versioning = FixedVersion(0, 0, 0, 1)
+
   override def newCipher(
       mode: Int,
       key: SecretKey,
@@ -42,29 +44,26 @@ object Aes extends Symmetric:
   def paramSpec(iv: IArray[Byte]): AlgorithmParameterSpec =
     new GCMParameterSpec(gcmTagLength, iv.mutable)
 
-  given encrypt(using
-      passphrase: Passphrase
-  ): Encrypt[Try] =
+  given encrypt(using passphrase: Passphrase): Encrypt[Try] =
     (plainText: PlainText) =>
       Try:
         val salt = Salt(saltLength)
         val key = keygen(passphrase, salt)
         val iv = newIv()
         val ivSpec = paramSpec(iv)
-        val cipherText = encrypt(plainText.bytes, plainText.aad, key, ivSpec)
+        val cipherText = encrypt(plainText, key, ivSpec)
         CipherText(
+          version.bytes,
           plainText.aad,
           salt.bytes,
           iv,
           cipherText
         )
 
-  given decrypt(using
-      passphrase: Passphrase
-  ): Decrypt[Try] = (cipherText: CipherText) =>
-    Try:
-      val IArray(aad, salt, iv, bytes) = cipherText.split
-      val key = keygen(passphrase, Salt(salt))
-      val ivSpec = paramSpec(iv)
-      val decrypted = decrypt(bytes, aad, key, ivSpec)
-      PlainText(decrypted, aad)
+  given decrypt(using passphrase: Passphrase): Decrypt[Try] =
+    (_: CipherText).withVersion:
+      case IArray(_, aad, salt, iv, bytes) =>
+        val key = keygen(passphrase, Salt(salt))
+        val ivSpec = paramSpec(iv)
+        val decrypted = decrypt(bytes, aad, key, ivSpec)
+        PlainText(decrypted, aad)

@@ -17,17 +17,19 @@ import scala.util.Try
   *   Generates an RSA key pair with the specified size.
   */
 object RsaAes:
+  given version: Versioning = FixedVersion(0, 0, 0, 1)
+
   given encrypt(using publicKey: PublicKey): Encrypt[Try] =
     (plainText: PlainText) =>
       Try:
         val aesKey = Aes.keygen()
         val iv = Aes.newIv()
         val ivSpec = Aes.paramSpec(iv)
-        val encryptedText =
-          Aes.encrypt(plainText.bytes, plainText.aad, aesKey, ivSpec)
-        val encryptedAesKey =
-          Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
+        val encryptedText = Aes.encrypt(plainText, aesKey, ivSpec)
+        val aesKeyBytes = aesKey.getEncoded.immutable
+        val encryptedAesKey = Rsa.encrypt(aesKeyBytes, publicKey)
         CipherText(
+          version.bytes,
           plainText.aad,
           iv,
           encryptedAesKey,
@@ -35,11 +37,10 @@ object RsaAes:
         )
 
   given decrypt(using privateKey: PrivateKey): Decrypt[Try] =
-    (cipherText: CipherText) =>
-      Try:
-        val IArray(aad, iv, keyBytes, textBytes) = cipherText.split
-        val aesKeyBytes = Rsa.decrypt(keyBytes, privateKey)
+    (_: CipherText).withVersion:
+      case IArray(_, aad, iv, encryptedKey, encryptedText) =>
+        val aesKeyBytes = Rsa.decrypt(encryptedKey, privateKey)
         val aesKey = Aes.key(aesKeyBytes)
         val ivSpec = Aes.paramSpec(iv)
-        val text = Aes.decrypt(textBytes, aad, aesKey, ivSpec)
+        val text = Aes.decrypt(encryptedText, aad, aesKey, ivSpec)
         PlainText(text, aad)

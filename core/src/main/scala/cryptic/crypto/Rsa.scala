@@ -24,7 +24,7 @@ import javax.crypto.spec.{OAEPParameterSpec, PSource}
 object Rsa extends Asymmetric[Try]:
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
   given functor: Functor[Try] = Functor.tryFunctor
-
+  def version: Versioning = FixedVersion(0, 0, 0, 1)
   def newCipher(mode: Int, key: Key): Cipher =
     val oaepParams: OAEPParameterSpec = new OAEPParameterSpec(
       "SHA-256",

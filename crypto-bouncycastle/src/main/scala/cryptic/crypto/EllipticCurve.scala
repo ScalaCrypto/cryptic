@@ -13,19 +13,23 @@ import scala.util.Try
 
 /** Elliptic Curve (ECIES) asymmetric crypto built on Bouncy Castle.
   *
-  * Provides `Encrypt[Try]`/`Decrypt[Try]` via the shared `Asymmetric` utilities, using
-  * the BC provider and a pre-configured `IESParameterSpec` for ECIES.
+  * Provides `Encrypt[Try]`/`Decrypt[Try]` via the shared `Asymmetric`
+  * utilities, using the BC provider and a pre-configured `IESParameterSpec` for
+  * ECIES.
   *
   * Notes:
-  * - Requires a public key for encryption and a private key for decryption to be in scope.
-  * - Uses the Bouncy Castle provider (added at static initialization) and `ECIES` cipher.
-  * - The current setup initializes the key pair generator for `secp256r1`.
-  * - The `AAD` is carried alongside the payload bytes inside `CipherText` and restored
-  *   into `PlainText` during decryption; ECIES itself does not interpret the AAD.
+  *   - Requires a public key for encryption and a private key for decryption to
+  *     be in scope.
+  *   - Uses the Bouncy Castle provider (added at static initialization) and
+  *     `ECIES` cipher.
+  *   - The current setup initializes the key pair generator for `secp256r1`.
+  *   - The `AAD` is carried alongside the payload bytes inside `CipherText` and
+  *     restored into `PlainText` during decryption; ECIES itself does not
+  *     interpret the AAD.
   */
 object EllipticCurve extends Asymmetric[Try]:
+  def version: Versioning = FixedVersion(0, 0, 0, 1)
   Security.addProvider(new BouncyCastleProvider())
-  private val secureRandom = new SecureRandom()
   private val generator: KeyPairGenerator = KeyPairGenerator.getInstance("EC")
   generator.initialize(new ECGenParameterSpec("secp256r1"))
 
@@ -36,16 +40,14 @@ object EllipticCurve extends Asymmetric[Try]:
     val encoding = Hex.decode("112233445566778899AABBCCDDEEFF00")
     val macKeySize = 128
     val cipherKeySize = 128
-    val nonce = new Array[Byte](16)
-    secureRandom.nextBytes(nonce)
-
+    val nonce = secureRandom.newBytes(16)
     val iesParams =
       new IESParameterSpec(
         derivation,
         encoding,
         macKeySize,
         cipherKeySize,
-        nonce
+        nonce.mutable
       )
 
     val cipher = Cipher.getInstance("ECIES", "BC")

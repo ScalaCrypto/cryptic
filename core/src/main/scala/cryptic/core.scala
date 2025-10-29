@@ -1,6 +1,7 @@
 package cryptic
 
 import java.nio.ByteBuffer
+import java.security.SecureRandom
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
@@ -66,9 +67,11 @@ case class CipherText(bytes: IArray[Byte]):
   /** Splits the bytes into the concatenated segments written via IArray.join.
     */
   def split: IArray[IArray[Byte]] = buffer.split
+
   override def equals(obj: scala.Any): Boolean = obj match
-    case CipherText(other) ⇒ bytes.sameElements(other)
-    case _ ⇒ false
+    case CipherText(other) => bytes.sameElements(other)
+    case _                 => false
+
   override def toString: String =
     s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
 
@@ -80,6 +83,28 @@ case class CipherText(bytes: IArray[Byte]):
 
   /** Length of the underlying byte array. */
   def length: Int = bytes.length
+
+  /** Applies a provided function to the payload segments, handling versioning
+    * logic.
+    *
+    * This method splits the bytes into segments, extracts the version
+    * information from the first segment, and applies the given function to the
+    * remaining segments. The provided function operates on the tail segments
+    * after the versioning is handled.
+    *
+    * @param f
+    *   the function to apply to the tail segments of the payload after handling
+    *   versioning
+    * @return
+    *   a `Try[A]` representing the result of applying the function, or an error
+    *   if any occurs during processing
+    */
+  def withVersion[A](f: IArray[IArray[Byte]] => A)(using Versioning): Try[A] =
+    Try:
+      val parts = split
+      val version = parts.head
+      version.withVersion(f(parts))
+    .flatten
 
 /** Helpers and constructors for CipherText. */
 object CipherText:
@@ -213,13 +238,13 @@ extension (array: Array[Byte])
     */
   def aad: AAD = IArray.unsafeFromArray(array)
 
-extension (str:String)
-  /**
-   * Returns the `AAD` instance created from the `str` converted to bytes.
-   *
-   * @return
-   * an instance of `AAD` derived from the byte array representation of `str`.
-   */
+extension (str: String)
+  /** Returns the `AAD` instance created from the `str` converted to bytes.
+    *
+    * @return
+    *   an instance of `AAD` derived from the byte array representation of
+    *   `str`.
+    */
   def aad: AAD = str.getBytes.aad
 
 extension (array: IArray[Byte])
@@ -264,3 +289,18 @@ extension (iarrayObject: IArray.type)
     arrays.foldLeft(buffer):
       case (buffer, bytes) => buffer.nextBytes(bytes.mutable)
     buffer.array().immutable
+
+val secureRandom: SecureRandom =
+  val preferredAlgorithms = List("NativePRNGNonBlocking", "SHA1PRNG")
+  val sr = preferredAlgorithms.view
+    .map(alg => scala.util.Try(SecureRandom.getInstance(alg)))
+    .collectFirst { case scala.util.Success(sr) => sr }
+    .getOrElse(new SecureRandom())
+  sr.nextBytes(new Array[Byte](20)) // Force initial seeding
+  sr
+
+extension (secureRandom: SecureRandom)
+  def newBytes(length: Int): IArray[Byte] =
+    val arr = new Array[Byte](length)
+    secureRandom.nextBytes(arr)
+    arr.immutable

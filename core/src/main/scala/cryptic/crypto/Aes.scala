@@ -10,7 +10,7 @@ import javax.crypto.spec.{
   SecretKeySpec
 }
 import javax.crypto.{Cipher, KeyGenerator, SecretKey, SecretKeyFactory}
-import scala.util.Try
+import scala.util.{Success, Try}
 
 /** Object AES provides encryption and decryption utilities using the AES
   * algorithm. The functions provided allow encryption of plaintext into
@@ -27,6 +27,8 @@ object Aes extends Symmetric[Try]:
   override val keyAlgorithm = "AES"
   override val keyspecIterationCount: Int = 310000
   override val keyspecLength: Int = 256
+
+  val version: Version = FixedVersion(0, 0, 0, 1)
 
   override def newCipher(
       mode: Int,
@@ -49,20 +51,24 @@ object Aes extends Symmetric[Try]:
         val key = keygen(passphrase, salt)
         val iv = newIv()
         val ivSpec = paramSpec(iv)
-        encrypt(plainText.bytes, plainText.aad, key, ivSpec).map: encrypted =>
+        encrypt(plainText, key, ivSpec).map(encrypted =>
           CipherText(
+            version.bytes,
             plainText.aad,
             salt.bytes,
             iv,
             encrypted
           )
+        )
       .flatten
 
   given decrypt(using passphrase: Passphrase): Decrypt[Try] =
-    (cipherText: CipherText) =>
-      Try:
-        val IArray(aad, salt, iv, bytes) = cipherText.split
+    (_: CipherText).splitWith:
+      case IArray(ver, aad, salt, iv, bytes) if version.supports(ver) =>
         val key = keygen(passphrase, Salt(salt))
         val ivSpec = paramSpec(iv)
-        decrypt(bytes, aad, key, ivSpec).map(PlainText(_, aad))
-      .flatten
+        decrypt(bytes, aad, key, ivSpec).map(decrypted =>
+          PlainText(decrypted, aad)
+        )
+      case IArray(ver, _, _, _, _) =>
+        version.failed(ver)

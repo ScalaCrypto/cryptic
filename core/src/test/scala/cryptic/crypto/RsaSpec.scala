@@ -23,7 +23,7 @@ class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
     given privateKey: PrivateKey = keyPair.getPrivate
     encrypted.decrypted match
       case Success(actual) => actual shouldEqual text
-      case x ⇒ fail(s"does not decrypt: $x")
+      case x               => fail(s"does not decrypt: $x")
 
   "RSA" should "not support AAD" in:
     val encrypted = text.encrypted("AAD".aad)
@@ -46,3 +46,19 @@ class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
       .encrypted(expected)
       .cipherText
       .failure
+
+  "RSA" should "reject wrong version" in:
+    import cryptic.Functor.tryFunctor
+    val tampered = text.encrypted.cipherText
+      .map: cipherText =>
+        val IArray(_, bytes) = cipherText.split
+        val wrongVersion = FixedVersion(0, 0, 0, 0).bytes
+        CipherText(wrongVersion, bytes)
+
+    given privateKey: PrivateKey = keyPair.getPrivate
+
+    Encrypted[Try, String](tampered).decrypted match
+      case Failure(e) =>
+        e shouldBe a[IllegalArgumentException]
+        e.getMessage should include("Unsupported version")
+      case x => fail(s"Expected decryption to fail due to version mismatch, got $x")

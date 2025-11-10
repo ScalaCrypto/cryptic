@@ -6,7 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
-import scala.util.{Success,Try}
+import scala.util.{Failure, Success, Try}
 
 class EllipticCurveSpec extends AnyFlatSpec with Matchers:
   import cryptic.codec.default.given
@@ -34,3 +34,24 @@ class EllipticCurveSpec extends AnyFlatSpec with Matchers:
   "EllipticCurve" should "hide the plain text" in:
     text.encrypted.bytes.map(b=>
       new String(b.mutable).contains(text.getBytes())) shouldBe Success(false)
+
+  "EllipticCurve" should "not support AAD" in:
+    val encrypted = text.encrypted("AAD".aad)
+    intercept[UnsupportedOperationException]:
+      encrypted.bytes.get
+
+  "EllipticCurve" should "reject wrong version" in:
+    import cryptic.Functor.tryFunctor
+    val tampered = text.encrypted.cipherText
+      .map: cipherText =>
+        val IArray(_, bytes) = cipherText.split
+        val wrongVersion = FixedVersion(0, 0, 0, 0).bytes
+        CipherText(wrongVersion, bytes)
+
+    given privateKey: PrivateKey = keyPair.getPrivate
+
+    Encrypted[Try, String](tampered).decrypted match
+      case Failure(e) =>
+        e shouldBe a[IllegalArgumentException]
+        e.getMessage should include ("Unsupported version")
+      case _ => fail("Expected decryption to fail due to version mismatch")

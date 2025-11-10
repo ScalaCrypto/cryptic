@@ -12,12 +12,14 @@ import javax.crypto.spec.{
 import javax.crypto.{Cipher, KeyGenerator, SecretKey, SecretKeyFactory}
 import scala.util.Try
 
-/** Abstraction for symmetric cryptography (single shared secret key).
-  *
-  * Provides key derivation utilities, encryption/decryption helpers, and common
-  * parameters used by concrete algorithms (e.g., AES-GCM).
-  */
-trait Symmetric:
+/** A trait that centralizes cryptographic operations relevant to symmetric
+ * encryption and decryption, key generation, and key management.
+ *
+ * @tparam F
+ * A higher-kinded type representing the effect structure for computations
+ * involving cryptographic operations.
+ */
+trait Symmetric[F[_]]:
   import Symmetric.*
   export Symmetric.*
 
@@ -44,20 +46,30 @@ trait Symmetric:
       aad: AAD,
       key: SecretKey,
       spec: AlgorithmParameterSpec
-  ): IArray[Byte] =
-    val cipher = newCipher(Cipher.ENCRYPT_MODE, key, spec)
-    if aad.nonEmpty then cipher.updateAAD(aad.mutable)
-    cipher.doFinal(bytes.mutable).immutable
+  )(using Functor[F]): F[IArray[Byte]] =
+    Try:
+      val cipher = newCipher(Cipher.ENCRYPT_MODE, key, spec)
+      if aad.nonEmpty then cipher.updateAAD(aad.mutable)
+      cipher.doFinal(bytes.mutable).immutable
+    .lift
+
+  def encrypt(
+      plainText: PlainText,
+      key: SecretKey,
+      spec: AlgorithmParameterSpec
+  )(using Functor[F]): F[IArray[Byte]] = encrypt(plainText.bytes, plainText.aad, key, spec)
 
   def decrypt(
       bytes: IArray[Byte],
       aad: AAD,
       key: SecretKey,
       spec: AlgorithmParameterSpec
-  ): IArray[Byte] =
-    val cipher = newCipher(Cipher.DECRYPT_MODE, key, spec)
-    if aad.nonEmpty then cipher.updateAAD(aad.mutable)
-    cipher.doFinal(bytes.mutable).immutable
+  )(using Functor[F]): F[IArray[Byte]] =
+    Try:
+      val cipher = newCipher(Cipher.DECRYPT_MODE, key, spec)
+      if aad.nonEmpty then cipher.updateAAD(aad.mutable)
+      cipher.doFinal(bytes.mutable).immutable
+    .lift
 
   /** Case class Passphrase for handling cryptographic passphrases.
     *

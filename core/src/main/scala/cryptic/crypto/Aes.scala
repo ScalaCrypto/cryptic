@@ -17,7 +17,7 @@ import scala.util.Try
   * ciphertext and decryption of ciphertext back into plaintext using a
   * passphrase and various parameters defined in the AESParams case class.
   */
-object Aes extends Symmetric:
+object Aes extends Symmetric[Try]:
   val transformation: String = "GCM/NoPadding"
   val saltLength: Int = 32
   val gcmTagLength = 128 // GCM authentication tag length in bits
@@ -42,29 +42,27 @@ object Aes extends Symmetric:
   def paramSpec(iv: IArray[Byte]): AlgorithmParameterSpec =
     new GCMParameterSpec(gcmTagLength, iv.mutable)
 
-  given encrypt(using
-      passphrase: Passphrase
-  ): Encrypt[Try] =
+  given encrypt(using passphrase: Passphrase): Encrypt[Try] =
     (plainText: PlainText) =>
       Try:
         val salt = Salt(saltLength)
         val key = keygen(passphrase, salt)
         val iv = newIv()
         val ivSpec = paramSpec(iv)
-        val cipherText = encrypt(plainText.bytes, plainText.aad, key, ivSpec)
-        CipherText(
-          plainText.aad,
-          salt.bytes,
-          iv,
-          cipherText
-        )
+        encrypt(plainText.bytes, plainText.aad, key, ivSpec).map: encrypted =>
+          CipherText(
+            plainText.aad,
+            salt.bytes,
+            iv,
+            encrypted
+          )
+      .flatten
 
-  given decrypt(using
-      passphrase: Passphrase
-  ): Decrypt[Try] = (cipherText: CipherText) =>
-    Try:
-      val IArray(aad, salt, iv, bytes) = cipherText.split
-      val key = keygen(passphrase, Salt(salt))
-      val ivSpec = paramSpec(iv)
-      val decrypted = decrypt(bytes, aad, key, ivSpec)
-      PlainText(decrypted, aad)
+  given decrypt(using passphrase: Passphrase): Decrypt[Try] =
+    (cipherText: CipherText) =>
+      Try:
+        val IArray(aad, salt, iv, bytes) = cipherText.split
+        val key = keygen(passphrase, Salt(salt))
+        val ivSpec = paramSpec(iv)
+        decrypt(bytes, aad, key, ivSpec).map(PlainText(_, aad))
+      .flatten

@@ -5,11 +5,17 @@ import java.security.*
 import javax.crypto.Cipher
 import scala.util.{Failure, Try}
 
-/** Trait representing asymmetric encryption and decryption functionality.
-  *
-  * Provides a mechanism to encrypt and decrypt data using public and private
-  * keys following asymmetric cryptographic principles.
-  */
+/** Represents an abstraction for asymmetric encryption and decryption operations
+ * using a given effect type `F[_]`. Asymmetric encryption typically leverages
+ * a pair of keys: a public key for encryption and a private key for decryption.
+ *
+ * This trait provides methods to perform encryption, decryption, and to create
+ * initialized instances of `Cipher` for the required operation modes.
+ *
+ * @tparam F
+ * The effect type wrapping the result of encryption and decryption. Examples
+ * include `Try`, `Option`, or asynchronous data types like `IO`.
+ */
 trait Asymmetric[F[_]]:
 
   def newCipher(mode: Int, key: Key): Cipher
@@ -23,23 +29,22 @@ trait Asymmetric[F[_]]:
             "Asymmetric ciphers do not support AAD"
           )
         )
-      else
-        Try:
-          val bytes = encrypt(plainText.bytes, key)
-          CipherText(bytes)
-        .lift
+      else encrypt(plainText.bytes, key).map(CipherText.apply)
 
-  def encrypt(bytes: IArray[Byte], key: PublicKey): IArray[Byte] =
-    val cipher: Cipher = newCipher(Cipher.ENCRYPT_MODE, key)
-    cipher.doFinal(bytes.mutable).immutable
+  def encrypt(bytes: IArray[Byte], key: PublicKey)(using
+      Functor[F]
+  ): F[IArray[Byte]] =
+    Try:
+      newCipher(Cipher.ENCRYPT_MODE, key)
+        .doFinal(bytes.mutable)
+        .immutable
+    .lift
 
   given decrypt(using key: PrivateKey, functor: Functor[F]): Decrypt[F] =
     (cipherText: CipherText) =>
-      Try:
-        val text = decrypt(cipherText.bytes, key)
-        PlainText(text)
-      .lift
+      decrypt(cipherText.bytes, key).map(PlainText.apply)
 
-  def decrypt(bytes: IArray[Byte], privateKey: PrivateKey): IArray[Byte] =
-    val cipher: Cipher = newCipher(Cipher.DECRYPT_MODE, privateKey)
-    cipher.doFinal(bytes.mutable).immutable
+  def decrypt(bytes: IArray[Byte], privateKey: PrivateKey)(using Functor[F]): F[IArray[Byte]] =
+    Try:
+      newCipher(Cipher.DECRYPT_MODE, privateKey).doFinal(bytes.mutable).immutable
+    .lift

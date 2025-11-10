@@ -23,23 +23,29 @@ object RsaAes:
         val aesKey = Aes.keygen()
         val iv = Aes.newIv()
         val ivSpec = Aes.paramSpec(iv)
-        val encryptedText =
-          Aes.encrypt(plainText.bytes, plainText.aad, aesKey, ivSpec)
-        val encryptedAesKey =
-          Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
-        CipherText(
+        for
+          encryptedAesKey <- Rsa.encrypt(aesKey.getEncoded.immutable, publicKey)
+          encryptedText <- Aes.encrypt(
+            plainText.bytes,
+            plainText.aad,
+            aesKey,
+            ivSpec
+          )
+        yield CipherText(
           plainText.aad,
           iv,
           encryptedAesKey,
           encryptedText
         )
+      .flatten
 
   given decrypt(using privateKey: PrivateKey): Decrypt[Try] =
     (cipherText: CipherText) =>
       Try:
-        val IArray(aad, iv, keyBytes, textBytes) = cipherText.split
-        val aesKeyBytes = Rsa.decrypt(keyBytes, privateKey)
-        val aesKey = Aes.key(aesKeyBytes)
+        val IArray(aad, iv, encryptedKey, encryptedText) = cipherText.split
         val ivSpec = Aes.paramSpec(iv)
-        val text = Aes.decrypt(textBytes, aad, aesKey, ivSpec)
-        PlainText(text, aad)
+        for
+          aesKey <- Rsa.decrypt(encryptedKey, privateKey).map(Aes.key)
+          text <- Aes.decrypt(encryptedText, aad, aesKey, ivSpec)
+        yield PlainText(text, aad)
+      .flatten

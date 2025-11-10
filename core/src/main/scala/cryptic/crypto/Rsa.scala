@@ -41,13 +41,3 @@ object Rsa extends Asymmetric[Try]:
     val generator = KeyPairGenerator.getInstance("RSA")
     generator.initialize(size)
     generator.generateKeyPair()
-
-  def encodeCipherText(bytes: IArray[Byte]): CipherText =
-    CipherText(version.bytes, bytes)
-
-  def decodeCipherText
-      : PartialFunction[IArray[IArray[Byte]], Try[IArray[Byte]]] =
-    case IArray(ver, encrypted) if version.supports(ver) =>
-      Success(encrypted)
-    case IArray(ver, _) =>
-      version.failed(ver)

@@ -45,8 +45,8 @@ class UpickleSpec extends AnyFlatSpec with Matchers with TryValues:
     val actual: Try[User] = plainText.decoded
     actual shouldEqual Success(user)
   "Upickle codec" should "be usable by the encoder/decoder" in:
-    import cryptic.crypto.demo.Reverse.*
-    import cryptic.crypto.demo.Reverse.given
+    import cryptic.cipher.demo.Reverse.*
+    import cryptic.cipher.demo.Reverse.given
     import cryptic.Functor.tryFunctor
     val encrypted = user.encrypted
     encrypted.bytes.success.value shouldBe write(user).getBytes.reverse // Reverse...

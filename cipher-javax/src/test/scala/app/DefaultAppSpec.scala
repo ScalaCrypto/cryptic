@@ -8,7 +8,7 @@ import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.{Success, Try}
 
 class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
-  import cryptic.default.{given, *}
+  import cryptic.cipher.default.{*, given}
 
   val keyPair: KeyPair = newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
@@ -17,10 +17,10 @@ class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
   val encrypted: Encrypted[Try, String] = clear.encrypted
   val decrypted: Try[String] = encrypted.decrypted
 
-  "Cryptic" should "encrypt" in:
+  it should "encrypt" in:
     encrypted.bytes.success should not equal Success(clear.getBytes)
 
-  "Cryptic" should "decrypt" in:
+  it should "decrypt" in:
     decrypted.success shouldEqual Success(clear)
 
   case class Person(id: Long, email: Encrypted[Try, String])

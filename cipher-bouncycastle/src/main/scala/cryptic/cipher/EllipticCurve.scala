@@ -26,6 +26,11 @@ object EllipticCurve extends Asymmetric[Try]:
   Security.addProvider(new BouncyCastleProvider())
   private val generator: KeyPairGenerator = KeyPairGenerator.getInstance("EC")
   generator.initialize(new ECGenParameterSpec("secp256r1"))
+  given functor: Functor[Try] = Functor.tryFunctor
+
+  object default:
+    export cryptic.default.{given, *}
+    export EllipticCurve.{given, *}
 
   override def newCipher(mode: Int, key: Key): Cipher =
     val derivation = Hex.decode("00112233445566778899AABBCCDDEEFF")

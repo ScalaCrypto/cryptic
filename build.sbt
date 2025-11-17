@@ -66,7 +66,8 @@ lazy val commonSettings =
   Seq(
     scalaVersion := "3.7.3",
     scalacOptions ++= Seq(
-      "-Xmax-inlines", "64",
+      "-Xmax-inlines",
+      "64",
       "-Yexplicit-nulls",
       "-Wsafe-init"
     ),
@@ -123,7 +124,7 @@ lazy val codecUpickleSettings = commonSettings ++ Seq(
   }
 )
 
-lazy val cryptoCommonSettings = (projectName: String) =>
+lazy val cipherCommonSettings = (projectName: String) =>
   commonSettings ++ Seq(
     name := projectName,
     libraryDependencies ++= Seq(scalaTest % Test),
@@ -132,13 +133,13 @@ lazy val cryptoCommonSettings = (projectName: String) =>
     },
     artifactName := {
       (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
-        s"cryptic-${artifact.name.replace("crypto-", "")}-${module.revision}.${artifact.extension}"
+        s"cryptic-${artifact.name.replace("cipher-", "")}-${module.revision}.${artifact.extension}"
     }
   )
 
-lazy val cryptoTestSettings =
+lazy val cipherTestSettings =
   commonSettings ++ testSettings ++ Seq(
-    name := "crypto-test",
+    name := "cipher-test",
     libraryDependencies ++= Seq(scalaTest % Test),
     publish / skip := true
   )
@@ -155,22 +156,30 @@ lazy val `codec-upickle` = (project in file("codec-upickle"))
   .settings(codecUpickleSettings)
   .dependsOn(core)
 
-lazy val `crypto-bouncycastle` = (project in file("crypto-bouncycastle"))
+lazy val `cipher-javax` = (project in file("cipher-javax"))
   .settings(
-    cryptoCommonSettings("crypto-bouncycastle") ++ Seq(
+    cipherCommonSettings("cipher-javax") ++ Seq(
       libraryDependencies ++= Seq(bc, scalaTest % Test)
     )
   )
   .dependsOn(core)
+lazy val `cipher-bouncycastle` = (project in file("cipher-bouncycastle"))
+  .settings(
+    cipherCommonSettings("cipher-bouncycastle") ++ Seq(
+      libraryDependencies ++= Seq(bc, scalaTest % Test)
+    )
+  )
+  .dependsOn(core, `cipher-javax`)
 
-lazy val `crypto-test` = (project in file("crypto-test"))
-  .settings(cryptoTestSettings)
+lazy val `cipher-test` = (project in file("cipher-test"))
+  .settings(cipherTestSettings)
   .dependsOn(
     core,
     `codec-chill`,
     `codec-fst`,
     `codec-upickle`,
-    `crypto-bouncycastle`
+    `cipher-javax`,
+    `cipher-bouncycastle`
   )
 
 lazy val cryptic = (project in file("."))
@@ -181,7 +190,7 @@ lazy val cryptic = (project in file("."))
     publish / skip := true,
     paradoxTheme := Some(builtinParadoxTheme("generic")),
     Compile / paradoxProperties ++= Map(
-      "github.base_url" -> s"https://github.com/ScalaCrypto/cryptic/tree/${version.value}"
+      "github.base_url" -> s"https://github.com/Scalacipher/cryptic/tree/${version.value}"
     )
   )
   .aggregate(
@@ -189,6 +198,7 @@ lazy val cryptic = (project in file("."))
     `codec-chill`,
     `codec-fst`,
     `codec-upickle`,
-    `crypto-bouncycastle`,
-    `crypto-test`
+    `cipher-bouncycastle`,
+    `cipher-javax`,
+    `cipher-test`
   )

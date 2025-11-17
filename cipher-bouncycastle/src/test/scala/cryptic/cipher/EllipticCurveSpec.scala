@@ -9,9 +9,7 @@ import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.{Failure, Success, Try}
 
 class EllipticCurveSpec extends AnyFlatSpec with Matchers:
-  import cryptic.codec.default.given
-  import EllipticCurve.{*, given}
-  given functor:Functor[Try] = Functor.tryFunctor
+  import EllipticCurve.default.{*, given}
   private val keyPair: KeyPair = newKeyPair()
   given publicKey: PublicKey = keyPair.getPublic
   private val text = "secret"
@@ -41,7 +39,6 @@ class EllipticCurveSpec extends AnyFlatSpec with Matchers:
       encrypted.bytes.get
 
   "EllipticCurve" should "reject wrong version" in:
-    import cryptic.Functor.tryFunctor
     val tampered = text.encrypted.cipherText
       .map: cipherText =>
         val IArray(_, bytes) = cipherText.split

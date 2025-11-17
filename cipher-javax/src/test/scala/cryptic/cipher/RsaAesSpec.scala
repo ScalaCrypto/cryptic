@@ -9,15 +9,12 @@ import scala.util.{Failure, Success, Try}
 import cryptic.FixedVersion
 
 class RsaAesSpec extends AnyFlatSpec with Matchers:
-  import cryptic.codec.default.given
-
-  import RsaAes.{*, given}
-  given f: Functor[Try] = Functor.tryFunctor
+  import RsaAes.default.{given, *}
 
   val keyPair: KeyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   val text: String = "secret" * 10000 // Large data
-  "RsaAes" should "support encryption and decryption" in:
+  it should "support encryption and decryption" in:
     // Note no need for the private key when encrypting
     val encrypted = text.encrypted
     given privateKey: PrivateKey = keyPair.getPrivate
@@ -25,11 +22,11 @@ class RsaAesSpec extends AnyFlatSpec with Matchers:
       case Success(actual) => actual shouldEqual text
       case x ⇒ fail(s"does not decrypt: $x")
 
-  "RsaAes" should "fail with mismatched versions" in:
-    val tampered = text.encrypted.cipherText.map: cipherText =>
-      val IArray(_, aad, iv, key, text) = cipherText.split
-      val wrongVersion = FixedVersion(0, 0, 0, 0).bytes
-      CipherText(wrongVersion, aad, iv, key, text)
+  it should "fail with mismatched versions" in:
+    val tampered = text.encrypted.splitWith:
+      case IArray(_, aad, iv, key, text) =>
+        val wrongVersion = FixedVersion(0, 0, 0, 0).bytes
+        cryptic.Functor.tryFunctor.pure(CipherText(wrongVersion, aad, iv, key, text))
     given privateKey: PrivateKey = keyPair.getPrivate
     Encrypted[Try, String](tampered).decrypted match
       case Failure(e) =>
@@ -37,6 +34,6 @@ class RsaAesSpec extends AnyFlatSpec with Matchers:
         e.getMessage should include("Unsupported version")
       case _ => fail("Expected decryption to fail due to version mismatch")
 
-  "RsaAes" should "hide plaintext" in:
+  it should "hide plaintext" in:
     new String(text.encrypted.bytes.get.mutable)
       .contains(text.getBytes()) shouldBe false

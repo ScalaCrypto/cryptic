@@ -18,6 +18,7 @@ import scala.util.{Failure, Success, Try}
   *   include `Try`, `Option`, or asynchronous data types like `IO`.
   */
 trait Asymmetric[F[_]]:
+  import cryptic.default.{given, *}
 
   /** Creates a new Cipher instance configured for a specific mode and key.
     *
@@ -42,34 +43,34 @@ trait Asymmetric[F[_]]:
     */
   val version: Version
 
-  /**
-   * Encodes the given encrypted payload into a `CipherText` object.
-   *
-   * This method combines the current version's bytes with the provided encrypted
-   * data to produce a `CipherText` instance.
-   *
-   * @param encrypted
-   * The encrypted payload as an immutable array of bytes.
-   * @return
-   * A `CipherText` instance containing the version bytes and the encrypted payload.
-   */
+  /** Encodes the given encrypted payload into a `CipherText` object.
+    *
+    * This method combines the current version's bytes with the provided
+    * encrypted data to produce a `CipherText` instance.
+    *
+    * @param encrypted
+    *   The encrypted payload as an immutable array of bytes.
+    * @return
+    *   A `CipherText` instance containing the version bytes and the encrypted
+    *   payload.
+    */
   def encodeCipherText(encrypted: IArray[Byte]): CipherText =
     CipherText(version.bytes, encrypted)
 
   /** Decodes a cipher text payload using the provided functor. The method
-   * supports specific versions of the payload format and applies transformations
-   * based on the version compatibility.
-   *
-   * @param functor
-   * the type class providing effectful computation capabilities for the
-   * defined higher-kinded type `F`
-   * @return
-   * a partial function that matches an array of byte arrays, representing
-   * the version and encrypted data. If the version is supported, it returns
-   * the encrypted data wrapped in the effect `F`. If the version is not
-   * supported, it fails the computation and lifts the failure into the effect
-   * `F`.
-   */
+    * supports specific versions of the payload format and applies
+    * transformations based on the version compatibility.
+    *
+    * @param functor
+    *   the type class providing effectful computation capabilities for the
+    *   defined higher-kinded type `F`
+    * @return
+    *   a partial function that matches an array of byte arrays, representing
+    *   the version and encrypted data. If the version is supported, it returns
+    *   the encrypted data wrapped in the effect `F`. If the version is not
+    *   supported, it fails the computation and lifts the failure into the
+    *   effect `F`.
+    */
   def decodeCipherText(using
       functor: Functor[F]
   ): PartialFunction[IArray[IArray[Byte]], F[IArray[Byte]]] =

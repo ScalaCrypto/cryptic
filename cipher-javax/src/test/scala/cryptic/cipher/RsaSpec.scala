@@ -10,13 +10,12 @@ import javax.crypto.IllegalBlockSizeException
 import scala.util.{Failure, Success, Try}
 
 class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
-  import cryptic.codec.default.given
-  import Rsa.{*, given}
+  import Rsa.default.{*, given}
   val keyPair: KeyPair = Rsa.newKeyPair(2048)
   given publicKey: PublicKey = keyPair.getPublic
   val text = "secret"
 
-  "RSA" should "support encryption and decryption" in:
+  it should "support encryption and decryption" in:
     // Note no need for the private key when encrypting
     val encrypted = text.encrypted
 
@@ -25,21 +24,21 @@ class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
       case Success(actual) => actual shouldEqual text
       case x               => fail(s"does not decrypt: $x")
 
-  "RSA" should "not support AAD" in:
+  it should "not support AAD" in:
     val encrypted = text.encrypted("AAD".aad)
     intercept[UnsupportedOperationException]:
       encrypted.bytes.get
 
-  "RSA" should "fail on large data" in:
+  it should "fail on large data" in:
     ("secret" * 1000).encrypted.cipherText.failure.exception shouldBe a[
       IllegalBlockSizeException
     ]
 
-  "RSA" should "hide plaintext" in:
+  it should "hide plaintext" in:
     new String(text.encrypted.bytes.get.mutable)
       .contains(text.getBytes()) shouldBe false
 
-  "RSA" should "fail to encode AAD unauthenticated in the CipherText" in:
+  it should "fail to encode AAD unauthenticated in the CipherText" in:
     import cryptic.Functor.tryFunctor
     val expected = "AAD".aad
     text
@@ -47,13 +46,12 @@ class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
       .cipherText
       .failure
 
-  "RSA" should "reject wrong version" in:
+  it should "reject wrong version" in:
     import cryptic.Functor.tryFunctor
-    val tampered = text.encrypted.cipherText
-      .map: cipherText =>
-        val IArray(_, bytes) = cipherText.split
+    val tampered = text.encrypted.splitWith:
+      case IArray(_, bytes) =>
         val wrongVersion = FixedVersion(0, 0, 0, 0).bytes
-        CipherText(wrongVersion, bytes)
+        tryFunctor.pure(CipherText(wrongVersion, bytes))
 
     given privateKey: PrivateKey = keyPair.getPrivate
 
@@ -61,4 +59,5 @@ class RsaSpec extends AnyFlatSpec with Matchers with TryValues:
       case Failure(e) =>
         e shouldBe a[IllegalArgumentException]
         e.getMessage should include("Unsupported version")
-      case x => fail(s"Expected decryption to fail due to version mismatch, got $x")
+      case x =>
+        fail(s"Expected decryption to fail due to version mismatch, got $x")

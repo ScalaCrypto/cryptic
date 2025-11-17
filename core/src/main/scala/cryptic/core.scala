@@ -1,10 +1,9 @@
 package cryptic
 
 import java.nio.ByteBuffer
-import java.security.SecureRandom
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
 
 /** Identity type alias used to represent pure (non-effectful) values. */
 type Id[A] = A
@@ -68,19 +67,30 @@ case class CipherText(bytes: IArray[Byte]):
     */
   def split: IArray[IArray[Byte]] = buffer.split
 
-  /**
-   * Applies a given partial function to the segments of the encrypted payload bytes.
-   * If the partial function is not defined for the segments, it invokes the `failed` method
-   * of the provided `Functor` instance with an `IllegalArgumentException`.
-   *
-   * @param f A partial function that processes the result of the `split` method, which segments
-   *          the encrypted payload bytes into multiple concatenated parts, and produces an effectful computation.
-   * @return An effectful computation of type `F[A]` resulting from applying the given partial function
-   *         to the segmented bytes. If the partial function is not applicable, a failure effect is returned.
-   */
-  def splitWith[F[_], A](f: PartialFunction[IArray[IArray[Byte]], F[A]])(using functor:Functor[F]): F[A] =
-      f.applyOrElse(split, (_: IArray[IArray[Byte]]) =>
-        functor.failed(new IllegalArgumentException(s"Split failed, no match: $this")))
+  /** Applies a given partial function to the segments of the encrypted payload
+    * bytes. If the partial function is not defined for the segments, it invokes
+    * the `failed` method of the provided `Functor` instance with an
+    * `IllegalArgumentException`.
+    *
+    * @param f
+    *   A partial function that processes the result of the `split` method,
+    *   which segments the encrypted payload bytes into multiple concatenated
+    *   parts, and produces an effectful computation.
+    * @return
+    *   An effectful computation of type `F[A]` resulting from applying the
+    *   given partial function to the segmented bytes. If the partial function
+    *   is not applicable, a failure effect is returned.
+    */
+  def splitWith[F[_], A](
+      f: PartialFunction[IArray[IArray[Byte]], F[A]]
+  )(using functor: Functor[F]): F[A] =
+    f.applyOrElse(
+      split,
+      (_: IArray[IArray[Byte]]) =>
+        functor.failed(
+          new IllegalArgumentException(s"Split failed, no match: $this")
+        )
+    )
 
   override def equals(obj: scala.Any): Boolean = obj match
     case CipherText(other) => bytes.sameElements(other)
@@ -207,6 +217,9 @@ given Codec[Nothing]:
       )
     )
 
+case class Salt(bytes: IArray[Byte]) extends AnyVal:
+  def length: Int = bytes.length
+
 // Syntax extensions
 /** Enriches any value with .encrypted given Encrypt and Functor instances. */
 extension [F[_]: {Functor, Encrypt}, V: Codec](value: V)
@@ -281,18 +294,3 @@ extension (iarrayObject: IArray.type)
     arrays.foldLeft(buffer):
       case (buffer, bytes) => buffer.nextBytes(bytes.mutable)
     buffer.array().immutable
-
-val secureRandom: SecureRandom =
-  val preferredAlgorithms = List("NativePRNGNonBlocking", "SHA1PRNG")
-  val sr = preferredAlgorithms.view
-    .map(alg => scala.util.Try(SecureRandom.getInstance(alg)))
-    .collectFirst { case scala.util.Success(sr) => sr }
-    .getOrElse(new SecureRandom())
-  sr.nextBytes(new Array[Byte](20)) // Force initial seeding
-  sr
-
-extension (secureRandom: SecureRandom)
-  def newBytes(length: Int): IArray[Byte] =
-    val arr = new Array[Byte](length)
-    secureRandom.nextBytes(arr)
-    arr.immutable

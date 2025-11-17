@@ -15,8 +15,7 @@ case class User(id: Long, email: Encrypted[Try, EmailAddress])
 class GettingStartedSpec extends AnyFlatSpec with Matchers:
 
   "Getting started guide" should "work" in:
-    import cryptic.default.{*, given}
-    import cryptic.Functor.tryFunctor
+    import cryptic.cipher.RsaAes.default.{given, *}
     for i <- 0 to 0 do {
       // #import
     }

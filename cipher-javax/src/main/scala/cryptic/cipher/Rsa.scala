@@ -23,8 +23,12 @@ import javax.crypto.spec.{OAEPParameterSpec, PSource}
   */
 object Rsa extends Asymmetric[Try]:
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
-  given functor: Functor[Try] = Functor.tryFunctor
+  given functor: Functor[Try] = Functor.tryFunctor // Todo remove
   val version: Version = FixedVersion(0, 0, 0, 1)
+
+  object default:
+    export cryptic.default.{given, *}
+    export Rsa.{given, *}
 
   def newCipher(mode: Int, key: Key): Cipher =
     val oaepParams: OAEPParameterSpec = new OAEPParameterSpec(

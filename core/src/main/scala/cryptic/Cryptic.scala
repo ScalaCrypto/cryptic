@@ -289,6 +289,20 @@ case class Encrypted[F[_]: Functor, V: Codec](cipherText: F[CipherText])
     */
   def bytes: F[IArray[Byte]] = cipherText.map(_.bytes)
 
+  /**
+   * Applies a given partial function to process segments of the encrypted
+   * data, producing an effectful computation of type `F[A]`.
+   *
+   * @param f
+   * A partial function that processes the segmented encrypted data,
+   * represented as `IArray[IArray[Byte]]`, and produces an effectful
+   * computation of type `F[A]`.
+   * @return
+   * The result of applying the provided partial function to the segmented
+   * data, wrapped in the effect type `F[A]`.
+   */
+  def splitWith[A](f: PartialFunction[IArray[IArray[Byte]], F[A]]): F[A] =
+    cipherText.flatMap(_.splitWith(f))
   /** Checks if this encrypted value is non-empty (defined).
     *
     * @return

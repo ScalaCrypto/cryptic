@@ -8,9 +8,7 @@ import java.security.{KeyPair, PrivateKey, PublicKey}
 import scala.util.{Success, Try}
 
 class EllipticCurveAppSpec extends AnyFlatSpec with Matchers with TryValues:
-  import cryptic.{*, given}
-  import cryptic.codec.default.given
-  import cryptic.cipher.EllipticCurve.{*, given}
+  import cryptic.cipher.EllipticCurve.default.{*, given}
 
   val keyPair: KeyPair = newKeyPair()
   given publicKey: PublicKey = keyPair.getPublic

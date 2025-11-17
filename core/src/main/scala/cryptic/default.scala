@@ -20,6 +20,3 @@ package cryptic
 object default extends Codec.Companion:
   export cryptic.Cryptic.{given, *}
   export cryptic.codec.default.{given, *}
-  // Default is RsaAes
-  export cryptic.cipher.RsaAes.{encrypt, decrypt}  // Only RsaAes given instances
-  export cryptic.cipher.Rsa.newKeyPair  // Key generation function

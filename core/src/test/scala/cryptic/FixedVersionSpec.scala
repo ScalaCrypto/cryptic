@@ -29,6 +29,6 @@ class FixedVersionSpec extends AnyFlatSpec with Matchers with TryValues:
     intercept[IllegalArgumentException]:
       FixedVersion(1, 2, 3, 4, 5) // Invalid length
 
-  it should "format toString correctly" in :
+  it should "format toString correctly" in:
     val version = FixedVersion(1, 2, 3, 4)
     version.toString shouldBe "1.2.3.4"

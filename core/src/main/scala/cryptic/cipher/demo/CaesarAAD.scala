@@ -3,53 +3,41 @@ package cipher
 package demo
 
 import java.nio.ByteBuffer
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
-/**
- * The `CaesarAAD` object provides encryption and decryption functionality using a Caesar cipher
- * with an additional "Associated Authentication Data" (AAD) mechanism for key identification.
- * It defines methods and given instances for the `Encrypt` and `Decrypt` type classes, as well as utilities
- * for key management.
- *
- * The AAD is used as a metadata segment to facilitate dynamic key-based encryption and decryption.
- * Each AAD is associated with a key ID, allowing multiple keys to be used simultaneously.
- *
- * The `Keys` case class encapsulates a mapping between `keyId` and their offsets, enabling flexible
- * encryption for various key IDs.
- */
+/** Provides functionality for encryption and decryption operations based on the
+  * Caesar cipher technique with an associated authentication data (AAD).
+  *
+  * This object defines a mechanism for handling keys, encryption, and
+  * decryption while ensuring that key offsets are non-zero. The primary focus
+  * is on integrating this logic with the `Try` effect type.
+  */
 object CaesarAAD:
-  case class Keys(offsets: Map[Int, Int]):
-    require(offsets.nonEmpty, "Offsets cannot be empty")
+  given functor: Functor[Try] = Functor.tryFunctor
+  case class Keys(offsets: Map[String, Int]):
     require(offsets.forall(_._2 != 0), "Offsets cannot be zero")
-    def add(keyId: Int, offset: Int): Keys =
-      copy(offsets = offsets + (keyId -> offset))
-    def get(keyId: Int): Int =
-      offsets.getOrElse(
-        keyId,
-        throw new NoSuchElementException(s"Key ID $keyId not found")
-      )
+    def get(keyId: String): Try[Int] =
+      offsets
+        .get(keyId)
+        .toRight(new NoSuchElementException(s"Key ID $keyId not found"))
+        .toTry
+
   object Keys:
-    def apply(offsets: (Int, Int)*): Keys =
-      Keys(offsets.toMap)
+    def apply(offsets: (String, Int)*): Keys = Keys(offsets.toMap)
+
   given encrypt(using keys: Keys): Encrypt[Try] =
     (plainText: PlainText) =>
-      Try:
-        val offset = keys.get(plainText.aad.toKeyId)
-        val bytes = plainText.bytes.mutable
-          .map(b => (b + offset).toByte)
-          .immutable
-        CipherText(plainText.aad, bytes)
-  given decrypt(using keys: Keys): Decrypt[Try] = (cipherText: CipherText) =>
-    Try:
-      val IArray(aad, bytes) = cipherText.split
-      val keyId = aad.toKeyId
-      val offset = keys.get(keyId)
-      val decoded = bytes.map(b => (b - offset).toByte)
-      PlainText(decoded, aad)
+      for
+        offset <- keys.get(plainText.aad.string)
+        encrypted <- plainText.bytes.addOffset(offset)
+      yield CipherText(plainText.aad.bytes, encrypted)
 
-  def keygen(keyId: Int, offset: Int): Keys = Keys(keyId -> offset)
-extension (n: Int)
-  def toAAD: AAD =
-    ByteBuffer.allocate(4).putInt(n).array().aad
-extension (bytes: IArray[Byte])
-  def toKeyId: Int = ByteBuffer.wrap(bytes.mutable).getInt
+  given decrypt(using keys: Keys): Decrypt[Try] =
+    (_: CipherText).splitWith:
+      case IArray(aadBytes, encrypted) =>
+        val aad = AAD(aadBytes)
+        val keyId = aad.string
+        for
+          offset <- keys.get(keyId)
+          decrypted <- encrypted.addOffset(-offset)
+        yield PlainText(decrypted, aad)

@@ -32,4 +32,6 @@ class EllipticCurveAppSpec extends AnyFlatSpec with Matchers with TryValues:
     val person = Person(id, email.encrypted)
     person.email.bytes.success should not equal Success(email.getBytes())
     person.email.contains(email) shouldBe Success(true)
-    person.toString should startWith("Person(17,Encrypted(Success(CipherText(0x")
+    person.toString should startWith(
+      "Person(17,Encrypted(Success(CipherText(0x"
+    )

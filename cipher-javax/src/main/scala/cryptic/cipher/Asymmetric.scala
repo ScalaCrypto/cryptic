@@ -82,7 +82,7 @@ trait Asymmetric[F[_]]:
   given encrypt(using key: PublicKey, functor: Functor[F]): Encrypt[F] =
     (plainText: PlainText) =>
       // Todo move aad out of PlainText and make Encrypt trait check with types
-      if plainText.aad.nonEmpty then
+      if plainText.aad.bytes.nonEmpty then
         functor.failed[CipherText](
           new UnsupportedOperationException(
             "Asymmetric ciphers do not support AAD"

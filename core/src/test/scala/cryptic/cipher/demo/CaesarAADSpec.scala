@@ -11,27 +11,32 @@ import scala.util.{Success, Try}
 class CaesarAADSpec extends AnyFlatSpec with Matchers with TryValues:
   import CaesarAAD.{*, given}
   import cryptic.codec.default.given
-  import cryptic.Functor.tryFunctor
-  given keys: Keys = CaesarAAD.Keys(100 -> 1, 400 -> 2)
+  given keys: Keys = CaesarAAD.Keys("Pompey" -> 1, "Crassus" -> 2)
 
   private val text = "secret"
-  private val encrypted = text.encrypted(100.toAAD)
-  "CaesarAAD Encrypted" should "support encryption and decryption" in:
-    encrypted.decrypted match
-      case Success(decrypted) => decrypted shouldEqual text
-      case x                  => fail(s"does not decrypt: $x")
+  private val pompey = text.encrypted("Pompey".aad)
+  private val crassus = text.encrypted("Crassus".aad)
 
-  "CaesarAAD Encrypted" should "hide plaintext" in:
-    encrypted.bytes.map(b =>
+  it should "support encryption and decryption to Pompey" in:
+    pompey.decrypted.success.value shouldEqual text
+
+  it should "support encryption and decryption to Crassus" in:
+    crassus.decrypted.success.value shouldEqual text
+
+  it should "hide plaintext" in:
+    pompey.bytes.map(b =>
       new String(b.mutable).contains(text)
     ) shouldBe Success(false)
 
-  "CaesarAAD key zero" should "not be valid" in:
+  it should "key zero not be valid" in:
     assertThrows[IllegalArgumentException]:
-      CaesarAAD.Keys(1 -> 0)
+      CaesarAAD.Keys("Self" -> 0)
 
-  "CaesarAAD encrypted" should "be rotated" in:
-    encrypted.bytes.success.value.toSeq shouldEqual IArray.join(
-      100.toAAD,
+  it should "Fail on nonexisting key" in:
+    text.encrypted("Brutus".aad).bytes.failed
+
+  it should "rotate the plaintext in the ciphertext" in:
+    pompey.bytes.success.value.toSeq shouldEqual IArray.join(
+      "Pompey".bytes,
       "tfdsfu".getBytes.immutable
     )

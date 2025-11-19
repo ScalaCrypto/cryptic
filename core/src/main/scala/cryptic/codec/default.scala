@@ -23,46 +23,29 @@ object default extends Codec.Companion:
       Success(pt.bytes)
 
   given Codec[String]:
-    def encode(v: String, aad: AAD): PlainText =
-      PlainText(v, aad)
-    def decode(pt: PlainText): Try[String] =
-      Success(new String(pt.bytes.mutable))
+    def encode(v: String, aad: AAD): PlainText = PlainText(v, aad)
+    def decode(pt: PlainText): Try[String] = Try(pt.bytes.string)
 
   given Codec[Boolean]:
     def encode(v: Boolean, aad: AAD): PlainText =
       val b: Byte = if v then 1.toByte else 0.toByte
       PlainText(IArray.unsafeFromArray(Array(b)), aad)
-    def decode(pt: PlainText): Try[Boolean] =
-      Success(pt.bytes.nonEmpty && pt.bytes(0) != 0)
+    def decode(pt: PlainText): Try[Boolean] = Try(
+      pt.bytes.nonEmpty && pt.bytes(0) != 0
+    )
 
   given Codec[Int]:
-    def encode(v: Int, aad: AAD): PlainText =
-      val buffer = ByteBuffer.allocate(4)
-      buffer.putInt(v)
-      PlainText(buffer.array().immutable, aad)
-    def decode(pt: PlainText): Try[Int] =
-      Try(ByteBuffer.wrap(pt.bytes.mutable).getInt)
+    def encode(v: Int, aad: AAD): PlainText = PlainText(v.bytes, aad)
+    def decode(pt: PlainText): Try[Int] = Try(pt.bytes.int)
 
   given Codec[Long]:
-    def encode(v: Long, aad: AAD): PlainText =
-      val buffer = ByteBuffer.allocate(8)
-      buffer.putLong(v)
-      PlainText(buffer.array().immutable, aad)
-    def decode(pt: PlainText): Try[Long] =
-      Try(ByteBuffer.wrap(pt.bytes.mutable).getLong)
+    def encode(v: Long, aad: AAD): PlainText = PlainText(v.bytes, aad)
+    def decode(pt: PlainText): Try[Long] = Try(pt.bytes.long)
 
   given Codec[Float]:
-    def encode(v: Float, aad: AAD): PlainText =
-      val buffer = ByteBuffer.allocate(4)
-      buffer.putFloat(v)
-      PlainText(buffer.array().immutable, aad)
-    def decode(pt: PlainText): Try[Float] =
-      Try(ByteBuffer.wrap(pt.bytes.mutable).getFloat)
+    def encode(v: Float, aad: AAD): PlainText = PlainText(v.bytes, aad)
+    def decode(pt: PlainText): Try[Float] = Try(pt.bytes.float)
 
   given Codec[Double]:
-    def encode(v: Double, aad: AAD): PlainText =
-      val buffer = ByteBuffer.allocate(8)
-      buffer.putDouble(v)
-      PlainText(buffer.array().immutable, aad)
-    def decode(pt: PlainText): Try[Double] =
-      Try(ByteBuffer.wrap(pt.bytes.mutable).getDouble)
+    def encode(v: Double, aad: AAD): PlainText = PlainText(v.bytes, aad)
+    def decode(pt: PlainText): Try[Double] = Try(pt.bytes.double)

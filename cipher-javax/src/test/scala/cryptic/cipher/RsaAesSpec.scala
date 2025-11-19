@@ -26,7 +26,9 @@ class RsaAesSpec extends AnyFlatSpec with Matchers:
     val tampered = text.encrypted.splitWith:
       case IArray(_, aad, iv, key, text) =>
         val wrongVersion = FixedVersion(0, 0, 0, 0).bytes
-        cryptic.Functor.tryFunctor.pure(CipherText(wrongVersion, aad, iv, key, text))
+        cryptic.Functor.tryFunctor.pure(
+          CipherText(wrongVersion, aad, iv, key, text)
+        )
     given privateKey: PrivateKey = keyPair.getPrivate
     Encrypted[Try, String](tampered).decrypted match
       case Failure(e) =>

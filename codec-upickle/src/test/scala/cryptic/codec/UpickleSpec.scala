@@ -49,6 +49,8 @@ class UpickleSpec extends AnyFlatSpec with Matchers with TryValues:
     import cryptic.cipher.demo.Reverse.given
     import cryptic.Functor.tryFunctor
     val encrypted = user.encrypted
-    encrypted.bytes.success.value shouldBe write(user).getBytes.reverse // Reverse...
+    encrypted.bytes.success.value shouldBe write(
+      user
+    ).getBytes.reverse // Reverse...
     val decrypted = encrypted.decrypted
     decrypted.success.value shouldBe user

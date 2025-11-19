@@ -1,6 +1,7 @@
 package cryptic
 
 import java.nio.ByteBuffer
+import scala.annotation.targetName
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -15,12 +16,28 @@ type Hash = IArray[Byte]
 type Signature = IArray[Byte]
 
 /** Arbitrary metadata associated with PlainText encoding. */
-type AAD = IArray[Byte]
+case class AAD(bytes: IArray[Byte]):
+  def nonEmpty: Boolean = bytes.nonEmpty
+  def int: Int = bytes.int
+  def long: Long = bytes.long
+  def float: Float = bytes.float
+  def double: Double = bytes.double
+  def string: String = new String(bytes.mutable)
+
+  /** Executes the provided function if the current object is non-empty.
+    *
+    * @param f
+    *   a function that takes a non-empty `IArray[Byte]` and performs an
+    *   operation
+    * @return
+    *   Unit
+    */
+  def forNonEmpty[A](f: IArray[Byte] => A): Unit = if nonEmpty then f(bytes)
 
 /** Utilities for working with AAD metadata used during encoding. */
 object AAD:
   /** An empty aad indicating no additional metadata. */
-  val empty: AAD = IArray.emptyByteIArray
+  val empty: AAD = AAD(IArray.emptyByteIArray)
 
 /** A UTF-8 agnostic container for unencrypted payload bytes and their encoding
   * aad.
@@ -217,6 +234,21 @@ given Codec[Nothing]:
       )
     )
 
+/** Case class Passphrase for handling cryptographic passphrases.
+  *
+  * @param bytes
+  *   Array of bytes representing the passphrase.
+  */
+case class Passphrase(bytes: IArray[Byte]):
+  def chars: IArray[Char] = bytes.map(_.toChar)
+
+  override def toString: String = new String(bytes.mutable)
+
+object Passphrase:
+  def apply(password: String): Passphrase = new Passphrase(
+    password.getBytes.immutable
+  )
+
 case class Salt(bytes: IArray[Byte]) extends AnyVal:
   def length: Int = bytes.length
 
@@ -234,6 +266,7 @@ extension [F[_]: {Functor, Encrypt}, V: Codec](value: V)
 /** Unsafe conversions between mutable and immutable byte/char arrays. */
 extension (array: Array[Byte])
   /** Immutable IArray view over a Byte array. */
+  @targetName("toImmutableArray")
   def immutable: IArray[Byte] = IArray.unsafeFromArray(array)
 
   /** Returns an instance of the `AAD` type created from the provided `array`.
@@ -241,7 +274,8 @@ extension (array: Array[Byte])
     * @return
     *   an instance of `AAD` initialized using the given array.
     */
-  def aad: AAD = IArray.unsafeFromArray(array)
+  @targetName("toAAD")
+  def aad: AAD = AAD(IArray.unsafeFromArray(array))
 
 extension (str: String)
   /** Returns the `AAD` instance created from the `str` converted to bytes.
@@ -250,13 +284,26 @@ extension (str: String)
     *   an instance of `AAD` derived from the byte array representation of
     *   `str`.
     */
+  @targetName("stringToAAD")
   def aad: AAD = str.getBytes.aad
+  @targetName("stringToBytes")
+  def bytes: IArray[Byte] = str.getBytes.immutable
 
 extension (array: IArray[Byte])
   /** Mutable Array view over an IArray[Byte]. */
+  @targetName("toMutableArray")
   def mutable: Array[Byte] = IArray.wrapByteIArray(array).unsafeArray
+  def byteBuffer: ByteBuffer = ByteBuffer.wrap(array.mutable)
+  def split: IArray[IArray[Byte]] = byteBuffer.split
+  def string: String = new String(mutable)
+  def int: Int = byteBuffer.getInt
+  def long: Long = byteBuffer.getLong
+  def float: Float = byteBuffer.getFloat
+  def double: Double = byteBuffer.getDouble
+
 extension (array: IArray[Char])
   /** Mutable Array view over an IArray[Char]. */
+  @targetName("toMutableCharArray")
   def mutable: Array[Char] = IArray.wrapCharIArray(array).unsafeArray
 
 /** Binary encoding helpers for length-prefixed concatenation of byte arrays. */
@@ -294,3 +341,31 @@ extension (iarrayObject: IArray.type)
     arrays.foldLeft(buffer):
       case (buffer, bytes) => buffer.nextBytes(bytes.mutable)
     buffer.array().immutable
+
+extension (i: Int)
+  def bytes: IArray[Byte] =
+    val buffer = ByteBuffer.allocate(4)
+    buffer.putInt(i)
+    buffer.array().immutable
+  def aad: AAD = AAD(bytes)
+
+extension (l: Long)
+  def bytes: IArray[Byte] =
+    val buffer = ByteBuffer.allocate(8)
+    buffer.putLong(l)
+    buffer.array().immutable
+  def aad: AAD = AAD(bytes)
+
+extension (f: Float)
+  def bytes: IArray[Byte] =
+    val buffer = ByteBuffer.allocate(4)
+    buffer.putFloat(f)
+    buffer.array().immutable
+  def aad: AAD = AAD(bytes)
+
+extension (d: Double)
+  def bytes: IArray[Byte] =
+    val buffer = ByteBuffer.allocate(8)
+    buffer.putDouble(d)
+    buffer.array().immutable
+  def aad: AAD = AAD(bytes)

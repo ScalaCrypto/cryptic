@@ -12,44 +12,58 @@ import javax.crypto.spec.{
 import javax.crypto.{Cipher, KeyGenerator, SecretKey, SecretKeyFactory}
 import scala.util.{Success, Try}
 
-/** Provides AES encryption and decryption functionality using GCM mode with
- * no padding.
- *
- * This object is a concrete implementation of the `Symmetric[Try]` trait,
- * enabling encryption and decryption processes for securing data. The
- * object leverages configuration properties such as transformation mode,
- * cryptographic salt, initialization vector (IV) length, and factory
- * algorithm for key generation.
- *
- * Key features:
- * - Supports AES encryption in GCM mode with no padding for authenticated
- * encryption.
- * - Manages cryptographic parameters such as salt, IV, and versioning.
- * - Generates new cryptographic keys and IVs securely.
- *
- * Components:
- * - `encrypt`: A given instance of `Encrypt[Try]` for encrypting plaintext.
- * - `decrypt`: A given instance of `Decrypt[Try]` for decrypting ciphertext.
- * - `newIv`: Generates a new initialization vector with the specified
- * length.
- * - `paramSpec`: Constructs a GCM parameter specification for the given IV.
- * - `newCipher`: Creates and initializes a new cryptographic cipher.
- *
- * The object includes configuration constants:
- * - `transformation`: The cryptographic transformation mode.
- * - `saltLength`: Length of the salt in bytes.
- * - `gcmTagLength`: Length of the GCM authentication tag in bits.
- * - `ivLength`: Length of the initialization vector in bytes.
- * - `factoryAlgorithm`: Algorithm used for key generation.
- * - `keyAlgorithm`: Algorithm used for encryption.
- * - `keyspecIterationCount`: Number of iterations for the key derivation
- * function.
- * - `keyspecLength`: Length of the derived key in bits.
- * - `version`: The version information for the cipher text format.
- *
- * The `default` object imports implicit values and utilities for using this
- * implementation in a broader cryptographic framework.
- */
+/** `Aes` is an implementation of the AES (Advanced Encryption Standard)
+  * encryption algorithm with support for encryption and decryption in GCM mode
+  * with no padding. It provides a secure method for symmetric encryption using
+  * a passphrase-derived key.
+  *
+  * This object encapsulates the AES configuration and operations, including the
+  * generation of initialization vectors, parameter specifications, and the
+  * handling of encryption and decryption processes. It is built on top of
+  * Java's Cryptography Architecture (JCA) and uses key derivation functionality
+  * for secure passphrase handling.
+  *
+  * Configuration:
+  *   - `transformation`: Specifies the cryptographic transformation, fixed as
+  *     "GCM/NoPadding".
+  *   - `saltLength`: Length of the salt used for key derivation.
+  *   - `gcmTagLength`: Length of the GCM authentication tag in bits.
+  *   - `ivLength`: Length of the initialization vector (IV) in bytes.
+  *   - `factoryAlgorithm`: Algorithm used for password-based key derivation,
+  *     fixed as "PBKDF2WithHmacSHA256".
+  *   - `keyAlgorithm`: Key generation algorithm, AES in this case.
+  *   - `iterationCount`: Iteration count for the key derivation process.
+  *   - `keyLength`: Length of the encryption key in bits.
+  *   - `version`: Represents the versioning of the cipher text for
+  *     compatibility checks.
+  *
+  * This object defines the following:
+  *   - `newCipher`: Creates and initializes a `Cipher` instance for encryption
+  *     or decryption.
+  *   - `newIv`: Generates a random initialization vector of the specified
+  *     length.
+  *   - `paramSpec`: Generates an `AlgorithmParameterSpec` for GCM mode with the
+  *     provided IV.
+  *
+  * Implicit Behaviors:
+  *   - `pbeKeyParams`: Defines the parameters for password-based key
+  *     derivation.
+  *   - `encrypt`: Implicitly provides the encryption logic, utilizing the
+  *     passphrase-derived key. Encrypts the plaintext with the generated IV and
+  *     constructs a `CipherText` object.
+  *   - `decrypt`: Implicitly provides the decryption logic, utilizing the
+  *     passphrase-derived key. Validates and decrypts the `CipherText` back to
+  *     plaintext.
+  *
+  * Internal Utilities:
+  *   - Encapsulation of salts, IVs, and key derivation parameters for secure
+  *     handling of symmetric cryptographic operations.
+  *   - Support for versioning to ensure compatibility between different cipher
+  *     text formats.
+  *
+  * Use this object to encrypt and decrypt data securely, ensuring proper
+  * handling of keys, salts, and cryptographic parameters.
+  */
 object Aes extends Symmetric[Try]:
   val transformation: String = "GCM/NoPadding"
   val saltLength: Int = 32
@@ -57,20 +71,32 @@ object Aes extends Symmetric[Try]:
   val ivLength: Int = 12
   val factoryAlgorithm: String = "PBKDF2WithHmacSHA256"
   val keyAlgorithm = "AES"
-  val keyspecIterationCount: Int = 310000
-  val keyspecLength: Int = 256
+  val iterationCount: Int = 310000
+  val keyLength: Int = 256
   val version: Version = FixedVersion(0, 0, 0, 1)
 
   object default:
-    export cryptic.default.{given ,*}
+    export cryptic.default.{given, *}
     export Aes.{given, *}
+
+  /** Provides an implicit instance of `PBEKeyParams`, initializing it with
+    * algorithm-specific parameters such as factory algorithm, iteration count,
+    * key length, and key algorithm. These parameters are used for deriving
+    * secret keys in password-based encryption (PBE) operations.
+    *
+    * @return
+    *   an instance of `PBEKeyParams` containing pre-configured settings for
+    *   password-based encryption.
+    */
+  given pbeKeyParams: PBEKeyParams =
+    PBEKeyParams(factoryAlgorithm, iterationCount, keyLength, keyAlgorithm)
 
   override def newCipher(
       mode: Int,
       key: SecretKey,
       spec: AlgorithmParameterSpec
   ): Cipher =
-    val cipher = Cipher.getInstance(s"  $keyAlgorithm/$transformation")
+    val cipher = Cipher.getInstance(s"$keyAlgorithm/$transformation")
     cipher.init(mode, key, spec)
     cipher
 
@@ -83,22 +109,16 @@ object Aes extends Symmetric[Try]:
     (plainText: PlainText) =>
       Try:
         val salt = Salt(saltLength)
-        val key = keygen(
-          passphrase,
-          salt,
-          factoryAlgorithm,
-          keyspecIterationCount,
-          keyspecLength,
-          keyAlgorithm
-        )
+        val key = passphrase.secretKey(salt)
         val iv = newIv()
         val ivSpec = paramSpec(iv)
         encrypt(plainText, key, ivSpec).map(encrypted =>
           CipherText(
             version.bytes,
-            plainText.aad,
+            plainText.aad.bytes,
             salt.bytes,
             iv,
+            pbeKeyParams.bytes,
             encrypted
           )
         )
@@ -106,18 +126,14 @@ object Aes extends Symmetric[Try]:
 
   given decrypt(using passphrase: Passphrase): Decrypt[Try] =
     (_: CipherText).splitWith:
-      case IArray(ver, aad, salt, iv, bytes) if version.supports(ver) =>
-        val key = keygen(
-          passphrase,
-          Salt(salt),
-          factoryAlgorithm,
-          keyspecIterationCount,
-          keyspecLength,
-          keyAlgorithm
-        )
+      case IArray(ver, aadBytes, salt, iv, paramBytes, bytes)
+          if version.supports(ver) =>
+        val aad = AAD(aadBytes)
+        val key =
+          passphrase.secretKey(Salt(salt))(using PBEKeyParams(paramBytes))
         val ivSpec = paramSpec(iv)
         decrypt(bytes, aad, key, ivSpec).map(decrypted =>
           PlainText(decrypted, aad)
         )
-      case IArray(ver, _, _, _, _) =>
+      case IArray(ver, _, _, _, _, _) =>
         version.failed(ver)

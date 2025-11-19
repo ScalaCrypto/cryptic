@@ -24,11 +24,11 @@ class AesSpec extends AnyFlatSpec with Matchers:
 
   it should "encode AAD" in:
     import cryptic.Functor.tryFunctor
-    val expected = "AAD".getBytes.aad
+    val expected = "AAD".aad
     text
       .encrypted(expected)
       .splitWith:
-        case IArray(version, actual, salt, iv, bytes) =>
+        case IArray(_, actual, _, _, _) =>
           tryFunctor.pure(actual shouldBe expected)
 
   it should "detect if AAD is altered" in:
@@ -37,9 +37,9 @@ class AesSpec extends AnyFlatSpec with Matchers:
     val tampered = text
       .encrypted(aad)
       .splitWith:
-        case IArray(version, aad2, salt, iv, bytes) =>
+        case IArray(version, _, salt, iv, params, bytes) =>
           tryFunctor.pure(
-            CipherText(version, "tampered".getBytes.aad, salt, iv, bytes)
+            CipherText(version, "tampered".bytes, salt, iv, params, bytes)
           )
     Encrypted[Try, String](tampered).decrypted match
       case Failure(e) => e.getMessage should include("Tag mismatch")
@@ -48,11 +48,11 @@ class AesSpec extends AnyFlatSpec with Matchers:
   it should "reject wrong version" in:
     import cryptic.Functor.tryFunctor
     val tampered = text.encrypted.splitWith:
-      case IArray(_, aad, salt, iv, bytes) =>
+      case IArray(_, aad, salt, iv, params, bytes) =>
         val wrongVersion = FixedVersion(0, 0, 0, 0).bytes
-        tryFunctor.pure(CipherText(wrongVersion, aad, salt, iv, bytes))
+        tryFunctor.pure(CipherText(wrongVersion, aad, salt, iv, params, bytes))
     Encrypted[Try, String](tampered).decrypted match
       case Failure(e) =>
         e shouldBe a[IllegalArgumentException]
         e.getMessage should include("Unsupported version")
-      case _ => fail("Expected decryption to fail due to version mismatch")
+      case x => fail(s"Expected decryption to fail due to version mismatch, $x")

@@ -1,6 +1,8 @@
 package cryptic
 package cipher
 
+import org.bouncycastle.math.ec.rfc8032.Ed25519.Algorithm
+
 import java.security.SecureRandom
 import javax.crypto.{KeyGenerator, SecretKey, SecretKeyFactory}
 import javax.crypto.spec.{PBEKeySpec, SecretKeySpec}
@@ -23,21 +25,55 @@ extension (secureRandom: SecureRandom)
 extension (saltObject: Salt.type)
   def apply(length: Int): Salt = Salt(secureRandom.newBytes(length))
 
-/** Case class Passphrase for handling cryptographic passphrases.
-  *
-  * @param bytes
-  *   Array of bytes representing the passphrase.
-  */
-case class Passphrase(bytes: IArray[Byte]):
-  def chars: IArray[Char] = bytes.map(_.toChar)
+case class PBEKeyParams(
+    factoryAlgorithm: String,
+    iterationCount: Int,
+    keyLength: Int,
+    keyAlgorithm: String
+):
+  def keySpec(passphrase: Passphrase, salt: Salt): PBEKeySpec =
+    new PBEKeySpec(
+      passphrase.chars.mutable,
+      salt.bytes.mutable,
+      iterationCount,
+      keyLength
+    )
+  def bytes: IArray[Byte] =
+    IArray.join(
+      factoryAlgorithm.bytes,
+      iterationCount.bytes,
+      keyLength.bytes,
+      keyAlgorithm.bytes
+    )
 
-  override def toString: String = new String(bytes.mutable)
+object PBEKeyParams:
+  def apply(bytes: IArray[Byte]): PBEKeyParams = bytes.split match
+    case IArray(fa, ic, kl, ka) =>
+      PBEKeyParams(fa.string, ic.int, kl.int, ka.string)
 
-object Passphrase:
-  def apply(password: String): Passphrase = new Passphrase(
-    password.getBytes.immutable
-  )
+extension (passphrase: Passphrase)
+  /** Derives a secret key using the provided salt and password-based encryption
+    * (PBE) parameters.
+    *
+    * @param salt
+    *   The cryptographic salt used in conjunction with the password for key
+    *   derivation.
+    * @param pbeKeyParams
+    *   Implicit parameter providing the settings for key derivation, including
+    *   the factory algorithm, iteration count, key length, and key algorithm.
+    * @return
+    *   A derived secret key based on the provided parameters, suitable for
+    *   cryptographic operations.
+    */
+  def secretKey(salt: Salt)(using pbeKeyParams: PBEKeyParams): SecretKey =
+    val keySpec = pbeKeyParams.keySpec(passphrase, salt)
+    val factory = SecretKeyFactory.getInstance(pbeKeyParams.factoryAlgorithm)
+    new SecretKeySpec(
+      factory.generateSecret(keySpec).getEncoded,
+      pbeKeyParams.keyAlgorithm
+    )
 
+extension (PassphraseObject: Passphrase.type)
   /** Generates a Passphrase by creating a random array of bytes of the
     * specified length.
     *
@@ -56,34 +92,3 @@ object Passphrase:
     bytes(0) = firstLast(0)
     bytes(bytes.length - 1) = firstLast(1)
     apply(bytes.immutable)
-
-/** Generates a secret key using the provided password and salt.
-  *
-  * @param passphrase
-  *   the passphrase used to generate the key
-  * @param salt
-  *   the salt value used in the key generation process
-  * @return
-  *   the generated secret key
-  */
-def keygen(passphrase: Passphrase, salt: Salt, factoryAlgorithm: String, iterationCount: Int, specLength: Int, keyAlgorithm: String): SecretKey =
-  val factory = SecretKeyFactory.getInstance(factoryAlgorithm)
-  val keySpec =
-    new PBEKeySpec(
-      passphrase.chars.mutable,
-      salt.bytes.mutable,
-      iterationCount,
-      specLength
-    )
-  new SecretKeySpec(
-    factory.generateSecret(keySpec).getEncoded,
-    keyAlgorithm
-  )
-
-def keygen(size: Int = 256, algorithm: String): SecretKey =
-  val keyGenerator = KeyGenerator.getInstance(algorithm)
-  keyGenerator.init(size)
-  keyGenerator.generateKey()
-
-def key(bytes: IArray[Byte], algorithm: String): SecretKey =
-  new SecretKeySpec(bytes.mutable, algorithm)

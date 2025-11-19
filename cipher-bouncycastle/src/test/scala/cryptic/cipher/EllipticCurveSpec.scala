@@ -30,8 +30,9 @@ class EllipticCurveSpec extends AnyFlatSpec with Matchers:
     enc.decrypted shouldBe Success(large)
 
   "EllipticCurve" should "hide the plain text" in:
-    text.encrypted.bytes.map(b=>
-      new String(b.mutable).contains(text.getBytes())) shouldBe Success(false)
+    text.encrypted.bytes.map(b =>
+      new String(b.mutable).contains(text.getBytes())
+    ) shouldBe Success(false)
 
   "EllipticCurve" should "not support AAD" in:
     val encrypted = text.encrypted("AAD".aad)
@@ -50,5 +51,5 @@ class EllipticCurveSpec extends AnyFlatSpec with Matchers:
     Encrypted[Try, String](tampered).decrypted match
       case Failure(e) =>
         e shouldBe a[IllegalArgumentException]
-        e.getMessage should include ("Unsupported version")
+        e.getMessage should include("Unsupported version")
       case _ => fail("Expected decryption to fail due to version mismatch")

@@ -11,8 +11,7 @@ import scala.util.{Success, Try}
 class CaesarSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.codec.default.given
   import Caesar.{*, given}
-  import cryptic.Functor.tryFunctor
-  given key1: Key = Caesar.Key(1)
+  given Key(1)
 
   private val text = "nisse"
   private val encrypted: Encrypted[Try, String] = text.encrypted

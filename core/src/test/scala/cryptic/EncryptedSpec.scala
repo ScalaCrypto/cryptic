@@ -27,11 +27,12 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
     encEmpty.isEmpty.success shouldBe Success(true)
     encEmpty.nonEmpty.success shouldBe Success(false)
   "Encrypted empty" should "not decrypt" in:
-      encEmpty.decrypted.failure
+    encEmpty.decrypted.failure
   "Case class with encrypted members" should "encrypt and decrypt" in:
     case class Foo(clear: String, secret: Encrypted[Try, String])
     val foo = Foo("clear", "secret".encrypted)
-    foo.secret.bytes.success.value.toSeq shouldEqual Seq(116, 101, 114, 99, 101, 115)
+    foo.secret.bytes.success.value.toSeq shouldEqual Seq(116, 101, 114, 99, 101,
+      115)
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted bytes" should "be callable without decrypt in scope" in:
     val e = "secret".encrypted

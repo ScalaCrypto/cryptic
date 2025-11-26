@@ -182,6 +182,12 @@ lazy val `cipher-test` = (project in file("cipher-test"))
     `cipher-bouncycastle`
   )
 
+lazy val `cipher-enigma` = (project in file("cipher-enigma"))
+  .settings(
+    cipherCommonSettings("cipher-enigma")
+  )
+  .dependsOn(core)
+
 lazy val cryptic = (project in file("."))
   .enablePlugins(ParadoxPlugin)
   .settings(
@@ -200,5 +206,6 @@ lazy val cryptic = (project in file("."))
     `codec-upickle`,
     `cipher-bouncycastle`,
     `cipher-javax`,
+    `cipher-enigma`,
     `cipher-test`
   )

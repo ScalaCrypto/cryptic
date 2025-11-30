@@ -2,37 +2,50 @@ package cryptic
 package cipher
 package enigma
 
-import cryptic.cipher.enigma.Reflector.A
-import org.scalatest.flatspec.{AnyFlatSpec, AsyncFlatSpec}
+import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.TryValues
+import org.scalatest.prop.TableDrivenPropertyChecks
 
-import scala.util.{Success, Try}
-
-class EnigmaSpec extends AnyFlatSpec with Matchers with TryValues:
+class EnigmaSpec
+    extends AnyFlatSpec
+    with Matchers
+    with TryValues
+    with TableDrivenPropertyChecks:
   behavior of "Enigma"
 
   import Enigma.default.{given, *}
   import Functor.tryFunctor
 
-  "Enigma" should "encrypt MARTIN to WFSEXB" in:
-    given settings: Settings = Settings('Z')
-    val enc: Encrypted[Try, String] =
-      "MARTIN".encrypted
-    enc.bytes.success.value shouldBe "WFSEXB".bytes
+  val lorem: String = "lorem.txt".fromResource.glyph.string
+  val loremCipherAAA_AAA: String = "lorem-cipher-AAA-AAA.txt".fromResource.glyph.string
+  val loremCipherMAR_ADQ: String = "lorem-cipher-MAR_ADQ.txt".fromResource.glyph.string
+  val loremCipherZBQ_AAA: String = "lorem-cipher-ZBQ-AAA.txt".fromResource.glyph.string
 
-  it should "encrypt A to T when Z" in:
-    given settings:Settings  = Settings('Z')
-    "A".encrypted.bytes.success.value shouldBe "N".bytes
+  "Enigma" should "encrypt and decrypt with explicit ring settings" in:
+    val data = Table(
+      ("plain", "cipher", "settings"),
+      ("MARTIN", "WFSEXB", "III-II-I AAA AAZ B"),
+      ("MARTIN", "SNJAJP", "III-II-I AAB AAZ B"),
+      ("MARTIN", "HTFUSP", "III-II-I AAA AAA B"),
+      ("MARTIN", "ITDVLW", "III-II-I AAE AAA B"),
+      ("ABCD", "ZUIN", "III-II-I AAA ADQ B"),
+      ("ABCD", "NODJ", "III-II-I AAA LEQ B"),
+      (lorem, loremCipherAAA_AAA, "III-II-I AAA AAA B"),
+      (lorem, loremCipherMAR_ADQ, "III-II-I MAR ADQ B"),
+      (lorem, loremCipherZBQ_AAA, "III-II-I ZBQ AAA B")
+    )
+    forAll(data)((plain: String, cipher: String, settings: String) =>
+      given s: Settings = Settings(settings)
+      verify(plain, cipher)
+    )
 
-  it should "encrypt A to T when A" in:
-    given settings:Settings  = Settings('A')
-    "A".encrypted.bytes.success.value shouldBe "F".bytes
+  "Settings" should "parse with ring settings" in:
+    val settings = Settings("III-II-I AAA AAZ B")
+    settings.rotors.rotors shouldBe Rotors("III-II-I AAA AAZ ").rotors
+    settings.reflector shouldBe Reflector.B
 
-  it should "encrypt A to T when B" in:
-    given settings:Settings  = Settings('B')
-    "A".encrypted.bytes.success.value shouldBe "T".bytes
-
-  it should "encrypt A to T when C" in:
-    given settings:Settings  = Settings('C')
-    "A".encrypted.bytes.success.value shouldBe "Z".bytes
+  def verify(text: String, cipher: String)(using settings: Settings): Any =
+    val encrypted = text.encrypted
+    encrypted.bytes.success.value.map(_.toChar).mkString shouldBe cipher
+    encrypted.decrypted.success.value shouldBe text

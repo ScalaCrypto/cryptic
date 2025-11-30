@@ -81,3 +81,31 @@ class GlyphSpec extends AnyFlatSpec with Matchers:
     invalids.foreach { c =>
       Glyph.isValid(c) shouldBe false
     }
+
+  "Glyph extension methods" should "convert between Char and String" in :
+    val g = 'A'.glyph
+    g.char shouldBe 'A'
+    g.string shouldBe "A"
+    Glyph(25).string shouldBe "Z"
+    "ABC".glyph.string shouldBe "ABC"
+    Seq('A'.glyph, 'B'.glyph, 'C'.glyph).string shouldBe "ABC"
+
+  "Rotor.previousCarry" should "be true when current pos is one after the notch (single notch)" in:
+    // Wheel I has notch at 'R' -> previousCarry true at pos 'S'
+    val r1 = Rotor("I", 'A', 'S')
+    r1.previousCarry shouldBe true
+    // At the notch itself ('R') it's false for previousCarry
+    Rotor("I", 'A', 'R').previousCarry shouldBe false
+    // One past 'S' ('T') is also false
+    Rotor("I", 'A', 'T').previousCarry shouldBe false
+
+  it should "handle multiple notches correctly (VI: A and N)" in:
+    // Wheel VI has notches at 'A' and 'N' -> previousCarry true at 'B' and 'O'
+    Rotor("VI", 'A', 'B').previousCarry shouldBe true
+    Rotor("VI", 'A', 'O').previousCarry shouldBe true
+    // At the notch positions themselves, previousCarry should be false
+    Rotor("VI", 'A', 'A').previousCarry shouldBe false
+    Rotor("VI", 'A', 'N').previousCarry shouldBe false
+    // Other positions should be false
+    Rotor("VI", 'A', 'C').previousCarry shouldBe false
+

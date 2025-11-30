@@ -30,12 +30,13 @@ object Glyph:
 
 extension (g: Glyph)
   def char: Char = (g + Glyph.base).toChar
-
+  def string:String = char.toString
   /** Underlying 0-25 index value of this Glyph */
   def int: Int = g
   def +(term: Glyph): Glyph = Glyph(g + term)
   def -(term: Glyph): Glyph = Glyph(g - term)
   def ++ : Glyph = Glyph(g + 1)
+  def -- : Glyph = Glyph(g - 1)
 
 extension (c: Char)
   def glyph: Glyph = Glyph(c)
@@ -56,3 +57,13 @@ extension (ga: IArray[Glyph])
   /** Convert an immutable array of Glyphs to a String
     */
   def string: String = ga.map(_.char).mkString
+
+extension (seq: Seq[Glyph])
+  /**
+   * Constructs a string by concatenating the `char` representation of elements 
+   * in the sequence `seq`.
+   *
+   * @return A string composed of the characters obtained from the `char` property 
+   *         of each element in the sequence `seq`.
+   */
+  def string: String = seq.map(_.char).mkString

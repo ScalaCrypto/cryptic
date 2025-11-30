@@ -7,6 +7,7 @@ lazy val chill = ("com.twitter" % "chill" % "0.10.0")
 lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
 lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.3.2").withSources()
 lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.82").withSources()
+lazy val scribe = ("com.outr" %% "scribe" % "3.17.0").withSources()
 
 lazy val javaBaseOpens = Seq(
   "--add-opens=java.base/java.lang=ALL-UNNAMED",
@@ -79,11 +80,14 @@ lazy val commonSettings =
   ) ++ testSettings
 
 lazy val testSettings =
-  Seq(Test / fork := true, Test / javaOptions ++= javaBaseOpens)
+  Seq(
+    Test / fork := true,
+    Test / javaOptions ++= javaBaseOpens,
+    libraryDependencies += scalaTest % Test
+  )
 
 lazy val coreSettings = commonSettings ++ Seq(
   name := "core",
-  libraryDependencies ++= Seq(scalaTest % Test),
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
@@ -94,7 +98,7 @@ lazy val coreSettings = commonSettings ++ Seq(
 
 lazy val codecChillSettings = commonSettings ++ Seq(
   name := "codec-chill",
-  libraryDependencies ++= Seq(scalaTest % Test, chill),
+  libraryDependencies ++= Seq(chill),
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
@@ -102,9 +106,9 @@ lazy val codecChillSettings = commonSettings ++ Seq(
     s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
   }
 )
-lazy val codecFstSettings = commonSettings ++ testSettings ++ Seq(
+lazy val codecFstSettings = commonSettings ++ Seq(
   name := "codec-fst",
-  libraryDependencies ++= Seq(scalaTest % Test, fst),
+  libraryDependencies += fst,
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
@@ -115,7 +119,7 @@ lazy val codecFstSettings = commonSettings ++ testSettings ++ Seq(
 
 lazy val codecUpickleSettings = commonSettings ++ Seq(
   name := "codec-upickle",
-  libraryDependencies ++= Seq(scalaTest % Test, upickle),
+  libraryDependencies += upickle,
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
@@ -127,7 +131,6 @@ lazy val codecUpickleSettings = commonSettings ++ Seq(
 lazy val cipherCommonSettings = (projectName: String) =>
   commonSettings ++ Seq(
     name := projectName,
-    libraryDependencies ++= Seq(scalaTest % Test),
     Compile / packageBin / mappings += {
       file("LICENSE") -> "LICENSE"
     },
@@ -138,9 +141,8 @@ lazy val cipherCommonSettings = (projectName: String) =>
   )
 
 lazy val cipherTestSettings =
-  commonSettings ++ testSettings ++ Seq(
+  commonSettings ++ Seq(
     name := "cipher-test",
-    libraryDependencies ++= Seq(scalaTest % Test),
     publish / skip := true
   )
 
@@ -157,19 +159,23 @@ lazy val `codec-upickle` = (project in file("codec-upickle"))
   .dependsOn(core)
 
 lazy val `cipher-javax` = (project in file("cipher-javax"))
-  .settings(
-    cipherCommonSettings("cipher-javax") ++ Seq(
-      libraryDependencies ++= Seq(bc, scalaTest % Test)
-    )
-  )
+  .settings(cipherCommonSettings("cipher-javax"))
   .dependsOn(core)
 lazy val `cipher-bouncycastle` = (project in file("cipher-bouncycastle"))
   .settings(
     cipherCommonSettings("cipher-bouncycastle") ++ Seq(
-      libraryDependencies ++= Seq(bc, scalaTest % Test)
+      libraryDependencies += bc
     )
   )
   .dependsOn(core, `cipher-javax`)
+
+lazy val `cipher-enigma` = (project in file("cipher-enigma"))
+  .settings(
+    cipherCommonSettings("cipher-enigma") ++ Seq(
+      libraryDependencies += scribe
+    )
+  )
+  .dependsOn(core)
 
 lazy val `cipher-test` = (project in file("cipher-test"))
   .settings(cipherTestSettings)
@@ -181,12 +187,6 @@ lazy val `cipher-test` = (project in file("cipher-test"))
     `cipher-javax`,
     `cipher-bouncycastle`
   )
-
-lazy val `cipher-enigma` = (project in file("cipher-enigma"))
-  .settings(
-    cipherCommonSettings("cipher-enigma")
-  )
-  .dependsOn(core)
 
 lazy val cryptic = (project in file("."))
   .enablePlugins(ParadoxPlugin)

@@ -1,8 +1,6 @@
 package cryptic
 package cipher
 
-import org.bouncycastle.math.ec.rfc8032.Ed25519.Algorithm
-
 import java.security.SecureRandom
 import javax.crypto.{KeyGenerator, SecretKey, SecretKeyFactory}
 import javax.crypto.spec.{PBEKeySpec, SecretKeySpec}

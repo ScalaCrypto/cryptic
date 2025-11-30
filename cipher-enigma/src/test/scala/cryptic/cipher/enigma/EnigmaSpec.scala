@@ -59,8 +59,3 @@ class EnigmaSpec
 
     val encrypted: Encrypted[Try, String] = secret.encrypted
     encrypted.decrypted.success.value shouldBe expected
-
-  def verify(text: String, cipher: String)(using settings: String): Any =
-    val encrypted = text.encrypted
-    encrypted.bytes.success.value.map(_.toChar).mkString shouldBe cipher
-    encrypted.decrypted.success.value shouldBe text

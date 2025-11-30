@@ -2,8 +2,6 @@ package cryptic
 package cipher
 package enigma
 
-import scala.annotation.targetName
-
 /** Enigma reflectors A, B, C.
   *
   * Wiring is expressed in the domain type `Glyph` and the primary API operates

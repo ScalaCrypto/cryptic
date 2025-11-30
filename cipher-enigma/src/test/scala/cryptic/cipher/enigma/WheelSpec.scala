@@ -1,4 +1,6 @@
-package cryptic.cipher.enigma
+package cryptic
+package cipher
+package enigma
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

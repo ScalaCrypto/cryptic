@@ -74,3 +74,6 @@ extension (iter: Iterable[Glyph])
     */
   def string: String = iter.map(_.char).mkString
   def iarray: IArray[Byte] = IArray.from(iter.map(_.byte))
+
+extension (iarray:IArray[Byte])
+  def glyph:IArray[Glyph] = new String(iarray.mutable).glyph

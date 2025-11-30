@@ -4,7 +4,7 @@ package enigma
 
 import scala.util.{Success, Try}
 
-case class Settings(rotors: Rotors, reflector: Reflector):
+case class Settings(rotors: Rotors, reflector: Reflector, plugboard: PlugBoard):
   /**
    * Adjusts the rotor positions using the given array of glyphs and returns an updated Settings object.
    *
@@ -14,50 +14,57 @@ case class Settings(rotors: Rotors, reflector: Reflector):
   def pos(pos: IArray[Glyph]): Settings = copy(rotors = rotors.pos(pos))
 
 object Settings:
-  /** Parses a settings string and constructs a `Settings` instance representing
-    * the rotor and reflector configurations for an Enigma machine.
-    *
-    * The input settings string must match one of the following formats:
-    *   - `"names rings positions reflector"` (e.g., `"III-II-I AAA AAZ B"`)
-    *   - `"names rings reflector"` (e.g., `"III-II-I AAA B"`), in which case
-    *     positions will default to all 'A'.
-    *
-    * @param settings
-    *   the input string specifying the rotor names, ring settings, (optional)
-    *   initial positions, and reflector. Valid formats:
-    *   `"names rings positions reflector"` or `"names rings reflector"`.
-    *   - `names` are hyphen-separated rotor IDs (left-to-right order).
-    *   - `rings` and `positions` are sequences of letters where each length
-    *     matches the number of rotor names.
-    *   - `reflector` is a single letter (e.g., `B`).
-    *
-    * Example: "III-II-I AAA AAZ B" or "III-II-I AAA B".
-    * @return
-    *   a `Settings` object representing the parsed rotor and reflector
-    *   configurations.
-    * @throws IllegalArgumentException
-    *   if the input does not adhere to the expected format, if the lengths of
-    *   `names`, `rings`, or `positions` are mismatched, or if any values are
-    *   invalid (e.g., unknown rotor names, invalid reflector).
-    */
+  /**
+   * Parses a settings string to construct a `Settings` object with the specified
+   * rotors, reflector, and plugboard configuration.
+   *
+   * The settings string must follow the format:
+   * "names rings [positions] reflector [plugboard]"
+   * - `names`: Hyphen-separated rotor identifiers from left-most to right-most, e.g., "III-II-I".
+   * - `rings`: A sequence of letters representing the ring settings, e.g., "AAA".
+   * - `positions` (optional): A sequence of letters representing the initial rotor positions, e.g., "AAZ".
+   * If omitted, defaults to "A" for each rotor.
+   * - `reflector`: A single letter indicating the reflector type, e.g., "B".
+   * - `plugboard` (optional): A string of paired letters representing plugboard connections, e.g., "ABCD".
+   *
+   * @param settings A string specifying the rotor names, ring settings, initial rotor positions,
+   *                 reflector type, and optional plugboard configuration.
+   * @return A `Settings` instance constructed based on the provided settings string.
+   * @throws IllegalArgumentException If the settings string does not match the required format or contains
+   *                                  invalid values.
+   */
   def apply(settings: String): Settings =
     // Match four parts: names, rings, positions, reflector
+    val WithPosPB =
+      """^\s*([^\s]+)\s+([A-Za-z]+)\s+([A-Za-z]+)\s+([A-Ca-c])\s+([A-Za-z]+)\s*$""".r
     val WithPos =
       """^\s*([^\s]+)\s+([A-Za-z]+)\s+([A-Za-z]+)\s+([A-Ca-c])\s*$""".r
+    val NoPosPB =
+      """^\s*([^\s]+)\s+([A-Za-z]+)\s+([A-Ca-c])\s+([A-Za-z]+)\s*$""".r
     val NoPos = """^\s*([^\s]+)\s+([A-Za-z]+)\s+([A-Ca-c])\s*$""".r
 
     settings match
+      case WithPosPB(namesPart, ringsPart, posPart, reflPart, plugPairs) =>
+        val rotors = Rotors(s"$namesPart $ringsPart $posPart")
+        val reflector = Reflector.valueOf(reflPart.toUpperCase)
+        val plugboard = PlugBoard(plugPairs)
+        Settings(rotors, reflector, plugboard)
       case WithPos(namesPart, ringsPart, posPart, reflPart) =>
         val rotors = Rotors(s"$namesPart $ringsPart $posPart")
         val reflector = Reflector.valueOf(reflPart.toUpperCase)
-        Settings(rotors, reflector)
+        Settings(rotors, reflector, PlugBoard(""))
+      case NoPosPB(namesPart, ringPart, reflPart, plugPairs) =>
+        val rotors = Rotors(s"$namesPart $ringPart ${"A" * ringPart.length}")
+        val reflector = Reflector.valueOf(reflPart.toUpperCase)
+        val plugboard = PlugBoard(plugPairs)
+        Settings(rotors, reflector, plugboard)
       case NoPos(namesPart, ringPart, reflPart) =>
         val rotors = Rotors(s"$namesPart $ringPart ${"A" * ringPart.length}")
         val reflector = Reflector.valueOf(reflPart.toUpperCase)
-        Settings(rotors, reflector)
+        Settings(rotors, reflector, PlugBoard(""))
       case _ =>
         throw IllegalArgumentException(
-          "Settings.apply requires format \"names rings [positions] reflector\" (e.g. \"III-II-I AAA AAZ B\")"
+          """Settings requires format "names rings [positions] reflector [plugboard]" (e.g. "III-II-I AAA AAZ B ABCD")"""
         )
 
 object Enigma:
@@ -69,9 +76,8 @@ object Enigma:
     export cryptic.default.{given, *}
     export Enigma.{given, *}
 
-  given encrypt(using settings: String): Encrypt[Try] =
+  given encrypt(using base: Settings): Encrypt[Try] =
     (plaintext: PlainText) =>
-      val base = Settings(settings)
       val n = base.rotors.size
       val start = Glyph.random(n)
       val key = Glyph.random(n)
@@ -81,10 +87,9 @@ object Enigma:
         CipherText(start.iarray, encryptedKey.iarray, encryptedMessage.iarray)
       Success(cipher)
 
-  given decrypt(using settings: String): Decrypt[Try] =
+  given decrypt(using base: Settings): Decrypt[Try] =
     (_: CipherText).splitWith:
       case IArray(startBytes, encryptedKeyBytes, encryptedMessageBytes) =>
-        val base = Settings(settings)
         val n = base.rotors.size
         val start = glyph(startBytes)
         val encryptedKey = glyph(encryptedKeyBytes)
@@ -94,22 +99,19 @@ object Enigma:
         val message = run(encryptedMessage)(using base.pos(key))
         Try(PlainText(message.string))
 
-  def run(message: IArray[Byte])(using Settings): IArray[Glyph] = run(
-    glyph(message)
-  )
-
+  def run(message: IArray[Byte])(using Settings): IArray[Glyph] = run(message.glyph)
   def run(message: IArray[Glyph])(using settings: Settings): IArray[Glyph] =
     var rotors = settings.rotors
     message
       .map: g =>
         // Rotate all rotors applying ripple-carry rules
         rotors = rotors.rotate
-        // Forward through rotors, reflect, then backward out
-        val (forward, inTrace) = rotors.in(g)
+        // Plugboard in, forward through rotors, reflect, then backward out
+        val swappedIn = settings.plugboard.swap(g)
+        val (forward, inTrace) = rotors.in(swappedIn)
         val reflected = settings.reflector.reflect(forward)
         val (output, outTrace) = rotors.out(reflected)
+        val swappedOut = settings.plugboard.swap(output)
         scribe.trace(s"encoded ${inTrace.string}-${outTrace.string}")
-        output
+        swappedOut
 
-  def glyph(bytes: IArray[Byte]): IArray[Glyph] =
-    new String(bytes.mutable).glyph

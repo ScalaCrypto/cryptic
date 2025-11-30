@@ -2,8 +2,6 @@ package cryptic
 package cipher
 package enigma
 
-import Glyph.*
-
 import scala.util.Try
 
 case class Wheel(name: String, wiring: IArray[Glyph], notches: IArray[Glyph]):

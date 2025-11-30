@@ -12,6 +12,8 @@ case class Rotors(rotors: IArray[Rotor]):
     "Rotors state must not contain duplicate rotors"
   )
 
+  val size: Int = rotors.length
+  
   /** Transforms a given `Glyph` through the sequence of rotors, recording the
     * state of the `Glyph` at each step.
     *
@@ -46,20 +48,48 @@ case class Rotors(rotors: IArray[Rotor]):
   /** Convenience overload for chars. */
   def out(c: Char): Char = out(c.glyph)._1.char
 
+  /**
+   * Retrieves the current positions of all rotors in the rotor sequence.
+   *
+   * @return
+   * An immutable array of `Glyph` representing the positions of the rotors.
+   */
   def pos: IArray[Glyph] = rotors.map(_.pos)
+
+  /**
+   * Updates the positions of the rotors in the sequence to the specified positions.
+   *
+   * @param pos
+   * An immutable array of `Glyph` values representing the new positions for the rotors.
+   * The length of this array must match the number of rotors (`size`).
+   * @return
+   * A new `Rotors` instance with the updated rotor positions.
+   * @throws IllegalArgumentException
+   * If the length of the `pos` array does not match the number of rotors.
+   */
+  def pos(pos: IArray[Glyph]): Rotors =
+    require(pos.length == size, "Length of pos must match the number of rotors.")
+    val reposed = rotors
+      .zip(pos)
+      .map:
+        case (r, g) => r.copy(pos = g)
+    copy(rotors = IArray.from(reposed))
 
   override def toString: String = s"""Rotors(${rotors
       .map(_.wheel.name)
       .reverse
       .mkString("-")} ${pos.string.reverse})"""
 
-  /** Rotate the rotors applying Enigma carry rules for an arbitrary number of
-    * rotors. States are ordered from right to left (index 0 = right-most,
-    * highest speed):
-    *   - The right-most rotor (index 0) always rotates.
-    *   - A carry from rotor i after its rotation causes rotor i+1 to rotate,
-    *     and so on.
-    */
+  /**
+   * Rotates the sequence of rotors to their next positions according to Enigma's stepping mechanism,
+   * including handling the "double-stepping" anomaly.
+   *
+   * The method progresses through the rotors, applying the rotation based on their individual states
+   * and carry state, updating their positions appropriately in sequence.
+   *
+   * @return
+   * A new instance of `Rotors` representing the updated state after rotation.
+   */
   def rotate: Rotors =
     val (rotated, _) = rotors.zipWithIndex.foldLeft((Seq.empty[Rotor], true)):
       case ((seq, _), (rotor, 0)) =>
@@ -69,11 +99,11 @@ case class Rotors(rotors: IArray[Rotor]):
         // We need to handle double step anomaly
         val rotated = rotor.rotate
         val (c, n) = (carry, rotor.carry, rotated.carry) match
-          case (true, false, true)   => (true, rotated)
-          case (true, _, true)   => (false, rotated)
-          case (true, _, false)  => (false, rotated)
-          case (false, _, true)  => (true, rotated)
-          case (false, _, false) => (false, rotor)
+          case (true, false, true) => (true, rotated)
+          case (true, _, true)     => (false, rotated)
+          case (true, _, false)    => (false, rotated)
+          case (false, _, true)    => (true, rotated)
+          case (false, _, false)   => (false, rotor)
         (seq :+ n, c)
       case ((seq, true), (rotor, _)) =>
         val rotated = rotor.rotate
@@ -81,7 +111,7 @@ case class Rotors(rotors: IArray[Rotor]):
       case ((seq, false), (rotor, _)) =>
         (seq :+ rotor, rotor.carry)
     val next = Rotors(IArray.from(rotated))
-    scribe.info(s"Rotated ${pos.string.reverse} -> ${next.pos.string.reverse}")
+    scribe.trace(s"Rotated ${pos.string.reverse} -> ${next.pos.string.reverse}")
     next
 
 object Rotors:

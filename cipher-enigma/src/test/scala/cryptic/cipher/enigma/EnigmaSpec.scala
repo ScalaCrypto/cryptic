@@ -7,6 +7,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.TryValues
 import org.scalatest.prop.TableDrivenPropertyChecks
 
+import scala.util.{Success, Try}
+
 class EnigmaSpec
     extends AnyFlatSpec
     with Matchers
@@ -22,7 +24,7 @@ class EnigmaSpec
   val loremCipherMAR_ADQ: String = "lorem-cipher-MAR_ADQ.txt".fromResource.glyph.string
   val loremCipherZBQ_AAA: String = "lorem-cipher-ZBQ-AAA.txt".fromResource.glyph.string
 
-  "Enigma" should "encrypt and decrypt with explicit ring settings" in:
+  "Enigma engine" should "encrypt and decrypt with explicit ring settings" in:
     val data = Table(
       ("plain", "cipher", "settings"),
       ("MARTIN", "WFSEXB", "III-II-I AAA AAZ B"),
@@ -37,15 +39,28 @@ class EnigmaSpec
     )
     forAll(data)((plain: String, cipher: String, settings: String) =>
       given s: Settings = Settings(settings)
-      verify(plain, cipher)
+      Enigma.run(plain.bytes).string shouldBe cipher
     )
 
-  "Settings" should "parse with ring settings" in:
+  "Settings" should "parse with pos settings" in:
     val settings = Settings("III-II-I AAA AAZ B")
     settings.rotors.rotors shouldBe Rotors("III-II-I AAA AAZ ").rotors
     settings.reflector shouldBe Reflector.B
 
-  def verify(text: String, cipher: String)(using settings: Settings): Any =
+  "Settings" should "parse without pos settings default to AAA" in:
+    val settings = Settings("III-II-I AAZ B")
+    settings.rotors.rotors shouldBe Rotors("III-II-I AAZ AAA ").rotors
+    settings.reflector shouldBe Reflector.B
+
+  "Enigma" should "add random start position and encrypted message key to preamble" in:
+    val secret = "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do"
+    val expected = secret.toUpperCase.filter(_.isLetter)
+    given settings:String = "III-II-I AAA B"
+
+    val encrypted: Encrypted[Try, String] = secret.encrypted
+    encrypted.decrypted.success.value shouldBe expected
+
+  def verify(text: String, cipher: String)(using settings: String): Any =
     val encrypted = text.encrypted
     encrypted.bytes.success.value.map(_.toChar).mkString shouldBe cipher
     encrypted.decrypted.success.value shouldBe text

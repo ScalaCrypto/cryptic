@@ -1,4 +1,7 @@
 import scala.collection.Seq
+// sbt-assembly keys and helpers
+import sbtassembly.AssemblyPlugin.autoImport.*
+import sbtassembly.{MergeStrategy, PathList}
 
 lazy val scalaTest = ("org.scalatest" %% "scalatest" % "3.2.19").withSources()
 lazy val chill = ("com.twitter" % "chill" % "0.10.0")
@@ -172,7 +175,43 @@ lazy val `cipher-bouncycastle` = (project in file("cipher-bouncycastle"))
 lazy val `cipher-enigma` = (project in file("cipher-enigma"))
   .settings(
     cipherCommonSettings("cipher-enigma") ++ Seq(
-      libraryDependencies += scribe
+      libraryDependencies ++= Seq(
+        scribe,
+        "com.lihaoyi" %% "mainargs" % "0.7.6"
+      ),
+      // Make the packaged jar executable by setting the Main-Class
+      Compile / packageBin / packageOptions += sbt.Package.MainClass(
+        "cryptic.cipher.enigma.Enigma"
+      ),
+      // --- Assembly (fat jar) configuration ---
+      // Ensure the assembly has the correct entry point
+      assembly / mainClass := Some("cryptic.cipher.enigma.Enigma"),
+      // Name of the assembled jar produced by the subproject (we still copy/rename below)
+      assembly / assemblyJarName := s"${name.value}-fat-${version.value}.jar",
+      // Include scala-library and all dependencies inside the fat jar
+      assembly / assemblyOption := (assembly / assemblyOption).value
+        .withIncludeScala(true)
+        .withIncludeDependency(true),
+      // Merge strategy to avoid META-INF clashes and concatenate reference.conf when present
+      assembly / assemblyMergeStrategy := {
+        case PathList("reference.conf")                       => MergeStrategy.concat
+        case PathList("META-INF", "MANIFEST.MF")            => MergeStrategy.discard
+        case PathList("META-INF", "INDEX.LIST")             => MergeStrategy.discard
+        case PathList("META-INF", xs*)                   => MergeStrategy.discard
+        case PathList("module-info.class")                   => MergeStrategy.discard
+        case x if x.endsWith(".proto")                       => MergeStrategy.first
+        case x if x.endsWith("io.netty.versions.properties") => MergeStrategy.first
+        case _                                                 => MergeStrategy.first
+      },
+      // Project-scoped task to produce a stable-named fat jar at cipher-enigma/target/enigma.jar
+      enigma := {
+        val log = streams.value.log
+        val fat = (Compile / assembly).value
+        val out = (ThisProject / target).value / "enigma.jar"
+        IO.copyFile(fat, out)
+        log.info(s"Wrote ${out.getAbsolutePath}")
+        out
+      }
     )
   )
   .dependsOn(core)
@@ -209,3 +248,6 @@ lazy val cryptic = (project in file("."))
     `cipher-enigma`,
     `cipher-test`
   )
+
+// Task key to build an executable Enigma fat jar (scoped per project)
+lazy val enigma = taskKey[File]("Create an executable Enigma CLI fat jar named 'enigma.jar'")

@@ -31,6 +31,8 @@ object CLI:
   private def group5(s: String): String = s.grouped(5).mkString(" ")
 
   import mainargs.{ParserForMethods, Flag, arg, main as m}
+  import Enigma.default.given
+  import Functor.tryFunctor
 
   @m(name = "enigma")
   def run(
@@ -38,7 +40,7 @@ object CLI:
         name = "decrypt",
         short = 'd',
         doc = "Decrypt input (default is encrypt)"
-      ) decrypt: Flag,
+      ) decryptMode: Flag,
       @arg(
         name = "settings",
         short = 's',
@@ -52,10 +54,11 @@ object CLI:
       text: String*
   ): Unit =
 
-    val encryptMode = !decrypt.value
-
-    import Enigma.default.{given, *}
-    import Functor.tryFunctor
+    val encryptMode = !decryptMode.value
+    settings
+      .map(process)
+      .flatten
+      .fold(reportError, println)
 
     def settings: Try[Settings] =
       settingsStr
@@ -75,53 +78,54 @@ object CLI:
           .orElse(if text.nonEmpty then Some(text.mkString(" ")) else None)
           .getOrElse(readAllStdin())
 
-    def encodePreamble(input: String)(using Settings): Try[String] =
-      input.encrypted
-        .splitWith:
-          case IArray(start, key, message) =>
-            Success(
-              (glyph(start).string, glyph(key).string, glyph(message).string)
+    def encodePreamble(using Settings): Try[String] =
+      input.flatMap:
+        _.encrypted
+          .splitWith:
+            case IArray(start, key, message) =>
+              Success(
+                (start.glyph.string, key.glyph.string, message.glyph.string)
+              )
+          .map:
+            case (start, key, message) => s"$start $key ${group5(message)}"
+
+    def decodePreamble(using Settings): Try[String] =
+      input.flatMap:
+        _.split(" ") match
+          case Array(s, k, tail*) =>
+            val start = s.glyph.iarray
+            val key = k.glyph.iarray
+            val message = tail.mkString.glyph.iarray
+            Encrypted[Try, String](
+              Success(CipherText(start, key, message))
+            ).decrypted
+          case _ =>
+            Failure(
+              new IllegalArgumentException(
+                "Invalid input format: expected start and key"
+              )
             )
-        .map:
-          case (start, key, message) =>
-            s"$start $key ${group5(message)}"
 
-    def decodePreamble(input: String)(using Settings): Try[String] =
-      val arr = input.split(" ")
-      val start = arr(0).glyph
-      val key = arr(1).glyph
-      val message = arr.drop(2).mkString.glyph
-      val enc = Encrypted[Try, String](
-        Success(CipherText(start.iarray, key.iarray, message.iarray))
-      )
-      enc.decrypted
+    def encode(using Settings): Try[String] =
+      input.map: i =>
+        group5(Enigma.run(i.glyph).string)
 
-    def encode(input: String)(using Settings): Try[String] =
-      Try(group5(Enigma.run(input.glyph).string))
+    def decode(using Settings): Try[String] =
+      input.map: i =>
+        Enigma.run(i.glyph).string
 
-    def decode(input: String)(using Settings): Try[String] =
-      Try(Enigma.run(input.glyph).string)
+    def process(settings: Settings): Try[String] =
+      given s: Settings = settings
 
-    def selectOperation(input: String)(using settings: Settings): Try[String] =
-      val op = (encryptMode, settings.preamble) match
+      (encryptMode, settings.preamble) match
         case (true, true)   => encodePreamble
         case (true, false)  => encode
         case (false, true)  => decodePreamble
         case (false, false) => decode
-      op(input)
 
-    val result = for
-      s <- settings
-      i <- input
-      result <- selectOperation(i)(using s)
-    yield result
-    result.fold(
-      throwable =>
-        Console.err.println(throwable.getMessage)
-        Console.err.println(usage())
-        sys.exit(1)
-      ,
-      println
-    )
+    def reportError(throwable: Throwable) =
+      Console.err.println(throwable.getMessage)
+      Console.err.println(usage())
+      sys.exit(1)
 
   def main(args: Array[String]): Unit = ParserForMethods(this).runOrExit(args)

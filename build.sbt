@@ -185,7 +185,7 @@ lazy val `cipher-enigma` = (project in file("cipher-enigma"))
       ),
       // --- Assembly (fat jar) configuration ---
       // Ensure the assembly has the correct entry point
-      assembly / mainClass := Some("cryptic.cipher.enigma.Enigma"),
+      assembly / mainClass := Some("cryptic.cipher.enigma.CLI"),
       // Name of the assembled jar produced by the subproject (we still copy/rename below)
       assembly / assemblyJarName := s"${name.value}-fat-${version.value}.jar",
       // Include scala-library and all dependencies inside the fat jar
@@ -194,23 +194,56 @@ lazy val `cipher-enigma` = (project in file("cipher-enigma"))
         .withIncludeDependency(true),
       // Merge strategy to avoid META-INF clashes and concatenate reference.conf when present
       assembly / assemblyMergeStrategy := {
-        case PathList("reference.conf")                       => MergeStrategy.concat
-        case PathList("META-INF", "MANIFEST.MF")            => MergeStrategy.discard
-        case PathList("META-INF", "INDEX.LIST")             => MergeStrategy.discard
-        case PathList("META-INF", xs*)                   => MergeStrategy.discard
-        case PathList("module-info.class")                   => MergeStrategy.discard
-        case x if x.endsWith(".proto")                       => MergeStrategy.first
-        case x if x.endsWith("io.netty.versions.properties") => MergeStrategy.first
-        case _                                                 => MergeStrategy.first
+        case PathList("reference.conf")          => MergeStrategy.concat
+        case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+        case PathList("META-INF", "INDEX.LIST")  => MergeStrategy.discard
+        case PathList("META-INF", _*)            => MergeStrategy.discard
+        case PathList("module-info.class")       => MergeStrategy.discard
+        case x if x.endsWith(".proto")           => MergeStrategy.first
+        case x if x.endsWith("io.netty.versions.properties") =>
+          MergeStrategy.first
+        case _ => MergeStrategy.first
       },
-      // Project-scoped task to produce a stable-named fat jar at cipher-enigma/target/enigma.jar
+      // Project-scoped task to produce a self-contained bash launcher script with the fat jar embedded
       enigma := {
+        import java.util.Base64
         val log = streams.value.log
         val fat = (Compile / assembly).value
-        val out = (ThisProject / target).value / "enigma.jar"
-        IO.copyFile(fat, out)
-        log.info(s"Wrote ${out.getAbsolutePath}")
-        out
+        val targetDir = (ThisProject / target).value
+        val jarOut = targetDir / "enigma.jar"
+        // Keep writing the jar for convenience
+        IO.copyFile(fat, jarOut)
+        log.info(s"Wrote jar ${jarOut.getAbsolutePath}")
+
+        val scriptOut = targetDir / "enigma"
+        val jarBytes = IO.readBytes(fat)
+        val b64 = Base64
+          .getMimeEncoder(76, "\n".getBytes("UTF-8"))
+          .encodeToString(jarBytes)
+
+        val header =
+          """#!/usr/bin/env bash
+set -euo pipefail
+
+# Self-extract embedded Enigma jar and run it
+TMPDIR_="${TMPDIR:-/tmp}"
+JAR_="$(mktemp "${TMPDIR_%/}/enigma-jar-XXXXXX")"
+cleanup_() { rm -f "$JAR_"; }
+trap cleanup_ EXIT
+
+# Extract base64 jar payload that starts after the marker line
+awk 'found{print} /^__JAR_BASE64__$/ {found=1; next}' "$0" | base64 --decode > "$JAR_"
+
+exec java ${JAVA_OPTS:-} -jar "$JAR_" "$@"
+cleanup_
+__JAR_BASE64__
+"""
+
+        IO.write(scriptOut, header + b64 + "\n")
+        // Make the script executable
+        scriptOut.setExecutable(true)
+        log.info(s"Wrote launcher ${scriptOut.getAbsolutePath}")
+        scriptOut
       }
     )
   )
@@ -249,5 +282,7 @@ lazy val cryptic = (project in file("."))
     `cipher-test`
   )
 
-// Task key to build an executable Enigma fat jar (scoped per project)
-lazy val enigma = taskKey[File]("Create an executable Enigma CLI fat jar named 'enigma.jar'")
+// Task key to build an executable Enigma bash script with embedded fat jar (scoped per project)
+lazy val enigma = taskKey[File](
+  "Create an executable 'enigma' bash script with embedded fat jar"
+)

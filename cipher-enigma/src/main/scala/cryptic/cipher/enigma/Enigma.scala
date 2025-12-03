@@ -3,7 +3,6 @@ package cipher
 package enigma
 
 import scala.util.{Failure, Success, Try}
-import scala.io.Source
 
 object Enigma:
 

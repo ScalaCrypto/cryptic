@@ -8,6 +8,32 @@ import scala.util.{Failure, Success, Try}
 val secureRandom = SecureRandom()
 opaque type Glyph = Int
 
+/** Represents the Glyph object, which provides operations related to the encoding and
+ * construction of glyphs for cryptographic purposes.
+ *
+ * Constants:
+ * - `mod`: A constant value indicating the modulus used for glyph calculations.
+ * - `base`: A constant value indicating the ASCII value offset for character conversions.
+ * - `one`: A predefined Glyph instance representing the glyph value of 1.
+ *
+ * Factory Methods:
+ * - `apply(i: Int): Glyph`: Constructs a Glyph instance from an integer by applying the
+ * modulus operation such that the resulting value is normalized between 0 and `mod - 1`.
+ * - `apply(c: Char): Glyph`: Constructs a Glyph instance from a character by subtracting
+ * the ASCII offset (`base`) and normalizing the result using the modulus operation.
+ *
+ * Utility Methods:
+ * - `random(n: Int): IArray[Glyph]`: Generates an immutable array containing `n` randomly
+ * generated Glyph instances. Each Glyph value is constrained by the modulus and generated
+ * securely using a random number generator.
+ * - `unsafe(c: Char): Try[Glyph]`: Attempts to construct a Glyph instance from a character
+ * input. Accepts letters A–Z or a–z, automatically converting lowercase to uppercase.
+ * Returns a `Success` containing the Glyph if valid, otherwise returns a `Failure` with
+ * an `IllegalArgumentException`.
+ * - `isValid(c: Char): Boolean`: Checks if a character can be converted to a valid Glyph
+ * representation following the same criteria as `unsafe`. Returns `true` if valid, otherwise
+ * `false`.
+ */
 object Glyph:
   val mod = 26
   val base = 65

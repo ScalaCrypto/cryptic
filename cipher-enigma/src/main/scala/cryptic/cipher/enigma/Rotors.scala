@@ -2,6 +2,13 @@ package cryptic
 package cipher
 package enigma
 
+/** Represents a sequence of rotors in an Enigma-like cryptographic device.
+ *
+ * @param rotors
+ * An immutable array of Rotors representing the rotor sequence.
+ * The rightmost rotor should be placed at index 0. The sequence must be non-empty
+ * and must not contain duplicate rotors.
+ */
 case class Rotors(rotors: IArray[Rotor]):
   require(
     rotors.nonEmpty,

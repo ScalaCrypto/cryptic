@@ -5,6 +5,49 @@ package enigma
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
+/**
+ * Command-line interface for the Enigma encryption/decryption tool.
+ *
+ * Provides functionality to encrypt or decrypt messages using specific settings.
+ * The input can be provided directly via text or read from a file.
+ *
+ * Arguments:
+ *
+ * - `-d, --decrypt`: Specifies decryption mode. Encrypt mode is the default.
+ * - `-s, --settings SETTINGS`: Specifies the Enigma settings as a single string, e.g., "III-II-I AAA AAZ B ABCD".
+ * This is optional if the environment variable `ENIGMA_SETTINGS` is set. This argument overrides the environment variable if provided.
+ * - `-f, --file FILE`: Reads the input message from a specified file.
+ * - `TEXT`: The input message text (optional if the input is provided via a file or stdin).
+ *
+ * Notes:
+ *
+ * - Input text is normalized to uppercase letters A–Z, ignoring non-alphabetical characters.
+ * - When encrypting, the output is grouped into five-letter blocks.
+ * - When decrypting, the output is returned as a continuous string.
+ *
+ * Methods:
+ *
+ * - `run`: Parses and processes command-line arguments for encryption or decryption.
+ * - `main`: Entry point for the application. Accepts and processes command-line arguments.
+ *
+ * Helper Methods:
+ *
+ * - `usage`: Returns a string describing the CLI usage and options.
+ * - `settings`: Parses and validates the Enigma machine settings.
+ * - `process`: Determines encryption or decryption logic based on the settings.
+ * - `encodePreamble`: Encrypts the input including the preamble.
+ * - `decodePreamble`: Decrypts the input including the preamble.
+ * - `encode`: Encrypts the input message.
+ * - `decode`: Decrypts the input message.
+ * - `input`: Handles input retrieval from text, file, or stdin.
+ * - `readAllStdin`: Reads input from standard input.
+ * - `readFile`: Reads input from a file.
+ * - `reportError`: Logs and prints error messages.
+ *
+ * Extensions:
+ *
+ * - `group5`: String extension method to format output into groups of five letters.
+ */
 object CLI:
   private def usage(): String =
     """

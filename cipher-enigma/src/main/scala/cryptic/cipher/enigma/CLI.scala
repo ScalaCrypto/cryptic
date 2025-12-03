@@ -24,12 +24,6 @@ object CLI:
       |Encrypt output is grouped into five-letter groups. Decrypt output is a continuous string.
       |""".stripMargin
 
-  private def readAllStdin(): String = Source.stdin.slurp
-
-  private def readFile(path: String): String = Source.fromFile(path).slurp
-
-  private def group5(s: String): String = s.grouped(5).mkString(" ")
-
   import mainargs.{ParserForMethods, Flag, arg, main as m}
   import Enigma.default.given
   import Functor.tryFunctor
@@ -71,12 +65,13 @@ object CLI:
           )
         )(Settings.parse)
 
-    def input: Try[String] =
-      Try:
-        file
-          .map(readFile)
-          .orElse(if text.nonEmpty then Some(text.mkString(" ")) else None)
-          .getOrElse(readAllStdin())
+    def process(settings: Settings): Try[String] =
+      given s: Settings = settings
+      (encryptMode, settings.preamble) match
+        case (true, true)   => encodePreamble
+        case (true, false)  => encode
+        case (false, true)  => decodePreamble
+        case (false, false) => decode
 
     def encodePreamble(using Settings): Try[String] =
       input.flatMap:
@@ -84,10 +79,14 @@ object CLI:
           .splitWith:
             case IArray(start, key, message) =>
               Success(
-                (start.glyph.string, key.glyph.string, message.glyph.string)
+                (
+                  start.glyph.string,
+                  key.glyph.string,
+                  message.glyph.string.group5
+                )
               )
           .map:
-            case (start, key, message) => s"$start $key ${group5(message)}"
+            case (start, key, message) => s"$start $key $message"
 
     def decodePreamble(using Settings): Try[String] =
       input.flatMap:
@@ -106,26 +105,30 @@ object CLI:
               )
             )
 
-    def encode(using Settings): Try[String] =
-      input.map: i =>
-        group5(Enigma.run(i.glyph).string)
+    def encode(using Settings): Try[String] = decode.map(_.group5)
 
     def decode(using Settings): Try[String] =
-      input.map: i =>
-        Enigma.run(i.glyph).string
+      input
+        .map(_.glyph)
+        .map(Enigma.run)
+        .map(_.string)
 
-    def process(settings: Settings): Try[String] =
-      given s: Settings = settings
+    def input: Try[String] =
+      Try:
+        file
+          .map(readFile)
+          .orElse(if text.nonEmpty then Some(text.mkString(" ")) else None)
+          .getOrElse(readAllStdin())
 
-      (encryptMode, settings.preamble) match
-        case (true, true)   => encodePreamble
-        case (true, false)  => encode
-        case (false, true)  => decodePreamble
-        case (false, false) => decode
+    def readAllStdin(): String = Source.stdin.slurp
+
+    def readFile(path: String): String = Source.fromFile(path).slurp
 
     def reportError(throwable: Throwable) =
       Console.err.println(throwable.getMessage)
       Console.err.println(usage())
       sys.exit(1)
+
+  extension (s: String) def group5: String = s.grouped(5).mkString(" ")
 
   def main(args: Array[String]): Unit = ParserForMethods(this).runOrExit(args)

@@ -504,6 +504,9 @@ object Encrypted:
     yield encrypted
     new Encrypted(cipherText)
 
+  def apply[F[_]: Functor, V: Codec](bytes: Array[Byte]): Encrypted[F, V] =
+    Encrypted[F, V](CipherText(bytes.immutable).pure)
+
   /** Constructs an `Encrypted` value from a precomputed cipher text effect.
     *
     * Use this when you already have `F[CipherText]` and want to wrap it as

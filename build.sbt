@@ -1,4 +1,7 @@
 import scala.collection.Seq
+// sbt-assembly keys and helpers
+import sbtassembly.AssemblyPlugin.autoImport.*
+import sbtassembly.{MergeStrategy, PathList}
 
 lazy val scalaTest = ("org.scalatest" %% "scalatest" % "3.2.19").withSources()
 lazy val chill = ("com.twitter" % "chill" % "0.10.0")
@@ -7,6 +10,7 @@ lazy val chill = ("com.twitter" % "chill" % "0.10.0")
 lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
 lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.3.2").withSources()
 lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.82").withSources()
+lazy val scribe = ("com.outr" %% "scribe" % "3.17.0").withSources()
 
 lazy val javaBaseOpens = Seq(
   "--add-opens=java.base/java.lang=ALL-UNNAMED",
@@ -79,11 +83,14 @@ lazy val commonSettings =
   ) ++ testSettings
 
 lazy val testSettings =
-  Seq(Test / fork := true, Test / javaOptions ++= javaBaseOpens)
+  Seq(
+    Test / fork := true,
+    Test / javaOptions ++= javaBaseOpens,
+    libraryDependencies += scalaTest % Test
+  )
 
 lazy val coreSettings = commonSettings ++ Seq(
   name := "core",
-  libraryDependencies ++= Seq(scalaTest % Test),
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
@@ -94,7 +101,7 @@ lazy val coreSettings = commonSettings ++ Seq(
 
 lazy val codecChillSettings = commonSettings ++ Seq(
   name := "codec-chill",
-  libraryDependencies ++= Seq(scalaTest % Test, chill),
+  libraryDependencies ++= Seq(chill),
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
@@ -102,9 +109,9 @@ lazy val codecChillSettings = commonSettings ++ Seq(
     s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
   }
 )
-lazy val codecFstSettings = commonSettings ++ testSettings ++ Seq(
+lazy val codecFstSettings = commonSettings ++ Seq(
   name := "codec-fst",
-  libraryDependencies ++= Seq(scalaTest % Test, fst),
+  libraryDependencies += fst,
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
@@ -115,7 +122,7 @@ lazy val codecFstSettings = commonSettings ++ testSettings ++ Seq(
 
 lazy val codecUpickleSettings = commonSettings ++ Seq(
   name := "codec-upickle",
-  libraryDependencies ++= Seq(scalaTest % Test, upickle),
+  libraryDependencies += upickle,
   Compile / packageBin / mappings += {
     file("LICENSE") -> "LICENSE"
   },
@@ -127,7 +134,6 @@ lazy val codecUpickleSettings = commonSettings ++ Seq(
 lazy val cipherCommonSettings = (projectName: String) =>
   commonSettings ++ Seq(
     name := projectName,
-    libraryDependencies ++= Seq(scalaTest % Test),
     Compile / packageBin / mappings += {
       file("LICENSE") -> "LICENSE"
     },
@@ -138,9 +144,8 @@ lazy val cipherCommonSettings = (projectName: String) =>
   )
 
 lazy val cipherTestSettings =
-  commonSettings ++ testSettings ++ Seq(
+  commonSettings ++ Seq(
     name := "cipher-test",
-    libraryDependencies ++= Seq(scalaTest % Test),
     publish / skip := true
   )
 
@@ -157,19 +162,92 @@ lazy val `codec-upickle` = (project in file("codec-upickle"))
   .dependsOn(core)
 
 lazy val `cipher-javax` = (project in file("cipher-javax"))
-  .settings(
-    cipherCommonSettings("cipher-javax") ++ Seq(
-      libraryDependencies ++= Seq(bc, scalaTest % Test)
-    )
-  )
+  .settings(cipherCommonSettings("cipher-javax"))
   .dependsOn(core)
 lazy val `cipher-bouncycastle` = (project in file("cipher-bouncycastle"))
   .settings(
     cipherCommonSettings("cipher-bouncycastle") ++ Seq(
-      libraryDependencies ++= Seq(bc, scalaTest % Test)
+      libraryDependencies += bc
     )
   )
   .dependsOn(core, `cipher-javax`)
+
+lazy val `cipher-enigma` = (project in file("cipher-enigma"))
+  .settings(
+    cipherCommonSettings("cipher-enigma") ++ Seq(
+      libraryDependencies ++= Seq(
+        scribe,
+        "com.lihaoyi" %% "mainargs" % "0.7.6"
+      ),
+      // Make the packaged jar executable by setting the Main-Class
+      Compile / packageBin / packageOptions += sbt.Package.MainClass(
+        "cryptic.cipher.enigma.Enigma"
+      ),
+      // --- Assembly (fat jar) configuration ---
+      // Ensure the assembly has the correct entry point
+      assembly / mainClass := Some("cryptic.cipher.enigma.CLI"),
+      // Name of the assembled jar produced by the subproject (we still copy/rename below)
+      assembly / assemblyJarName := s"${name.value}-fat-${version.value}.jar",
+      // Include scala-library and all dependencies inside the fat jar
+      assembly / assemblyOption := (assembly / assemblyOption).value
+        .withIncludeScala(true)
+        .withIncludeDependency(true),
+      // Merge strategy to avoid META-INF clashes and concatenate reference.conf when present
+      assembly / assemblyMergeStrategy := {
+        case PathList("reference.conf")          => MergeStrategy.concat
+        case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+        case PathList("META-INF", "INDEX.LIST")  => MergeStrategy.discard
+        case PathList("META-INF", _*)            => MergeStrategy.discard
+        case PathList("module-info.class")       => MergeStrategy.discard
+        case x if x.endsWith(".proto")           => MergeStrategy.first
+        case x if x.endsWith("io.netty.versions.properties") =>
+          MergeStrategy.first
+        case _ => MergeStrategy.first
+      },
+      // Project-scoped task to produce a self-contained bash launcher script with the fat jar embedded
+      enigma := {
+        import java.util.Base64
+        val log = streams.value.log
+        val fat = (Compile / assembly).value
+        val targetDir = (ThisProject / target).value
+        val jarOut = targetDir / "enigma.jar"
+        // Keep writing the jar for convenience
+        IO.copyFile(fat, jarOut)
+        log.info(s"Wrote jar ${jarOut.getAbsolutePath}")
+
+        val scriptOut = targetDir / "enigma"
+        val jarBytes = IO.readBytes(fat)
+        val b64 = Base64
+          .getMimeEncoder(76, "\n".getBytes("UTF-8"))
+          .encodeToString(jarBytes)
+
+        val header =
+          """#!/usr/bin/env bash
+set -euo pipefail
+
+# Self-extract embedded Enigma jar and run it
+TMPDIR_="${TMPDIR:-/tmp}"
+JAR_="$(mktemp "${TMPDIR_%/}/enigma-jar-XXXXXX")"
+cleanup_() { rm -f "$JAR_"; }
+trap cleanup_ EXIT
+
+# Extract base64 jar payload that starts after the marker line
+awk 'found{print} /^__JAR_BASE64__$/ {found=1; next}' "$0" | base64 --decode > "$JAR_"
+
+exec java ${JAVA_OPTS:-} -jar "$JAR_" "$@"
+cleanup_
+__JAR_BASE64__
+"""
+
+        IO.write(scriptOut, header + b64 + "\n")
+        // Make the script executable
+        scriptOut.setExecutable(true)
+        log.info(s"Wrote launcher ${scriptOut.getAbsolutePath}")
+        scriptOut
+      }
+    )
+  )
+  .dependsOn(core)
 
 lazy val `cipher-test` = (project in file("cipher-test"))
   .settings(cipherTestSettings)
@@ -200,5 +278,11 @@ lazy val cryptic = (project in file("."))
     `codec-upickle`,
     `cipher-bouncycastle`,
     `cipher-javax`,
+    `cipher-enigma`,
     `cipher-test`
   )
+
+// Task key to build an executable Enigma bash script with embedded fat jar (scoped per project)
+lazy val enigma = taskKey[File](
+  "Create an executable 'enigma' bash script with embedded fat jar"
+)

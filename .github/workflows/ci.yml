@@ -50,7 +50,7 @@ jobs:
         run: sbt '++ ${{ matrix.scala }}' test
 
       - name: Compress target directories
-        run: tar cf targets.tar codec-fst/target codec-upickle/target target cipher-javax/target cipher-test/target core/target codec-chill/target cipher-bouncycastle/target project/target
+        run: tar cf targets.tar cipher-enigma/target codec-fst/target codec-upickle/target target cipher-javax/target cipher-test/target core/target codec-chill/target cipher-bouncycastle/target project/target
 
       - name: Upload target directories
         uses: actions/upload-artifact@v4

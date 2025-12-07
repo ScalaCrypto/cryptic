@@ -47,16 +47,16 @@ object Settings:
   def parse(settings: String): Try[Settings] =
     // Match parts: names, rings, optional positions, reflector, optional plugboard
     val SettingsFormat =
-      """^\s*(\S+)\s+([A-Za-z]+)\s+(?:([A-Za-z]+)\s+)?([A-Ca-c])\s*([A-Za-z]*)\s*$""".r
+      """^\s*(\S+)\s+([A-Za-z]+)\s+(?:([A-Za-z]+)\s+)?([A-Ca-c])(?:\s+([A-Za-z]*))?\s*$""".r
 
     settings match
-      case SettingsFormat(names, rings, posOrNull, refl, pb) =>
+      case SettingsFormat(names, rings, posOrNull, refl, pbOrNull) =>
         val posOption = Option(posOrNull)
         val preamble = posOption.isEmpty
         val pos = posOption.getOrElse("A" * rings.length)
         val rotors = Rotors(s"$names $rings $pos")
         val reflector = Reflector.valueOf(refl.toUpperCase)
-        val plugboard = PlugBoard(pb)
+        val plugboard = PlugBoard(Option(pbOrNull).getOrElse(""))
         Success(Settings(rotors, reflector, plugboard, preamble))
       case _ =>
         Failure(

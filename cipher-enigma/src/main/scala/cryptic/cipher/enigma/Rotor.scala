@@ -32,7 +32,7 @@ case class Rotor(wheel: Wheel, ring: Glyph, pos: Glyph):
   def out(g: Glyph): Glyph = wheel.out(g + offset) - offset
   def out(c: Char): Char = out(c.glyph).char
 
-  override def toString: String = s"Rotor($wheel ${ring.char} ${pos.char})"
+  override def toString: String = s"$wheel ${ring.string} ${pos.string}"
 
 object Rotor:
   /** Convenience constructor for tests and callers that prefer simple types.

@@ -9,7 +9,7 @@ package enigma
   *   most once across all pairs, and the two `Glyph`s within a pair must
   *   differ.
   */
-case class PlugBoard(wiring: IArray[(Glyph, Glyph)]):
+case class PlugBoard(wiring: Seq[(Glyph, Glyph)]):
   require(wiring.length <= 10, "PlugBoard may contain at most 10 pairs")
   require(
     wiring.forall((a, b) => a != b),
@@ -22,6 +22,8 @@ case class PlugBoard(wiring: IArray[(Glyph, Glyph)]):
     "PlugBoard letters must be unique across all pairs"
   )
 
+  override def toString: String = wiring.map((f,t)=>s"${f.string}${t.string}").mkString
+
   /** Swap the provided `Glyph` using the configured wiring. If the `Glyph` is
     * not present in any pair, it is returned unchanged.
     */
@@ -33,6 +35,7 @@ case class PlugBoard(wiring: IArray[(Glyph, Glyph)]):
       .getOrElse(g)
 
 object PlugBoard:
+  val empty = PlugBoard(Seq.empty)
   /** Construct a PlugBoard from a concatenated string of letter pairs with no
     * spaces, e.g. "ABCD" -> pairs (A,B), (C,D). Lowercase letters are accepted
     * and normalized to uppercase. The total number of pairs must be between 0

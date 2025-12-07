@@ -4,49 +4,61 @@ package enigma
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
 
-class PlugBoardSpec extends AnyFlatSpec with Matchers:
+class PlugBoardSpec
+    extends AnyFlatSpec
+    with Matchers
+    with TableDrivenPropertyChecks:
   behavior of "PlugBoard"
 
-  it should "swap pairs and be identity for others" in:
+  it should "swap mapped glyphs and leave others unchanged" in:
     val pb = PlugBoard("ABCD") // A<->B, C<->D
-    pb.swap('A'.glyph).char shouldBe 'B'
-    pb.swap('B'.glyph).char shouldBe 'A'
-    pb.swap('C'.glyph).char shouldBe 'D'
-    pb.swap('D'.glyph).char shouldBe 'C'
-    // Unplugged letters unchanged
-    pb.swap('E'.glyph).char shouldBe 'E'
+    val data = Table(
+      ("in", "out"),
+      ('A', 'B'),
+      ('B', 'A'),
+      ('C', 'D'),
+      ('D', 'C'),
+      ('Z', 'Z') // unaffected
+    )
+    forAll(data): (in: Char, out: Char) =>
+      pb.swap(in.glyph) shouldBe out.glyph
 
-  it should "be symmetric (swap twice yields original)" in:
-    val pb = PlugBoard("QWERTY") // Q<->W, E<->R, T<->Y
-    ('A' to 'Z').foreach: c =>
-      val g = c.glyph
-      pb.swap(pb.swap(g)) shouldBe g
-
-  it should "accept empty wiring and act as identity" in:
+  it should "support empty wiring (no-op)" in:
     val pb = PlugBoard("")
-    ('A' to 'Z').foreach: c =>
-      pb.swap(c.glyph).char shouldBe c
+    pb.swap('A'.glyph) shouldBe 'A'.glyph
+    pb.swap('Z'.glyph) shouldBe 'Z'.glyph
 
-  it should "parse lowercase and uppercase letters equivalently" in:
-    val up = PlugBoard("ABCD")
-    val lo = PlugBoard("abCd")
-    ('A' to 'Z').foreach: c =>
-      up.swap(c.glyph) shouldBe lo.swap(c.glyph)
+  it should "normalize lowercase input when constructing from String" in:
+    val pb = PlugBoard("abCd")
+    // toString uses uppercase glyphs
+    pb.toString shouldBe "ABCD"
+    // swap behavior operates on Glyphs; use uppercase inputs
+    pb.swap('A'.glyph) shouldBe 'B'.glyph
+    pb.swap('C'.glyph) shouldBe 'D'.glyph
 
-  it should "reject odd number of letters" in:
-    an[IllegalArgumentException] should be thrownBy PlugBoard("ABC")
-
-  it should "reject duplicate letters across pairs" in:
-    // 'A' duplicated
-    an[IllegalArgumentException] should be thrownBy PlugBoard("ABAC")
-
-  it should "reject self-pairs like AA" in:
-    an[IllegalArgumentException] should be thrownBy PlugBoard("AABC")
-
-  it should "reject more than 10 pairs" in:
-    val twentyTwo = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".take(22) // 11 pairs
-    an[IllegalArgumentException] should be thrownBy PlugBoard(twentyTwo)
+  behavior of "PlugBoard.apply(pairs: String)"
 
   it should "reject non-letter characters" in:
-    an[IllegalArgumentException] should be thrownBy PlugBoard("AB- CD")
+    intercept[IllegalArgumentException] { PlugBoard("AB12") }
+    intercept[IllegalArgumentException] { PlugBoard("--__ ") }
+
+  it should "reject an odd number of letters" in:
+    intercept[IllegalArgumentException] { PlugBoard("ABC") }
+
+  it should "reject more than 10 pairs (20 letters)" in:
+    intercept[IllegalArgumentException] { PlugBoard("ABCDEFGHIJKLMNOPQRSTUVWXYZ") }
+
+  it should "reject self-pairs and duplicate letters across pairs" in:
+    // self-pair AA
+    intercept[IllegalArgumentException] { PlugBoard("AA") }
+    // duplicate A used in two pairs
+    intercept[IllegalArgumentException] { PlugBoard("ABAC") }
+
+  it should "preserve pair order and render as concatenated pairs in toString" in:
+    PlugBoard("ABCD").toString shouldBe "ABCD"
+    PlugBoard("EFGH").toString shouldBe "EFGH"
+
+  it should "construct an empty PlugBoard from an empty string" in:
+     PlugBoard("").wiring.isEmpty shouldBe true

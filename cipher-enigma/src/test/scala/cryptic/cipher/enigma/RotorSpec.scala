@@ -102,3 +102,6 @@ class RotorSpec
 
   it should "reject unknown wheel names via Wheel" in:
     intercept[IllegalArgumentException] { Rotor("VII A A") }
+
+  it should "have a toString matching apply" in:
+    Rotor("IV Z Q").toString shouldBe "IV Z Q"

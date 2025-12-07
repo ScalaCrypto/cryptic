@@ -9,7 +9,7 @@ package enigma
  * The rightmost rotor should be placed at index 0. The sequence must be non-empty
  * and must not contain duplicate rotors.
  */
-case class Rotors(rotors: IArray[Rotor]):
+case class Rotors(rotors: Seq[Rotor]):
   require(
     rotors.nonEmpty,
     "Rotors must contain at least one rotor state (right-most at index 0)"
@@ -61,7 +61,7 @@ case class Rotors(rotors: IArray[Rotor]):
    * @return
    * An immutable array of `Glyph` representing the positions of the rotors.
    */
-  def pos: IArray[Glyph] = rotors.map(_.pos)
+  def pos: Seq[Glyph] = rotors.map(_.pos)
 
   /**
    * Updates the positions of the rotors in the sequence to the specified positions.

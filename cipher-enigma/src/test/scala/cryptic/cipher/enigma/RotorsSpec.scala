@@ -50,7 +50,7 @@ class RotorsSpec
     val single0 = Rotors(IArray(Rotor("I A A")))
     val single1 = single0.rotate
     single1.rotors.length shouldBe 1
-    single1.rotors(0).pos shouldBe 'B'.glyph
+    single1.rotors.head.pos shouldBe 'B'.glyph
 
   it should "ripple carry across four rotors" in:
     // Set up a chain where first rotation causes cascading carries:
@@ -76,15 +76,9 @@ class RotorsSpec
     }
     // 1, 2, 3, 4 should all be allowed
     noException should be thrownBy Rotors(IArray(Rotor("I A A")))
-    noException should be thrownBy Rotors(
-      IArray(Rotor("I A A"), Rotor("II A A"))
-    )
-    noException should be thrownBy Rotors(
-      IArray(Rotor("I A A"), Rotor("II A A"), Rotor("III A A"))
-    )
-    noException should be thrownBy Rotors(
-      IArray(Rotor("I A A"), Rotor("II A A"), Rotor("III A A"), Rotor("IV A A"))
-    )
+    noException should be thrownBy Rotors(IArray(Rotor("I A A"), Rotor("II A A")))
+    noException should be thrownBy Rotors(IArray(Rotor("I A A"), Rotor("II A A"), Rotor("III A A")))
+    noException should be thrownBy Rotors(IArray(Rotor("I A A"), Rotor("II A A"), Rotor("III A A"), Rotor("IV A A")))
 
   it should "reject duplicate rotors (by identity/name)" in:
     // Duplicate rotor I used twice should fail
@@ -115,7 +109,7 @@ class RotorsSpec
     val single = Rotors(IArray(Rotor("I A A")))
     val g = 'C'.glyph
 
-    single.in(g) shouldBe (single.rotors(0).in(g), List(2, 12))
+    single.in(g) shouldBe (single.rotors.head.in(g), List(2, 12))
     single.in('C') shouldBe single.in(g.char)
 
   behavior of "Rotors companion object apply"
@@ -123,7 +117,7 @@ class RotorsSpec
   it should "construct from varargs with at least one state (single)" in:
     val single = Rotors(Rotor("I A A"))
     single.rotors.length shouldBe 1
-    single.rotors(0).pos shouldBe 'A'.glyph
+    single.rotors.head.pos shouldBe 'A'.glyph
 
   it should "construct from varargs with multiple states and preserve order" in:
     val r0 = Rotor("I A A")
@@ -131,7 +125,7 @@ class RotorsSpec
     val r2 = Rotor("III A C")
     val rotors = Rotors(r0, r1, r2)
     rotors.rotors.length shouldBe 3
-    rotors.rotors(0) shouldBe r0
+    rotors.rotors.head shouldBe r0
     rotors.rotors(1) shouldBe r1
     rotors.rotors(2) shouldBe r2
 
@@ -161,5 +155,5 @@ class RotorsSpec
     val single = Rotors(IArray(Rotor("I A A")))
     val g = 'M'.glyph
 
-    single.out(g) shouldBe (single.rotors(0).out(g), List(12, 2))
+    single.out(g) shouldBe (single.rotors.head.out(g), List(12, 2))
     single.out('M') shouldBe single.out(g.char)

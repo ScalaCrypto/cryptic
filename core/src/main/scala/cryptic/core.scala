@@ -2,9 +2,9 @@ package cryptic
 
 import java.nio.ByteBuffer
 import scala.annotation.targetName
-import scala.concurrent.Future
+import scala.io.Source
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 
 /** Identity type alias used to represent pure (non-effectful) values. */
 type Id[A] = A
@@ -59,7 +59,7 @@ object PlainText:
   /** UTF-8 encodes a string into PlainText with an empty aad. */
   def apply(x: String): PlainText = apply(x, AAD.empty)
 
-  /** UTF-8 encodes a string into PlainText with a aad. */
+  /** UTF-8 encodes a string into PlainText with an aad. */
   def apply(x: String, aad: AAD): PlainText =
     apply(x.getBytes().immutable, aad)
 
@@ -288,6 +288,7 @@ extension (str: String)
   def aad: AAD = str.getBytes.aad
   @targetName("stringToBytes")
   def bytes: IArray[Byte] = str.getBytes.immutable
+  def fromResource:String = Source.fromResource(str).slurp
 
 extension (array: IArray[Byte])
   /** Mutable Array view over an IArray[Byte]. */
@@ -369,3 +370,11 @@ extension (d: Double)
     buffer.putDouble(d)
     buffer.array().immutable
   def aad: AAD = AAD(bytes)
+
+extension (source: Source)
+  def using[A](f: Source => A): A =
+    try
+      f(source)
+    finally
+      source.close()
+  def slurp: String = source.using(_.mkString)

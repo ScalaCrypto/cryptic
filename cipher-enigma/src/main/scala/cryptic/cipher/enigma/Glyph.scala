@@ -5,7 +5,9 @@ package enigma
 import java.security.SecureRandom
 import scala.util.{Failure, Success, Try}
 
-val secureRandom = SecureRandom()
+private object secureRandomHolder:
+  lazy val instance: SecureRandom = new SecureRandom
+private def secureRandom: SecureRandom = secureRandomHolder.instance
 opaque type Glyph = Int
 
 /** Represents the Glyph object, which provides operations related to the encoding and

@@ -173,22 +173,47 @@ lazy val `cipher-bouncycastle` = (project in file("cipher-bouncycastle"))
   .dependsOn(core, `cipher-javax`)
 
 lazy val `cipher-enigma` = (project in file("cipher-enigma"))
+  .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     cipherCommonSettings("cipher-enigma") ++ Seq(
       libraryDependencies ++= Seq(
         scribe,
         "com.lihaoyi" %% "mainargs" % "0.7.6"
       ),
-      // Make the packaged jar executable by setting the Main-Class
+      Compile / mainClass := Some("cryptic.cipher.enigma.cli"),
       Compile / packageBin / packageOptions += sbt.Package.MainClass(
-        "cryptic.cipher.enigma.Enigma"
+        "cryptic.cipher.enigma.cli"
       ),
+      Compile / packageBin / mappings ++= {
+        val classDir = (Compile / classDirectory).value
+        val sourceDir = (Compile / scalaSource).value
+        // Map files from the class directory to the root of the JAR
+        (Compile / products).value.flatMap { dir =>
+          Path.allSubpaths(dir)
+        }
+      },
+      GraalVMNativeImage / packageBin / artifactName := {
+        (sv, module, artifact) =>
+          s"${module.name}-${module.revision}-native-image-input.${artifact.extension}"
+      },
+
+      // GraalVM specific options
+      GraalVMNativeImage / graalVMNativeImageOptions ++= Seq(
+        "--no-fallback",
+        "--initialize-at-build-time",
+        "-H:+UnlockExperimentalVMOptions",
+        "-H:Name=enigma"
+      ),
+      GraalVMNativeImage / scriptClasspathOrdering := {
+        val fat = (Compile / assembly).value
+        Seq(fat -> fat.getName)
+      },
+      GraalVMNativeImage / mainClass := (Compile / mainClass).value,
+
+
       // --- Assembly (fat jar) configuration ---
-      // Ensure the assembly has the correct entry point
-      assembly / mainClass := Some("cryptic.cipher.enigma.CLI"),
-      // Name of the assembled jar produced by the subproject (we still copy/rename below)
+      assembly / mainClass := Some("cryptic.cipher.enigma.cli"),
       assembly / assemblyJarName := s"${name.value}-fat-${version.value}.jar",
-      // Include scala-library and all dependencies inside the fat jar
       assembly / assemblyOption := (assembly / assemblyOption).value
         .withIncludeScala(true)
         .withIncludeDependency(true),
@@ -211,10 +236,8 @@ lazy val `cipher-enigma` = (project in file("cipher-enigma"))
         val fat = (Compile / assembly).value
         val targetDir = (ThisProject / target).value
         val jarOut = targetDir / "enigma.jar"
-        // Keep writing the jar for convenience
         IO.copyFile(fat, jarOut)
         log.info(s"Wrote jar ${jarOut.getAbsolutePath}")
-
         val scriptOut = targetDir / "enigma"
         val jarBytes = IO.readBytes(fat)
         val b64 = Base64

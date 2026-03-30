@@ -11,7 +11,6 @@ select the modules you nedd or write your own
 |:----------------------|:--------------------| 
 | crypto-javax          | AES, RSA            |
 | crypto-bouncycastle   | EC (Elliptic curve) |
-| codec-chill   | Chill               | 
 | codec-fst     | Fst                 | 
 | codec-upickle | Upickle             | 
 
@@ -38,8 +37,6 @@ To encrypt with Elliptic Curve, ECIES
 Use the default codec for scala types or select one of
 
 ```sbt
-"scalacrypto" %% "codec-chill" % "1.0.0"
-
 "scalacrypto" %% "codec-fst" % "1.0.0"
 
 "scalacrypto" %% "codec-upickle" % "1.0.0"
@@ -72,7 +69,7 @@ Encrypt your data using convenient syntax, a crypto and a codec must be availabl
 ```scala
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import cryptic.crypto.EllipticCurve.{ given, * } // Elliptic Curve encryption
-import cryptic.codec.Chill.* // Brings the Chill codec in scope
+import cryptic.codec.Fst.* // Brings the Fst codec in scope
 
 // We need a given public key to enable encryption for Elliptic Curve
 private val keyPair: KeyPair = EllipticCurve.keygen(256)
@@ -106,7 +103,7 @@ Run your staged transformations, a crypto and a codec must be in scope:
 
 ```scala
 import cryptic.crypto.RSA.*
-import cryptic.codec.Chill.{ given, * }
+import cryptic.codec.Fst.{ given, * }
 
 val user2 = user.copy(email = lowered.run())
 ```
@@ -129,7 +126,6 @@ val emailInLower = user2.email.decrypted
 ## Provided codecs
 
 - Default
-- Chill
 - Fst
 - Upickle
 

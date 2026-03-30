@@ -3,7 +3,7 @@ package cipher
 
 import cryptic.{Decrypt, Encrypt}
 import cryptic.cipher.EllipticCurve
-import cryptic.codec.{Chill, Fst, Upickle}
+import cryptic.codec.{Fst, Upickle}
 import upickle.default.{Reader, ReadWriter, Writer, given}
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
@@ -15,10 +15,6 @@ trait EllipticCurveSpecBase extends CipherSpecBase:
   given privateKey: PrivateKey = keyPair.getPrivate
   override given encrypt: Encrypt[Try] = EllipticCurve.encrypt
   override given decrypt: Decrypt[Try] = EllipticCurve.decrypt
-
-class EllipticCurveChillSpec extends EllipticCurveSpecBase:
-  override given stringCodec: Codec[String] = Chill.codec
-  override def toString: String = "ECChill"
 
 class EllipticCurveFstSpec extends EllipticCurveSpecBase:
   override given stringCodec: Codec[String] = Fst.codec

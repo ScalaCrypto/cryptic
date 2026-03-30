@@ -33,7 +33,7 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
       (publicKey, privateKey)
 
     val user: User =
-      import cryptic.codec.Chill.{*, given}
+      import cryptic.codec.Fst.{*, given}
       import cryptic.cipher.Rsa.{*, given}
       given pubKey: PublicKey = publicKey
       // #encrypt
@@ -48,7 +48,7 @@ class GettingStartedSpec extends AnyFlatSpec with Matchers:
     val loweredEmailOp: Cryptic.Operation[Try, EmailAddress] =
       // # transform
       import Cryptic.*
-      import cryptic.codec.Chill.{*, given}
+      import cryptic.codec.Fst.{*, given}
       val loweredEmailOp: Operation[Try, EmailAddress] =
         user.email.map(email => email.copy(literal = email.literal.toLowerCase))
       // # transform

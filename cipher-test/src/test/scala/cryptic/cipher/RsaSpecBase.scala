@@ -1,7 +1,7 @@
 package cryptic
 package cipher
 
-import cryptic.codec.{Chill, Fst, Upickle}
+import cryptic.codec.{Fst, Upickle}
 import cryptic.{Codec, Decrypt, Encrypt}
 import upickle.default.*
 
@@ -14,10 +14,7 @@ trait RsaSpecBase extends CipherSpecBase:
   given privateKey: PrivateKey = keyPair.getPrivate
   override given encrypt: Encrypt[Try] = Rsa.encrypt
   override given decrypt: Decrypt[Try] = Rsa.decrypt
-  override def toString: String = "RSAChill"
-
-class RsaChillSpec extends RsaSpecBase:
-  override given stringCodec: Codec[String] = Chill.codec
+  override def toString: String = "RSA"
 
 class RsaFstSpec extends RsaSpecBase:
   override given stringCodec: Codec[String] = Fst.codec

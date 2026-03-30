@@ -4,12 +4,9 @@ import sbtassembly.AssemblyPlugin.autoImport.*
 import sbtassembly.{MergeStrategy, PathList}
 
 lazy val scalaTest = ("org.scalatest" %% "scalatest" % "3.2.19").withSources()
-lazy val chill = ("com.twitter" % "chill" % "0.10.0")
-  .cross(CrossVersion.for3Use2_13)
-  .withSources()
-lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.3").withSources()
-lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.3.2").withSources()
-lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.82").withSources()
+lazy val fst = ("de.ruedigermoeller" % "fst" % "3.0.4-jdk17").withSources()
+lazy val upickle = ("com.lihaoyi" %% "upickle" % "4.4.2").withSources()
+lazy val bc = ("org.bouncycastle" % "bcprov-jdk18on" % "1.83").withSources()
 lazy val scribe = ("com.outr" %% "scribe" % "3.17.0").withSources()
 
 lazy val javaBaseOpens = Seq(
@@ -68,7 +65,7 @@ inThisBuild(
 )
 lazy val commonSettings =
   Seq(
-    scalaVersion := "3.7.3",
+    scalaVersion := "3.8.2",
     scalacOptions ++= Seq(
       "-Xmax-inlines",
       "64",
@@ -99,16 +96,6 @@ lazy val coreSettings = commonSettings ++ Seq(
   }
 )
 
-lazy val codecChillSettings = commonSettings ++ Seq(
-  name := "codec-chill",
-  libraryDependencies ++= Seq(chill),
-  Compile / packageBin / mappings += {
-    file("LICENSE") -> "LICENSE"
-  },
-  artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
-    s"cryptic-${artifact.name.replace("codec-", "")}-${module.revision}.${artifact.extension}"
-  }
-)
 lazy val codecFstSettings = commonSettings ++ Seq(
   name := "codec-fst",
   libraryDependencies += fst,
@@ -151,9 +138,6 @@ lazy val cipherTestSettings =
 
 lazy val core = (project in file("core")).settings(coreSettings)
 
-lazy val `codec-chill` =
-  (project in file("codec-chill")).settings(codecChillSettings).dependsOn(core)
-
 lazy val `codec-fst` =
   (project in file("codec-fst")).settings(codecFstSettings).dependsOn(core)
 
@@ -178,7 +162,7 @@ lazy val `cipher-enigma` = (project in file("cipher-enigma"))
     cipherCommonSettings("cipher-enigma") ++ Seq(
       libraryDependencies ++= Seq(
         scribe,
-        "com.lihaoyi" %% "mainargs" % "0.7.6"
+        "com.lihaoyi" %% "mainargs" % "0.7.8"
       ),
       Compile / mainClass := Some("cryptic.cipher.enigma.cli"),
       Compile / packageBin / packageOptions += sbt.Package.MainClass(
@@ -276,7 +260,6 @@ lazy val `cipher-test` = (project in file("cipher-test"))
   .settings(cipherTestSettings)
   .dependsOn(
     core,
-    `codec-chill`,
     `codec-fst`,
     `codec-upickle`,
     `cipher-javax`,
@@ -296,7 +279,6 @@ lazy val cryptic = (project in file("."))
   )
   .aggregate(
     core,
-    `codec-chill`,
     `codec-fst`,
     `codec-upickle`,
     `cipher-bouncycastle`,

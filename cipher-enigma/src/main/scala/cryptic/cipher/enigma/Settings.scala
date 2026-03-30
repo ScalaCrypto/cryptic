@@ -50,7 +50,7 @@ object Settings:
       """^\s*(\S+)\s+([A-Za-z]+)\s+(?:([A-Za-z]+)\s+)?([A-Ca-c])(?:\s+([A-Za-z]*))?\s*$""".r
 
     settings match
-      case SettingsFormat(names, rings, posOrNull, refl, pbOrNull) =>
+      case SettingsFormat(names, rings:String, posOrNull, refl:String, pbOrNull) =>
         val posOption = Option(posOrNull)
         val preamble = posOption.isEmpty
         val pos = posOption.getOrElse("A" * rings.length)

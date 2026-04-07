@@ -55,10 +55,10 @@ object Rotor:
     *   alphabetic characters.
     */
   def apply(settings: String): Rotor =
-    val Settings = """^\s*([^\s]+)\s+([A-Za-z])\s+([A-Za-z])\s*$""".r
+    val Settings = """^\s*(\S+)\s+([A-Za-z])\s+([A-Za-z])\s*$""".r
 
     settings match
-      case Settings(name, ringStr, posStr) =>
+      case Settings(name:String, ringStr:String, posStr:String) =>
         val triedRotor = for
           wheel <- Wheel.unsafe(name)
           ring <- Glyph.unsafe(ringStr.head)
@@ -68,5 +68,5 @@ object Rotor:
         triedRotor.get
       case _ =>
         throw IllegalArgumentException(
-          "Rotor.apply requires format \"wheel ring pos\" with ring/pos as letters A-Z or a-z"
+          """Rotor.apply requires format "wheel ring pos" with ring/pos as letters A-Z or a-z"""
         )

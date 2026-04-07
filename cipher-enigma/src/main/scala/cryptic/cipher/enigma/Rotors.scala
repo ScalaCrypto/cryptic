@@ -154,10 +154,10 @@ object Rotors:
     */
   def apply(settings: String): Rotors =
     // Tolerate leading/trailing whitespace; require exactly three whitespace-separated parts
-    val Settings = """^\s*([^\s]+)\s+([A-Za-z]+)\s+([A-Za-z]+)\s*$""".r
+    val Settings = """^\s*(\S+)\s+([A-Za-z]+)\s+([A-Za-z]+)\s*$""".r
 
     settings match
-      case Settings(namesPart, ringsPart, posPart) =>
+      case Settings(namesPart:String, ringsPart:String, posPart:String) =>
         val names = namesPart.split("-").map(_.trim).toVector
         if names.isEmpty || !names.forall(_.nonEmpty) then
           throw IllegalArgumentException(

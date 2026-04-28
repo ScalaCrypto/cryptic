@@ -3,23 +3,17 @@ package cipher
 
 import cryptic.*
 import cryptic.codec.default.given
-import org.scalatest.TryValues
-import org.scalatest.flatspec.AnyFlatSpecLike
-import org.scalatest.matchers.should.Matchers
 
 import scala.compiletime.deferred
 import scala.util.{Success, Try}
 
-trait CipherSpecBase extends AnyFlatSpecLike with Matchers with TryValues:
+trait CipherSpecBase extends SpecBase:
   given encrypt: Encrypt[Try] = deferred
   given decrypt: Decrypt[Try] = deferred
-  given stringCodec: Codec[String] = deferred
-  given functor: Functor[Try] = Functor.tryFunctor
 
   "case class with encrypted members" should "encrypt and decrypt" in:
     case class Foo(clear: String, secret: Encrypted[Try, String])
-    val foo =
-      Foo("clear", "secret".encrypted)
+    val foo = Foo("clear", "secret".encrypted)
     foo.secret.bytes.success shouldNot be(Success(null))
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted bytes" should "be callable without decrypt in scope" in:

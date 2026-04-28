@@ -3,7 +3,7 @@ package cipher
 
 import java.security.*
 import javax.crypto.Cipher
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 /** Represents an abstraction for asymmetric encryption and decryption
   * operations using a given effect type `F[_]`. Asymmetric encryption typically
@@ -18,8 +18,6 @@ import scala.util.{Failure, Success, Try}
   *   include `Try`, `Option`, or asynchronous data types like `IO`.
   */
 trait Asymmetric[F[_]]:
-  import cryptic.default.{given, *}
-
   /** Creates a new Cipher instance configured for a specific mode and key.
     *
     * The method initializes a cryptographic Cipher object to perform encryption
@@ -43,52 +41,17 @@ trait Asymmetric[F[_]]:
     */
   val version: Version
 
-  /** Encodes the given encrypted payload into a `CipherText` object.
-    *
-    * This method combines the current version's bytes with the provided
-    * encrypted data to produce a `CipherText` instance.
-    *
-    * @param encrypted
-    *   The encrypted payload as an immutable array of bytes.
-    * @return
-    *   A `CipherText` instance containing the version bytes and the encrypted
-    *   payload.
-    */
-  def encodeCipherText(encrypted: IArray[Byte]): CipherText =
-    CipherText(version.bytes, encrypted)
-
-  /** Decodes a cipher text payload using the provided functor. The method
-    * supports specific versions of the payload format and applies
-    * transformations based on the version compatibility.
-    *
-    * @param functor
-    *   the type class providing effectful computation capabilities for the
-    *   defined higher-kinded type `F`
-    * @return
-    *   a partial function that matches an array of byte arrays, representing
-    *   the version and encrypted data. If the version is supported, it returns
-    *   the encrypted data wrapped in the effect `F`. If the version is not
-    *   supported, it fails the computation and lifts the failure into the
-    *   effect `F`.
-    */
-  def decodeCipherText(using
-      functor: Functor[F]
-  ): PartialFunction[IArray[IArray[Byte]], F[IArray[Byte]]] =
-    case IArray(ver, encrypted) if version.supports(ver) =>
-      functor.pure(encrypted)
-    case IArray(ver, _) =>
-      version.failed(ver).lift
-
   given encrypt(using key: PublicKey, functor: Functor[F]): Encrypt[F] =
     (plainText: PlainText) =>
       // Todo move aad out of PlainText and make Encrypt trait check with types
-      if plainText.aad.bytes.nonEmpty then
+      if plainText.aad.bytes.isEmpty then
+        encrypt(plainText.bytes, key).map(CipherText(version.bytes, _))
+      else
         functor.failed[CipherText](
           new UnsupportedOperationException(
             "Asymmetric ciphers do not support AAD"
           )
         )
-      else encrypt(plainText.bytes, key).map(encodeCipherText)
 
   def encrypt(bytes: IArray[Byte], key: PublicKey)(using
       Functor[F]
@@ -100,11 +63,11 @@ trait Asymmetric[F[_]]:
 
   given decrypt(using key: PrivateKey, functor: Functor[F]): Decrypt[F] =
     (_: CipherText)
-      .splitWith(decodeCipherText)
-      .flatMap(encrypted =>
-        val decrypted = decrypt(encrypted, key)
-        decrypted.map(PlainText.apply)
-      )
+      .splitWith:
+        case IArray(ver, encrypted) if version.supports(ver) =>
+          decrypt(encrypted, key).map(PlainText.apply)
+        case IArray(ver, _) =>
+          version.failed(ver).lift
 
   def decrypt(bytes: IArray[Byte], privateKey: PrivateKey)(using
       functor: Functor[F]

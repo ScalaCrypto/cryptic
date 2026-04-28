@@ -6,22 +6,26 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.IESParameterSpec
 import org.bouncycastle.util.encoders.Hex
 
-import java.security.*
 import java.security.spec.ECGenParameterSpec
+import java.security.{Key, KeyPair, KeyPairGenerator, Security, Signature}
 import javax.crypto.Cipher
 import scala.util.{Success, Try}
 
-/** Provides cryptographic operations using Elliptic Curve (EC) cryptography.
+/** Provides an implementation of elliptic curve cryptography (ECC) for
+  * performing cryptographic operations such as key pair generation, digital
+  * signature creation and validation, and encryption and decryption using the
+  * ECIES (Elliptic Curve Integrated Encryption Scheme) algorithm.
   *
-  * This object serves as a concrete implementation of the `Asymmetric` trait
-  * specialized for cryptographic operations based on Elliptic Curve (EC)
-  * cryptography. It supports key pair generation, encryption, and decryption
-  * using ECIES (Elliptic Curve Integrated Encryption Scheme).
+  * This object utilizes the Bouncy Castle Provider for cryptographic operations
+  * and adheres to the `Asymmetric` and `Signer` typeclasses, allowing it to
+  * perform operations in an effectful manner within the `Try` effect wrapper.
   *
-  * The implementation uses the BouncyCastle library as the cryptographic
-  * provider.
+  * Methods:
+  *   - newCipher: Creates an ECIES cipher instance.
+  *   - newKeyPair: Generates an EC key pair using the secp256r1 curve.
+  *   - newSignature: Creates a SHA256withECDSA signature instance.
   */
-object EllipticCurve extends Asymmetric[Try]:
+ object EllipticCurve extends Asymmetric[Try] with Signer[Try]:
   val version: Version = FixedVersion(0, 0, 0, 1)
   Security.addProvider(new BouncyCastleProvider())
   private val generator: KeyPairGenerator = KeyPairGenerator.getInstance("EC")
@@ -51,3 +55,7 @@ object EllipticCurve extends Asymmetric[Try]:
     cipher
 
   def newKeyPair(): KeyPair = generator.generateKeyPair()
+
+  def newSignature: Try[Signature] = Success(
+    Signature.getInstance("SHA256withECDSA", "BC")
+  )

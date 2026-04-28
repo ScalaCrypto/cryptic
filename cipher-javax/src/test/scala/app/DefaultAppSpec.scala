@@ -17,11 +17,11 @@ class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
   val encrypted: Encrypted[Try, String] = clear.encrypted
   val decrypted: Try[String] = encrypted.decrypted
 
-  it should "encrypt" in:
-    encrypted.bytes.success should not equal Success(clear.getBytes)
+  "The cryptic.cipher.default" should "encrypt a String" in:
+    encrypted.bytes.success.value should not equal clear.getBytes
 
-  it should "decrypt" in:
-    decrypted.success shouldEqual Success(clear)
+  it should "decrypt an encrypted String" in:
+    decrypted.success.value shouldEqual clear
 
   case class Person(id: Long, email: Encrypted[Try, String])
 
@@ -29,12 +29,17 @@ class DefaultAppSpec extends AnyFlatSpec with Matchers with TryValues:
   val email = "martin@scalacrypto.org"
   val person: Person = Person(id, email.encrypted)
 
-  "Email" should "be encrypted" in:
+  it should "encrypted a case class" in:
     person.email.bytes.success should not equal Success(email.getBytes())
     person.email.contains(email) shouldBe Success(true)
     person.toString should startWith(
       "Person(17,Encrypted(Success(CipherText(0x"
     )
 
-  "Email" should "be decrypted" in:
+  it should "decrypted a case class" in:
     person.email.decrypted.success shouldEqual Success(email)
+    
+  it should "sign and verify text" in:
+    val text = "verbatim"
+    val signed = text.signed
+    signed.verified.success.value shouldBe text 

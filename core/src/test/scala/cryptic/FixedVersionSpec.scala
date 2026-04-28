@@ -3,7 +3,6 @@ package cryptic
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.TryValues
-import scala.util.Success
 
 class FixedVersionSpec extends AnyFlatSpec with Matchers with TryValues:
   "FixedVersion" should "compare versions correctly" in:
@@ -23,11 +22,11 @@ class FixedVersionSpec extends AnyFlatSpec with Matchers with TryValues:
     version.supports(version.bytes) shouldBe true
     version.supports(FixedVersion(1, 0, 0, 1).bytes) shouldBe false
 
-  it should "handle invalid version formats" in:
+  it should "reject invalid version formats" in:
     intercept[IllegalArgumentException]:
-      FixedVersion(1, 2, 3) // Invalid length
+      FixedVersion(IArray(1, 2, 3)) // Invalid length
     intercept[IllegalArgumentException]:
-      FixedVersion(1, 2, 3, 4, 5) // Invalid length
+      FixedVersion(IArray(1, 2, 3, 4, 5)) // Invalid length
 
   it should "format toString correctly" in:
     val version = FixedVersion(1, 2, 3, 4)

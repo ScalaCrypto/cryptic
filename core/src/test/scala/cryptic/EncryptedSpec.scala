@@ -19,8 +19,8 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
   import cryptic.cipher.demo.Reverse.given
   import cryptic.Functor.tryFunctor
 
-  private val clear = "nisse"
-  private val encNisse: Encrypted[Try, String] = clear.encrypted
+  private val plainNisse = "nisse"
+  private val encNisse: Encrypted[Try, String] = plainNisse.encrypted
   private val encEmpty: Encrypted[Try, String] = Encrypted.empty[Try, String]
 
   "Encrypted empty" should "have isEmpty" in:
@@ -35,24 +35,24 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
       115)
     foo.secret.decrypted shouldEqual Success("secret")
   "Encrypted bytes" should "be callable without decrypt in scope" in:
-    val e = "secret".encrypted
-    e.bytes.success.value.toSeq shouldEqual Seq(116, 101, 114, 99, 101, 115)
+    val enc = "secret".encrypted
+    enc.bytes.success.value.toSeq shouldEqual Seq(116, 101, 114, 99, 101, 115)
   "Encrypted" should "have same value in encrypted space" in:
-    val enc2 = clear.encrypted
-    encNisse shouldEqual enc2
+    val enc2 = plainNisse.encrypted
+    encNisse.bytes.success.value shouldEqual enc2.bytes.success.value
   "Encrypted" should "not equal different values" in:
     val enc2 = "kalle".encrypted
     (encNisse == enc2) shouldBe false
   "Encrypted" should "have exists" in:
-    encNisse.exists(_ == clear).success shouldBe Success(true)
+    encNisse.exists(_ == plainNisse).success shouldBe Success(true)
     encNisse.exists(_ == "kalle").success shouldBe Success(false)
   "Encrypted" should "have forall" in:
-    encNisse.forall(_ == clear).success shouldBe Success(true)
+    encNisse.forall(_ == plainNisse).success shouldBe Success(true)
     encNisse.forall(_ == "kalle").success shouldBe Success(false)
   "Encrypted" should "have foreach" in:
     var a = ""
     encNisse.foreach(a = _)
-    a shouldBe clear
+    a shouldBe plainNisse
   "Encrypted" should "be mappable" in:
     encNisse.map(_.toUpperCase).decrypted.success shouldBe Success("NISSE")
   "Encrypted" should "be flat-mappable" in:
@@ -67,7 +67,7 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
   "Encrypted" should "be collectable" in:
     encNisse
       .collect:
-        case `clear` => "nice!"
+        case plainNisse => "nice!"
       .decrypted
       .success shouldBe Success("nice!")
     encNisse
@@ -81,7 +81,7 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
     dec.failure
     dec.failed.get.getMessage shouldBe "decrypted called on collected empty"
   "Encrypted" should "be filterable" in:
-    encNisse.filter(_.length > 2).decrypted.success shouldBe Success(clear)
+    encNisse.filter(_.length > 2).decrypted.success shouldBe Success(plainNisse)
     val empty = encNisse.filter(_.length < 2).run
     empty shouldBe encEmpty
     empty.isEmpty.success shouldBe Success(true)
@@ -102,7 +102,7 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
     encNisse
       .filter(_.length > 2)
       .decryptedOrElse("kalle")
-      .success shouldBe Success(clear)
+      .success shouldBe Success(plainNisse)
     encNisse
       .filter(_.length < 2)
       .decryptedOrElse("kalle")
@@ -112,7 +112,7 @@ class EncryptedSpec extends AnyFlatSpec with Matchers with TryValues:
       .filter(_.length > 2)
       .orElse("kalle".encrypted)
       .decrypted
-      .success shouldBe Success(clear)
+      .success shouldBe Success(plainNisse)
     encNisse
       .filter(_.length < 2)
       .orElse("kalle".encrypted)

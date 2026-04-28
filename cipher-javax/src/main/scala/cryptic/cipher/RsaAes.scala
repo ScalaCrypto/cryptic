@@ -2,7 +2,7 @@ package cryptic
 package cipher
 
 import java.security.{PrivateKey, PublicKey}
-import scala.util.{Success, Try}
+import scala.util.Try
 
 /** Provides RSA-AES hybrid encryption and decryption functionality.
   *
@@ -43,8 +43,11 @@ object RsaAes:
 
   object default:
     export cryptic.default.{given, *}
+    export cryptic.signed
     export RsaAes.{given, *}
     export Rsa.newKeyPair
+    export Rsa.sign
+    export Rsa.verify
 
   given encrypt(using publicKey: PublicKey): Encrypt[Try] =
     (plainText: PlainText) =>

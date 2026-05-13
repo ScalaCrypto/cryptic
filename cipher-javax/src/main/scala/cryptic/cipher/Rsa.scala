@@ -1,8 +1,15 @@
 package cryptic
 package cipher
 
-import java.security.{Key, KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
-import java.security.spec.MGF1ParameterSpec
+import java.security.{
+  Key,
+  KeyPair,
+  KeyPairGenerator,
+  PrivateKey,
+  PublicKey,
+  Signature
+}
+import java.security.spec.{MGF1ParameterSpec, PSSParameterSpec}
 import javax.crypto.Cipher
 import scala.util.{Success, Try}
 import javax.crypto.spec.{OAEPParameterSpec, PSource}
@@ -20,11 +27,14 @@ import javax.crypto.spec.{OAEPParameterSpec, PSource}
   *   - newCipher: Creates a new RSA cipher instance configured with the
   *     specified mode (encrypt or decrypt) and key.
   *   - newKeyPair: Generates a new RSA key pair with the specified key size.
+  *   - newSignature: Creates a new RSA signature instance configured with
+  *     RSASSA-PSS.
   */
-object Rsa extends Asymmetric[Try]:
+object Rsa extends Asymmetric[Try] with Signer[Try]:
   export java.security.{KeyPair, KeyPairGenerator, PrivateKey, PublicKey}
   given functor: Functor[Try] = Functor.tryFunctor // Todo remove
   val version: Version = FixedVersion(0, 0, 0, 1)
+  def version(bytes: IArray[Byte]): Version = FixedVersion(bytes)
 
   object default:
     export cryptic.default.{given, *}
@@ -45,3 +55,16 @@ object Rsa extends Asymmetric[Try]:
     val generator = KeyPairGenerator.getInstance("RSA")
     generator.initialize(size)
     generator.generateKeyPair()
+
+  def newSignature: Try[Signature] =
+    val signature = Signature.getInstance("RSASSA-PSS")
+    signature.setParameter(
+      PSSParameterSpec(
+        "SHA-256",
+        "MGF1",
+        MGF1ParameterSpec.SHA256,
+        32,
+        1
+      )
+    )
+    Success(signature)

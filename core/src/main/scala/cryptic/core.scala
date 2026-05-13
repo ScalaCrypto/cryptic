@@ -15,7 +15,7 @@ type Hash = IArray[Byte]
 /** Digital signature bytes represented as an immutable byte array. */
 type Signature = IArray[Byte]
 
-/** Arbitrary metadata associated with PlainText encoding. */
+/** Aditional Authenticated Data associated with PlainText encoding. */
 case class AAD(bytes: IArray[Byte]):
   def nonEmpty: Boolean = bytes.nonEmpty
   def int: Int = bytes.int
@@ -73,11 +73,10 @@ object PlainText:
     val digest = MessageDigest.getInstance("SHA-256")
     digest.digest(plainText.bytes.mutable).immutable // Todo handle aad?
 
-/** Encrypted payload bytes. The internal format may contain multiple
-  * concatenated segments.
-  */
-case class CipherText(bytes: IArray[Byte]):
-  /** A mutable ByteBuffer view over the cipher bytes. */
+sealed trait Bytes:
+  val bytes: IArray[Byte]
+
+  /** A mutable ByteBuffer view over the bytes. */
   def buffer: ByteBuffer = ByteBuffer.wrap(bytes.mutable)
 
   /** Splits the bytes into the concatenated segments written via IArray.join.
@@ -88,15 +87,6 @@ case class CipherText(bytes: IArray[Byte]):
     * bytes. If the partial function is not defined for the segments, it invokes
     * the `failed` method of the provided `Functor` instance with an
     * `IllegalArgumentException`.
-    *
-    * @param f
-    *   A partial function that processes the result of the `split` method,
-    *   which segments the encrypted payload bytes into multiple concatenated
-    *   parts, and produces an effectful computation.
-    * @return
-    *   An effectful computation of type `F[A]` resulting from applying the
-    *   given partial function to the segmented bytes. If the partial function
-    *   is not applicable, a failure effect is returned.
     */
   def splitWith[F[_], A](
       f: PartialFunction[IArray[IArray[Byte]], F[A]]
@@ -109,13 +99,6 @@ case class CipherText(bytes: IArray[Byte]):
         )
     )
 
-  override def equals(obj: scala.Any): Boolean = obj match
-    case CipherText(other) => bytes.sameElements(other)
-    case _                 => false
-
-  override def toString: String =
-    s"${getClass.getCanonicalName.split('.').last}(0x${bytes.map("%02x".format(_)).mkString})"
-
   /** True if there are no bytes. */
   def isEmpty: Boolean = bytes.isEmpty
 
@@ -124,6 +107,19 @@ case class CipherText(bytes: IArray[Byte]):
 
   /** Length of the underlying byte array. */
   def length: Int = bytes.length
+
+  /** Shared hex formatting used by subclasses. */
+  def hexBytes: String = bytes.map("%02x".format(_)).mkString
+
+  /** Shared runtime-name formatting used by subclasses. */
+  protected def runtimeName: String =
+    getClass.getCanonicalName.split('.').last
+
+/** Encrypted payload bytes. The internal format may contain multiple
+  * concatenated segments.
+  */
+case class CipherText(bytes: IArray[Byte]) extends Bytes:
+  override def toString: String = s"$runtimeName(0x$hexBytes)"
 
 /** Helpers and constructors for CipherText. */
 object CipherText:
@@ -141,6 +137,53 @@ object CipherText:
     */
   def unapplySeq(cipherText: CipherText): Option[Seq[IArray[Byte]]] =
     Option(cipherText.split)
+
+/** Represents a signed text structure containing a version, the original text,
+ * and a cryptographic signature. This class provides functionality for
+ * working with the signed data, including splitting the underlying bytes and
+ * verifying the signature.
+ *
+ * @constructor
+ * Creates a new instance of `SignedText` with the specified version, text,
+ * and signature segments.
+ * @param version
+ * The version information encoded as bytes.
+ * @param text
+ * The original text data encoded as bytes.
+ * @param signature
+ * The cryptographic signature verifying the text's authenticity.
+ */
+case class SignedText(
+    version: IArray[Byte],
+    text: IArray[Byte],
+    signature: IArray[Byte]
+) extends Bytes:
+  val bytes: IArray[Byte] = IArray.join(version, text, signature)
+  override def toString: String = s"$runtimeName(0x$hexBytes)"
+
+  /** Verifies this SignedText and returns the PlainText if verification
+    * succeeds.
+    *
+    * @param verify
+    *   the Verify instance to use for verification
+    * @param functor
+    *   the Functor instance for the effect type F
+    * @return
+    *   the verified PlainText wrapped in effect type F, or a failure if
+    *   verification fails
+    */
+  def verified[F[_]](using
+      verify: Verify[F],
+      functor: Functor[F]
+  ): F[PlainText] = verify(this)
+
+/** Helpers and constructors for SignedText. */
+object SignedText:
+  /** Extractor that yields all concatenated segments written into this
+    * SignedText.
+    */
+  def unapplySeq(signedText: SignedText): Option[Seq[IArray[Byte]]] =
+    Option(signedText.split)
 
 /** A type class for encryption, transforming plain text into encrypted cipher
   * text within a given effect type F.
@@ -169,23 +212,6 @@ object Encrypt:
   def lift[F[_]](encrypt: PlainText => F[CipherText]): Encrypt[F] =
     (plainText: PlainText) => encrypt(plainText)
 
-//  /** Lifts a function that transforms `PlainText` to a `Try[CipherText]` into
-//    * an `Encrypt` instance wrapped in the effect type `F`. The lifting process
-//    * embeds the computation into the provided functor for handling effects.
-//    *
-//    * @param encrypt
-//    *   The function that performs the transformation from `PlainText` to
-//    *   `Try[CipherText]`.
-//    * @param functor
-//    *   Implicit evidence for the existence of a `Functor[F]`, which provides
-//    *   operations for working within the effect type `F`.
-//    * @return
-//    *   An instance of `Encrypt[F]` that encapsulates the lifted encryption
-//    *   operation.
-//    */
-//  def lift[F[_]: Functor](encrypt: PlainText => Try[CipherText]): Encrypt[F] =
-//    (plainText: PlainText) => encrypt(plainText).lift
-
 /** Trait that provides decryption functionality for a given effect type `F[_]`.
   *
   * This abstraction defines a decryption operation, representing the process of
@@ -209,12 +235,26 @@ object Decrypt:
     (cipherText: CipherText) => decrypt(cipherText).lift
 
 // Sign/Verify function types
-type Sign = PlainText => Array[Byte]
-type Verify = Array[Byte] => Boolean
+/** A type class for signing, transforming plain text into signed text within a
+  * given effect type F.
+  */
+trait Sign[F[_]]:
+  def apply(plainText: PlainText): F[SignedText]
 
-// Codec type class and helpers
+/** A type class for verification, transforming signed text into plain text
+  * within a given effect type F if verification succeeds.
+  */
+trait Verify[F[_]]:
+  def apply(signedText: SignedText): F[PlainText]
+
+/** A type class for encoding and decoding values of type `V` into and from
+  * `PlainText`.
+  */
 trait Codec[V]:
+  /** Encodes a value into PlainText with optional AAD. */
   def encode(v: V, aad: AAD = AAD.empty): PlainText
+
+  /** Decodes PlainText into a value of type `V`. */
   def decode(plainText: PlainText): Try[V]
 
 object Codec:
@@ -263,6 +303,10 @@ extension [F[_]: {Functor, Encrypt}, V: Codec](value: V)
   def encrypted(aad: AAD): Encrypted[F, V] =
     Encrypted(value, aad)
 
+extension [F[_]: {Functor, Sign}, V: Codec](value: V)(using sign: Sign[F])
+  /** Signs this value using the provided sign instance. */
+  def signed: Signed[F, V] = Signed(sign(PlainText.encode(value, AAD.empty)))
+
 /** Unsafe conversions between mutable and immutable byte/char arrays. */
 extension (array: Array[Byte])
   /** Immutable IArray view over a Byte array. */
@@ -288,7 +332,7 @@ extension (str: String)
   def aad: AAD = str.getBytes.aad
   @targetName("stringToBytes")
   def bytes: IArray[Byte] = str.getBytes.immutable
-  def fromResource:String = Source.fromResource(str).slurp
+  def fromResource: String = Source.fromResource(str).slurp
 
 extension (array: IArray[Byte])
   /** Mutable Array view over an IArray[Byte]. */

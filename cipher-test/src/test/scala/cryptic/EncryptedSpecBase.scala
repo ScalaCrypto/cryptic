@@ -8,11 +8,6 @@ import upickle.default.*
 
 import scala.util.{Success, Try}
 
-case class Foo(bar: String)
-
-object Foo:
-  given rw: ReadWriter[Foo] = macroRW[Foo] // Only need for Upickle
-
 case class FooBar(secret: Encrypted[Try, String])
 
 trait EncryptedSpecBase extends AnyFlatSpec with Matchers with TryValues:
@@ -36,8 +31,8 @@ trait EncryptedSpecBase extends AnyFlatSpec with Matchers with TryValues:
     val pending: Cryptic[Try, String] = encrypted.map(_.toUpperCase)
     pending.decrypted shouldEqual Success("SECRET")
   "Encrypted without a decryption key" should "have the same value in encrypted space" in:
-    val enc1 = "nisse".encrypted
-    val enc2 = "nisse".encrypted
+    val enc1 = "nisse".encrypted.bytes.success.value
+    val enc2 = "nisse".encrypted.bytes.success.value
     enc1 shouldEqual enc2
   "Encrypted values" should "not be equal" in:
     val enc1 = "nisse".encrypted

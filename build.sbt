@@ -148,13 +148,14 @@ lazy val `codec-upickle` = (project in file("codec-upickle"))
 lazy val `cipher-javax` = (project in file("cipher-javax"))
   .settings(cipherCommonSettings("cipher-javax"))
   .dependsOn(core)
+
 lazy val `cipher-bouncycastle` = (project in file("cipher-bouncycastle"))
   .settings(
     cipherCommonSettings("cipher-bouncycastle") ++ Seq(
       libraryDependencies += bc
     )
   )
-  .dependsOn(core, `cipher-javax`)
+  .dependsOn(core, `cipher-javax`, `cipher-javax` % "test->test")
 
 lazy val `cipher-enigma` = (project in file("cipher-enigma"))
   .enablePlugins(GraalVMNativeImagePlugin)

@@ -1,7 +1,6 @@
 package cryptic
 package codec
 
-import java.nio.ByteBuffer
 import scala.util.Try
 import scala.util.Success
 

@@ -15,6 +15,21 @@ type Hash = IArray[Byte]
 /** Digital signature bytes represented as an immutable byte array. */
 type Signature = IArray[Byte]
 
+extension (left: IArray[Byte])
+  /** XORs these bytes with the corresponding bytes from the given bytes.
+    *
+    * @param right
+    *   The bytes to XOR with.
+    * @return
+    *   The resulting bytes.
+    */
+  def xor(right: IArray[Byte]): IArray[Byte] =
+    require(
+      left.length == right.length,
+      "Cannot XOR byte arrays of different lengths"
+    )
+    left.zip(right).map { (a, b) => (a ^ b).toByte }
+
 /** Aditional Authenticated Data associated with PlainText encoding. */
 case class AAD(bytes: IArray[Byte]):
   def nonEmpty: Boolean = bytes.nonEmpty

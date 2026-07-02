@@ -25,33 +25,26 @@ object Otp:
     */
   case class Pad(bytes: IArray[Byte])
 
-  private def xor(bytes: IArray[Byte], pad: IArray[Byte]): IArray[Byte] =
-    val b = bytes.mutable
-    val k = pad.mutable
-    val res = new Array[Byte](b.length)
-    for i <- b.indices do res(i) = (b(i) ^ k(i)).toByte
-    res.immutable
-
-  given encrypt(using pad: Pad): Encrypt[Try] = (plainText: PlainText) =>
-    if plainText.aad.nonEmpty then
+  given encrypt(using pad: Pad): Encrypt[Try] =
+    case plainText if plainText.aad.nonEmpty =>
       Failure(new UnsupportedOperationException("OTP does not support AAD"))
-    else if pad.bytes.length < plainText.bytes.length then
+    case plainText if pad.bytes.length < plainText.bytes.length =>
       Failure(new IllegalArgumentException("Pad is shorter than message"))
-    else
+    case plainText =>
       Success(
         CipherText(
           version.bytes,
-          xor(plainText.bytes, pad.bytes)
+          plainText.bytes.xor(pad.bytes)
         )
       )
 
-  given decrypt(using pad: Pad): Decrypt[Try] = (cipherText: CipherText) =>
-    cipherText.splitWith:
+  given decrypt(using pad: Pad): Decrypt[Try] =
+    (_: CipherText).splitWith:
       case IArray(v, encryptedBytes) if version.supports(v) =>
         if pad.bytes.length < encryptedBytes.length then
           Failure(
             new IllegalArgumentException("Pad is shorter than ciphertext")
           )
-        else Success(PlainText(xor(encryptedBytes, pad.bytes), AAD.empty))
+        else Success(PlainText(encryptedBytes.xor(pad.bytes), AAD.empty))
       case IArray(v, _) =>
         version.failed(v)

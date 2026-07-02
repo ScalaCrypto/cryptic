@@ -9,8 +9,9 @@ select the modules you nedd or write your own
 
 | Module                | Supports            |
 |:----------------------|:--------------------| 
-| crypto-javax          | AES, RSA            |
-| crypto-bouncycastle   | EC (Elliptic curve) |
+| core                  | OTP                 |
+| cipher-javax          | AES, RSA            |
+| cipher-bouncycastle   | EC (Elliptic curve) |
 | codec-fst     | Fst                 | 
 | codec-upickle | Upickle             | 
 
@@ -122,6 +123,7 @@ val emailInLower = user2.email.decrypted
 - AES
 - RSA
 - ECIES
+- OTP
 
 ## Provided codecs
 

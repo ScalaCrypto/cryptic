@@ -2,8 +2,6 @@
 package cryptic
 package cipher
 
-import scala.util.{Failure, Success, Try}
-
 /** One-Time Password (OTP) algorithm implementation.
   *
   * This implementation uses the One-Time Pad cipher, which provides
@@ -11,7 +9,6 @@ import scala.util.{Failure, Success, Try}
   * long as the message, and used only once.
   */
 object Otp:
-  given functor: Functor[Try] = Functor.tryFunctor
   val version: Version = FixedVersion(0, 0, 0, 1)
 
   object default:
@@ -25,26 +22,23 @@ object Otp:
     */
   case class Pad(bytes: IArray[Byte])
 
-  given encrypt(using pad: Pad): Encrypt[Try] =
+  given encrypt[F[_]](using pad: Pad, functor: Functor[F]): Encrypt[F] =
     case plainText if plainText.aad.nonEmpty =>
-      Failure(new UnsupportedOperationException("OTP does not support AAD"))
+      new UnsupportedOperationException("OTP does not support AAD").failed
     case plainText if pad.bytes.length < plainText.bytes.length =>
-      Failure(new IllegalArgumentException("Pad is shorter than message"))
+      new IllegalArgumentException("Pad is shorter than message").failed
     case plainText =>
-      Success(
-        CipherText(
-          version.bytes,
-          plainText.bytes.xor(pad.bytes)
-        )
+      CipherText(
+        version.bytes,
+        plainText.bytes.xor(pad.bytes)
       )
+        .pure
 
-  given decrypt(using pad: Pad): Decrypt[Try] =
+  given decrypt[F[_]](using pad: Pad, functor: Functor[F]): Decrypt[F] =
     (_: CipherText).splitWith:
       case IArray(v, encryptedBytes) if version.supports(v) =>
         if pad.bytes.length < encryptedBytes.length then
-          Failure(
-            new IllegalArgumentException("Pad is shorter than ciphertext")
-          )
-        else Success(PlainText(encryptedBytes.xor(pad.bytes), AAD.empty))
+          new IllegalArgumentException("Pad is shorter than ciphertext").failed
+        else PlainText(encryptedBytes.xor(pad.bytes), AAD.empty).pure
       case IArray(v, _) =>
-        version.failed(v)
+        version.failed[PlainText](v).exception.failed

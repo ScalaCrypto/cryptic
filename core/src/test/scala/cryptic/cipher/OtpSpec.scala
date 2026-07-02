@@ -13,6 +13,7 @@ class OtpSpec extends AnyFlatSpec with Matchers with TryValues:
 
   private val text = "hello"
   private val padBytes = IArray(1, 2, 3, 4, 5).map(_.toByte)
+  given Functor[Try] = Functor.tryFunctor
   given Pad(padBytes)
 
   "Otp Encrypted" should "support encryption and decryption" in:
